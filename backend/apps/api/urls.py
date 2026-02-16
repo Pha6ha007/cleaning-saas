@@ -596,4 +596,28 @@ urlpatterns = [
         api_views.MaintenanceNotificationLogListView.as_view(),
         name="maintenance-notifications",
     ),
+
+    # =====================
+    # Stage 7: Parts & Inventory (Lite)
+    # =====================
+    path(
+        "maintenance/parts/",
+        api_views.PartListCreateView.as_view(),
+        name="maintenance-parts",
+    ),
+    path(
+        "maintenance/parts/<int:pk>/",
+        api_views.PartDetailView.as_view(),
+        name="maintenance-part-detail",
+    ),
+    path(
+        "maintenance/visits/<int:pk>/parts/",
+        api_views.VisitPartsListCreateView.as_view(),
+        name="maintenance-visit-parts",
+    ),
+    path(
+        "maintenance/visits/<int:visit_id>/parts/<int:part_id>/",
+        api_views.VisitPartDeleteView.as_view(),
+        name="maintenance-visit-part-delete",
+    ),
 ]

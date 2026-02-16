@@ -578,3 +578,114 @@ class MaintenanceNotificationLog(models.Model):
 
     def __str__(self):
         return f"{self.get_kind_display()} -> {self.to_email} ({self.status})"
+
+
+# =============================================================================
+# Stage 7: Parts & Inventory (Lite)
+# =============================================================================
+
+class Part(models.Model):
+    """
+    Catalog of parts/consumables for maintenance.
+
+    Company-scoped, no inventory tracking in Lite version.
+    Parts can be linked to service visits to track usage.
+
+    See: docs/product/MAINTENANCE_V2_STRATEGY.md (Stage 7)
+    """
+
+    # Common units for parts
+    UNIT_PCS = "pcs"
+    UNIT_M = "m"
+    UNIT_KG = "kg"
+    UNIT_L = "L"
+    UNIT_SET = "set"
+
+    UNIT_CHOICES = [
+        (UNIT_PCS, "Pieces"),
+        (UNIT_M, "Meters"),
+        (UNIT_KG, "Kilograms"),
+        (UNIT_L, "Liters"),
+        (UNIT_SET, "Sets"),
+    ]
+
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        related_name="parts"
+    )
+    name = models.CharField(max_length=200)
+    sku = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Optional part number or SKU"
+    )
+    description = models.TextField(blank=True)
+    unit = models.CharField(
+        max_length=20,
+        choices=UNIT_CHOICES,
+        default=UNIT_PCS,
+        help_text="Unit of measurement"
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+        unique_together = ["company", "name"]
+        verbose_name = "Part"
+        verbose_name_plural = "Parts"
+
+    def __str__(self):
+        if self.sku:
+            return f"{self.name} ({self.sku})"
+        return self.name
+
+
+class VisitPart(models.Model):
+    """
+    Parts used on a specific service visit.
+
+    Links Job to Part with quantity.
+    No inventory deduction in Lite version - just tracking.
+
+    See: docs/product/MAINTENANCE_V2_STRATEGY.md (Stage 7)
+    """
+
+    job = models.ForeignKey(
+        'apps_jobs.Job',
+        on_delete=models.CASCADE,
+        related_name="used_parts"
+    )
+    part = models.ForeignKey(
+        Part,
+        on_delete=models.PROTECT,
+        related_name="usage_records"
+    )
+    quantity = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=1,
+        help_text="Quantity used"
+    )
+    notes = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Optional notes about this part usage"
+    )
+    added_at = models.DateTimeField(auto_now_add=True)
+    added_by = models.ForeignKey(
+        'apps_accounts.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="added_visit_parts"
+    )
+
+    class Meta:
+        ordering = ["-added_at"]
+        verbose_name = "Visit Part"
+        verbose_name_plural = "Visit Parts"
+
+    def __str__(self):
+        return f"{self.part.name} x{self.quantity} on Job #{self.job_id}"

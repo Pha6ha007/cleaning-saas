@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ("apps_accounts", "0001_initial"),
         ("apps_jobs", "0001_initial"),
-        ("maintenance", "0004_stage5_contracts_and_warranty"),
+        ("apps_maintenance", "0004_stage5_contracts_and_warranty"),
     ]
 
     operations = [

@@ -26,6 +26,8 @@ from apps.maintenance.models import (
     MaintenanceCategory,
     ServiceContract,
     MaintenanceNotificationLog,
+    Part,
+    VisitPart,
 )
 from apps.maintenance.notifications import (
     send_maintenance_notification,
@@ -3174,3 +3176,367 @@ class MaintenanceNotificationLogListView(MaintenancePermissionMixin, APIView):
             })
 
         return Response(data, status=status.HTTP_200_OK)
+
+
+# =============================================================================
+# Stage 7: Parts & Inventory (Lite)
+# =============================================================================
+
+class PartListCreateView(MaintenancePermissionMixin, APIView):
+    """
+    List and create parts.
+
+    GET /api/maintenance/parts/
+        Query params:
+        - is_active: filter by active status
+        - search: search by name or SKU
+
+    POST /api/maintenance/parts/
+        Body: { name, sku?, description?, unit? }
+    """
+
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        company, error = self._check_read_access(request)
+        if error:
+            return error
+
+        parts = Part.objects.filter(company=company)
+
+        # Filters
+        is_active = request.query_params.get("is_active")
+        if is_active is not None:
+            parts = parts.filter(is_active=is_active.lower() == "true")
+
+        search = request.query_params.get("search")
+        if search:
+            from django.db.models import Q
+            parts = parts.filter(
+                Q(name__icontains=search) | Q(sku__icontains=search)
+            )
+
+        data = [
+            {
+                "id": part.id,
+                "name": part.name,
+                "sku": part.sku,
+                "description": part.description,
+                "unit": part.unit,
+                "unit_display": part.get_unit_display(),
+                "is_active": part.is_active,
+                "created_at": part.created_at.isoformat(),
+            }
+            for part in parts
+        ]
+
+        return Response(data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        company, error = self._check_write_access(request)
+        if error:
+            return error
+
+        data = request.data
+        name = data.get("name", "").strip()
+
+        if not name:
+            return Response(
+                {"code": "VALIDATION_ERROR", "message": "Name is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Check for duplicate name
+        if Part.objects.filter(company=company, name=name).exists():
+            return Response(
+                {"code": "DUPLICATE_NAME", "message": "Part with this name already exists."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        part = Part.objects.create(
+            company=company,
+            name=name,
+            sku=data.get("sku", "").strip(),
+            description=data.get("description", ""),
+            unit=data.get("unit", Part.UNIT_PCS),
+        )
+
+        return Response(
+            {
+                "id": part.id,
+                "name": part.name,
+                "sku": part.sku,
+                "description": part.description,
+                "unit": part.unit,
+                "unit_display": part.get_unit_display(),
+                "is_active": part.is_active,
+                "created_at": part.created_at.isoformat(),
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class PartDetailView(MaintenancePermissionMixin, APIView):
+    """
+    Get, update, or delete a part.
+
+    GET /api/maintenance/parts/{id}/
+    PATCH /api/maintenance/parts/{id}/
+    DELETE /api/maintenance/parts/{id}/
+    """
+
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        company, error = self._check_read_access(request)
+        if error:
+            return error
+
+        part = get_object_or_404(Part, pk=pk, company=company)
+
+        # Get usage count
+        usage_count = VisitPart.objects.filter(part=part).count()
+
+        return Response(
+            {
+                "id": part.id,
+                "name": part.name,
+                "sku": part.sku,
+                "description": part.description,
+                "unit": part.unit,
+                "unit_display": part.get_unit_display(),
+                "is_active": part.is_active,
+                "usage_count": usage_count,
+                "created_at": part.created_at.isoformat(),
+                "updated_at": part.updated_at.isoformat(),
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def patch(self, request, pk):
+        company, error = self._check_write_access(request)
+        if error:
+            return error
+
+        part = get_object_or_404(Part, pk=pk, company=company)
+        data = request.data
+
+        if "name" in data:
+            new_name = data["name"].strip()
+            # Check for duplicate
+            if Part.objects.filter(company=company, name=new_name).exclude(pk=pk).exists():
+                return Response(
+                    {"code": "DUPLICATE_NAME", "message": "Part with this name already exists."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            part.name = new_name
+
+        if "sku" in data:
+            part.sku = data["sku"].strip()
+        if "description" in data:
+            part.description = data["description"]
+        if "unit" in data:
+            part.unit = data["unit"]
+        if "is_active" in data:
+            part.is_active = data["is_active"]
+
+        part.save()
+
+        return Response(
+            {
+                "id": part.id,
+                "name": part.name,
+                "sku": part.sku,
+                "unit": part.unit,
+                "is_active": part.is_active,
+                "updated_at": part.updated_at.isoformat(),
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def delete(self, request, pk):
+        company, error = self._check_write_access(request)
+        if error:
+            return error
+
+        part = get_object_or_404(Part, pk=pk, company=company)
+
+        # Check if part is used
+        usage_count = VisitPart.objects.filter(part=part).count()
+        if usage_count > 0:
+            return Response(
+                {
+                    "code": "PART_IN_USE",
+                    "message": f"Cannot delete part: used in {usage_count} visit(s). Deactivate instead.",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        part_id = part.id
+        part.delete()
+
+        return Response(
+            {"deleted": True, "id": part_id},
+            status=status.HTTP_200_OK,
+        )
+
+
+class VisitPartsListCreateView(MaintenancePermissionMixin, APIView):
+    """
+    List and add parts to a service visit.
+
+    GET /api/maintenance/visits/{id}/parts/
+    POST /api/maintenance/visits/{id}/parts/
+        Body: { part_id, quantity?, notes? }
+    """
+
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        company, error = self._check_read_access(request)
+        if error:
+            return error
+
+        job = get_object_or_404(
+            Job,
+            pk=pk,
+            company=company,
+            context=Job.CONTEXT_MAINTENANCE,
+        )
+
+        visit_parts = VisitPart.objects.filter(job=job).select_related("part", "added_by")
+
+        data = [
+            {
+                "id": vp.id,
+                "part": {
+                    "id": vp.part.id,
+                    "name": vp.part.name,
+                    "sku": vp.part.sku,
+                    "unit": vp.part.unit,
+                    "unit_display": vp.part.get_unit_display(),
+                },
+                "quantity": str(vp.quantity),
+                "notes": vp.notes,
+                "added_at": vp.added_at.isoformat(),
+                "added_by": {
+                    "id": vp.added_by.id,
+                    "name": vp.added_by.full_name or vp.added_by.email,
+                } if vp.added_by else None,
+            }
+            for vp in visit_parts
+        ]
+
+        return Response(data, status=status.HTTP_200_OK)
+
+    def post(self, request, pk):
+        company, error = self._check_write_access(request)
+        if error:
+            return error
+
+        job = get_object_or_404(
+            Job,
+            pk=pk,
+            company=company,
+            context=Job.CONTEXT_MAINTENANCE,
+        )
+
+        data = request.data
+        part_id = data.get("part_id")
+
+        if not part_id:
+            return Response(
+                {"code": "VALIDATION_ERROR", "message": "part_id is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Get part (must belong to same company)
+        part = get_object_or_404(Part, pk=part_id, company=company)
+
+        if not part.is_active:
+            return Response(
+                {"code": "PART_INACTIVE", "message": "Cannot use inactive part."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        quantity = data.get("quantity", 1)
+        try:
+            quantity = float(quantity)
+            if quantity <= 0:
+                raise ValueError()
+        except (ValueError, TypeError):
+            return Response(
+                {"code": "VALIDATION_ERROR", "message": "Quantity must be a positive number."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        visit_part = VisitPart.objects.create(
+            job=job,
+            part=part,
+            quantity=quantity,
+            notes=data.get("notes", ""),
+            added_by=request.user,
+        )
+
+        return Response(
+            {
+                "id": visit_part.id,
+                "part": {
+                    "id": part.id,
+                    "name": part.name,
+                    "sku": part.sku,
+                    "unit": part.unit,
+                    "unit_display": part.get_unit_display(),
+                },
+                "quantity": str(visit_part.quantity),
+                "notes": visit_part.notes,
+                "added_at": visit_part.added_at.isoformat(),
+                "added_by": {
+                    "id": request.user.id,
+                    "name": request.user.full_name or request.user.email,
+                },
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class VisitPartDeleteView(MaintenancePermissionMixin, APIView):
+    """
+    Remove a part from a service visit.
+
+    DELETE /api/maintenance/visits/{visit_id}/parts/{part_id}/
+    """
+
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, visit_id, part_id):
+        company, error = self._check_write_access(request)
+        if error:
+            return error
+
+        # Verify job exists and belongs to company
+        job = get_object_or_404(
+            Job,
+            pk=visit_id,
+            company=company,
+            context=Job.CONTEXT_MAINTENANCE,
+        )
+
+        # Get the visit part record
+        visit_part = get_object_or_404(
+            VisitPart,
+            pk=part_id,
+            job=job,
+        )
+
+        visit_part_id = visit_part.id
+        visit_part.delete()
+
+        return Response(
+            {"deleted": True, "id": visit_part_id},
+            status=status.HTTP_200_OK,
+        )

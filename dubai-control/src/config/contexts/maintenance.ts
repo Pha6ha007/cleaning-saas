@@ -11,6 +11,7 @@ import {
   FileText,
   CalendarRange,
   ScrollText,
+  Package,
 } from "lucide-react";
 import type { ContextConfig, NavItem } from "./types";
 
@@ -25,6 +26,7 @@ export const maintenanceNavItems: NavItem[] = [
   { name: "Contracts", href: "/maintenance/contracts", icon: ScrollText },
   { name: "Assets", href: "/maintenance/assets", icon: Wrench },
   { name: "Asset Types", href: "/maintenance/asset-types", icon: Tag },
+  { name: "Parts", href: "/maintenance/parts", icon: Package },
   { name: "Technicians", href: "/maintenance/technicians", icon: Users },
   { name: "Analytics", href: "/maintenance/analytics", icon: BarChart3 },
   { name: "Reports", href: "/maintenance/reports", icon: FileText },

@@ -72,6 +72,20 @@ import {
   type MaintenanceNotificationLog,
   type SendNotificationResult,
   type NotificationFilters,
+  // Stage 7: Parts & Inventory (Lite)
+  getParts,
+  getPart,
+  createPart,
+  updatePart,
+  deletePart,
+  getVisitParts,
+  addVisitPart,
+  removeVisitPart,
+  type Part,
+  type PartUnit,
+  type VisitPart,
+  type CreatePartInput,
+  type AddVisitPartInput,
 } from "./client";
 
 // =============================================================================
@@ -120,6 +134,12 @@ export type {
   MaintenanceNotificationLog,
   SendNotificationResult,
   NotificationFilters,
+  // Stage 7: Parts & Inventory (Lite)
+  Part,
+  PartUnit,
+  VisitPart,
+  CreatePartInput,
+  AddVisitPartInput,
 };
 
 // =============================================================================
@@ -922,6 +942,16 @@ export const maintenanceKeys = {
     all: ["maintenance", "notifications"] as const,
     list: (filters?: NotificationFilters) => [...maintenanceKeys.notifications.all, "list", filters] as const,
   },
+  // Parts (Stage 7)
+  parts: {
+    all: ["maintenance", "parts"] as const,
+    list: (filters?: { is_active?: boolean }) => [...maintenanceKeys.parts.all, "list", filters] as const,
+    detail: (id: number) => [...maintenanceKeys.parts.all, "detail", id] as const,
+  },
+  visitParts: {
+    all: ["maintenance", "visitParts"] as const,
+    list: (visitId: number) => [...maintenanceKeys.visitParts.all, "list", visitId] as const,
+  },
 } as const;
 
 // =============================================================================
@@ -941,4 +971,27 @@ export async function listNotificationLogs(
   filters?: NotificationFilters
 ): Promise<MaintenanceNotificationLog[]> {
   return getMaintenanceNotificationLogs(filters);
+}
+
+// =============================================================================
+// Parts API (Stage 7)
+// =============================================================================
+
+export { getParts, getPart, createPart, updatePart, deletePart };
+export { getVisitParts, addVisitPart, removeVisitPart };
+
+/**
+ * List parts catalog.
+ * GET /api/maintenance/parts/
+ */
+export async function listParts(filters?: { is_active?: boolean }): Promise<Part[]> {
+  return getParts(filters);
+}
+
+/**
+ * List parts used on a specific visit.
+ * GET /api/maintenance/visits/{id}/parts/
+ */
+export async function listVisitParts(visitId: number): Promise<VisitPart[]> {
+  return getVisitParts(visitId);
 }

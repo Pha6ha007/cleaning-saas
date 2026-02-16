@@ -32,18 +32,82 @@ import {
   Timer,
   Bell,
   ChevronDown,
+  Package,
+  Plus,
+  Trash2,
+  X,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { getServiceVisit } from "@/api/client";
 import {
   toggleChecklistItem,
   downloadVisitReport,
   sendNotification,
+  listParts,
+  listVisitParts,
+  addVisitPart,
+  removeVisitPart,
+  maintenanceKeys,
   type NotificationKind,
+  type Part,
+  type VisitPart,
 } from "@/api/maintenance";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
 import { MaintenanceLayout } from "@/contexts/maintenance/ui/MaintenanceLayout";
 import { CompletionBlockersPanel } from "@/contexts/maintenance/ui/ApiErrorPanel";
 import { buildCompletionBlockers } from "@/contexts/maintenance/utils/completionErrors";
+
+// Extended visit detail type for maintenance (API returns objects, not strings)
+type MaintenanceVisitDetail = {
+  id: number;
+  status: string;
+  scheduled_date: string;
+  scheduled_start_time?: string | null;
+  scheduled_end_time?: string | null;
+  actual_start_time?: string | null;
+  actual_end_time?: string | null;
+  location?: {
+    id: number;
+    name: string;
+    address?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+  } | null;
+  cleaner?: {
+    id: number;
+    full_name: string;
+    phone?: string | null;
+  } | null;
+  asset?: {
+    id: number;
+    name: string;
+    asset_type?: { id: number; name: string } | null;
+  } | null;
+  manager_notes?: string | null;
+  cleaner_notes?: string | null;
+  checklist_items?: Array<{
+    id: number;
+    text: string;
+    is_completed: boolean;
+    is_required: boolean;
+  }>;
+  photos?: {
+    before?: { url: string } | null;
+    after?: { url: string } | null;
+  } | null;
+  sla_status?: string;
+  sla_reasons?: string[];
+  sla_deadline?: string | null;
+  priority?: string;
+};
 
 // RBAC: Check if user can access visits (owner/manager/staff)
 function canAccessVisits(role: UserRole): boolean {
@@ -208,17 +272,83 @@ export default function VisitDetail() {
   const visitId = Number(id);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isSendingNotification, setIsSendingNotification] = useState(false);
+  const [showAddPartModal, setShowAddPartModal] = useState(false);
+  const [addPartForm, setAddPartForm] = useState({
+    part_id: "",
+    quantity: "1",
+    notes: "",
+  });
 
   // Fetch visit details
+  // Note: API returns objects for location/cleaner, but ManagerJobDetail types them as strings
+  // We cast to MaintenanceVisitDetail which has correct object types
   const {
     data: visit,
     isLoading,
     isError,
     refetch,
-  } = useQuery({
+  } = useQuery<MaintenanceVisitDetail>({
     queryKey: ["serviceVisit", visitId],
-    queryFn: () => getServiceVisit(visitId),
+    queryFn: async () => {
+      const data = await getServiceVisit(visitId);
+      return data as unknown as MaintenanceVisitDetail;
+    },
     enabled: hasAccess && !isNaN(visitId),
+  });
+
+  // Fetch parts catalog for add modal
+  const { data: partsData = [] } = useQuery({
+    queryKey: maintenanceKeys.parts.list({ is_active: true }),
+    queryFn: () => listParts({ is_active: true }),
+    enabled: hasAccess && isManager,
+  });
+
+  // Fetch visit parts
+  const { data: visitParts = [], refetch: refetchParts } = useQuery({
+    queryKey: maintenanceKeys.visitParts.list(visitId),
+    queryFn: () => listVisitParts(visitId),
+    enabled: hasAccess && !isNaN(visitId),
+  });
+
+  // Add part mutation
+  const addPartMutation = useMutation({
+    mutationFn: (data: { part_id: number; quantity?: number; notes?: string }) =>
+      addVisitPart(visitId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: maintenanceKeys.visitParts.list(visitId) });
+      toast({
+        title: "Part added",
+        description: "Part has been added to this visit.",
+      });
+      setShowAddPartModal(false);
+      setAddPartForm({ part_id: "", quantity: "1", notes: "" });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error?.response?.data?.message || "Failed to add part.",
+      });
+    },
+  });
+
+  // Remove part mutation
+  const removePartMutation = useMutation({
+    mutationFn: (partId: number) => removeVisitPart(visitId, partId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: maintenanceKeys.visitParts.list(visitId) });
+      toast({
+        title: "Part removed",
+        description: "Part has been removed from this visit.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error?.response?.data?.message || "Failed to remove part.",
+      });
+    },
   });
 
   // Toggle checklist item mutation
@@ -849,6 +979,203 @@ export default function VisitDetail() {
           </div>
         </div>
       </div>
+
+      {/* Parts Used Section (Stage 7) */}
+      <div className="detail-card mt-4">
+        <div className="flex items-center justify-between">
+          <h2 className="detail-card-title">
+            <Package />
+            Parts Used ({visitParts.length})
+          </h2>
+          {isManager && visit.status !== "cancelled" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAddPartModal(true)}
+            >
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              Add Part
+            </Button>
+          )}
+        </div>
+        <div className="mt-3">
+          {visitParts.length === 0 ? (
+            <div className="py-4 text-center">
+              <Package className="mx-auto h-8 w-8 text-muted-foreground/50" />
+              <p className="mt-2 text-sm text-muted-foreground">No parts recorded</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {visitParts.map((vp: VisitPart) => (
+                <div
+                  key={vp.id}
+                  className="flex items-center justify-between rounded-lg border border-border px-3 py-2"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm text-foreground">
+                        {vp.part.name}
+                      </span>
+                      {vp.part.sku && (
+                        <span className="text-xs text-muted-foreground">
+                          ({vp.part.sku})
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-xs text-muted-foreground">
+                        {vp.quantity} {vp.part.unit_display || vp.part.unit}
+                      </span>
+                      {vp.notes && (
+                        <>
+                          <span className="text-muted-foreground">·</span>
+                          <span className="text-xs text-muted-foreground truncate">
+                            {vp.notes}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  {isManager && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                      onClick={() => removePartMutation.mutate(vp.id)}
+                      disabled={removePartMutation.isPending}
+                    >
+                      {removePartMutation.isPending ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Add Part Modal */}
+      {showAddPartModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-xl border border-border bg-card shadow-xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-border px-6 py-4">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Add Part</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Record a part used on this visit
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAddPartModal(false)}
+                disabled={addPartMutation.isPending}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="part">Part *</Label>
+                <Select
+                  value={addPartForm.part_id}
+                  onValueChange={(value) =>
+                    setAddPartForm({ ...addPartForm, part_id: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a part" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {partsData.map((part: Part) => (
+                      <SelectItem key={part.id} value={String(part.id)}>
+                        {part.name}
+                        {part.sku && ` (${part.sku})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {partsData.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    No parts in catalog.{" "}
+                    <Link to="/maintenance/parts" className="text-blue-600 hover:underline">
+                      Add parts first
+                    </Link>
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="quantity">Quantity</Label>
+                <Input
+                  id="quantity"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={addPartForm.quantity}
+                  onChange={(e) =>
+                    setAddPartForm({ ...addPartForm, quantity: e.target.value })
+                  }
+                  placeholder="1"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes</Label>
+                <Input
+                  id="notes"
+                  value={addPartForm.notes}
+                  onChange={(e) =>
+                    setAddPartForm({ ...addPartForm, notes: e.target.value })
+                  }
+                  placeholder="Optional notes..."
+                />
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex justify-end gap-3 border-t border-border px-6 py-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowAddPartModal(false)}
+                disabled={addPartMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (!addPartForm.part_id) {
+                    toast({
+                      variant: "destructive",
+                      title: "Validation Error",
+                      description: "Please select a part",
+                    });
+                    return;
+                  }
+                  addPartMutation.mutate({
+                    part_id: Number(addPartForm.part_id),
+                    quantity: parseFloat(addPartForm.quantity) || 1,
+                    notes: addPartForm.notes.trim() || undefined,
+                  });
+                }}
+                disabled={addPartMutation.isPending || !addPartForm.part_id}
+              >
+                {addPartMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Add Part
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </MaintenanceLayout>
   );
 }

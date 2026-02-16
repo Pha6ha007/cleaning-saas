@@ -2132,3 +2132,122 @@ export async function getMaintenanceNotificationLogs(
   const url = `/api/maintenance/notifications/${queryString ? `?${queryString}` : ""}`;
   return apiFetch<MaintenanceNotificationLog[]>(url);
 }
+
+// ---------- Stage 7: Parts & Inventory (Lite) API ----------
+
+export type PartUnit = "pcs" | "m" | "kg" | "L" | "set";
+
+export type Part = {
+  id: number;
+  name: string;
+  sku: string;
+  description: string;
+  unit: PartUnit;
+  unit_display: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type VisitPart = {
+  id: number;
+  part: {
+    id: number;
+    name: string;
+    sku: string;
+    unit: PartUnit;
+    unit_display: string;
+  };
+  quantity: string; // Decimal as string
+  notes: string;
+  added_at: string;
+  added_by: {
+    id: number;
+    name: string;
+  } | null;
+};
+
+export type CreatePartInput = {
+  name: string;
+  sku?: string;
+  description?: string;
+  unit?: PartUnit;
+};
+
+export type AddVisitPartInput = {
+  part_id: number;
+  quantity?: number;
+  notes?: string;
+};
+
+export async function getParts(filters?: {
+  is_active?: boolean;
+}): Promise<Part[]> {
+  await loginManager();
+  const params = new URLSearchParams();
+  if (filters?.is_active !== undefined) {
+    params.set("is_active", String(filters.is_active));
+  }
+  const query = params.toString();
+  const url = query ? `/api/maintenance/parts/?${query}` : "/api/maintenance/parts/";
+  return apiFetch<Part[]>(url);
+}
+
+export async function getPart(id: number): Promise<Part> {
+  await loginManager();
+  return apiFetch<Part>(`/api/maintenance/parts/${id}/`);
+}
+
+export async function createPart(input: CreatePartInput): Promise<Part> {
+  await loginManager();
+  return apiFetch<Part>("/api/maintenance/parts/", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updatePart(
+  id: number,
+  input: Partial<CreatePartInput & { is_active: boolean }>
+): Promise<Part> {
+  await loginManager();
+  return apiFetch<Part>(`/api/maintenance/parts/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deletePart(id: number): Promise<void> {
+  await loginManager();
+  await apiFetch(`/api/maintenance/parts/${id}/`, {
+    method: "DELETE",
+  });
+}
+
+// Visit Parts (parts used on a service visit)
+
+export async function getVisitParts(visitId: number): Promise<VisitPart[]> {
+  await loginManager();
+  return apiFetch<VisitPart[]>(`/api/maintenance/visits/${visitId}/parts/`);
+}
+
+export async function addVisitPart(
+  visitId: number,
+  input: AddVisitPartInput
+): Promise<VisitPart> {
+  await loginManager();
+  return apiFetch<VisitPart>(`/api/maintenance/visits/${visitId}/parts/`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function removeVisitPart(
+  visitId: number,
+  partId: number
+): Promise<void> {
+  await loginManager();
+  await apiFetch(`/api/maintenance/visits/${visitId}/parts/${partId}/`, {
+    method: "DELETE",
+  });
+}
