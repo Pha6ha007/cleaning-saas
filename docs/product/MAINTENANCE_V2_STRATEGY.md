@@ -1,7 +1,7 @@
 # MAINTENANCE CONTEXT — V2 STRATEGY
 
 **Status:** IMPLEMENTED
-**Version:** 2.0
+**Version:** 2.1
 **Created:** 2026-02-15
 **Updated:** 2026-02-16
 **Authority:** Platform Strategy
@@ -191,6 +191,36 @@ Constraints:
 
 ---
 
+# STAGE 7 — Parts & Inventory (Lite) ✅ COMPLETED
+
+**Commit:** `23639ca`
+
+**Goal:** Track parts/consumables used on service visits.
+
+Add:
+
+- Part model (company-scoped catalog)
+  - name, sku, description, unit (pcs/m/kg/L/set)
+  - is_active flag for soft delete
+- VisitPart model (parts used on visit)
+  - Links Job to Part with quantity
+  - notes field for usage details
+  - added_by user tracking
+- Parts CRUD API endpoints
+- Visit Parts API (add/remove parts from visits)
+- Parts catalog page (/maintenance/parts)
+- "Parts Used" section in Visit Detail page
+
+Constraints:
+
+- **Lite version** — no inventory/stock levels tracking
+- No pricing or cost tracking
+- No asset type linkage (global catalog)
+- No supplier management
+- Quantity tracking only (no automated reordering)
+
+---
+
 ## 4. Architectural Guardrails
 
 Maintenance must never:
@@ -226,6 +256,7 @@ Maintenance becomes standalone when:
 - ✅ Has report suite
 - ✅ Has release lock document
 - ✅ Has notifications layer
+- ✅ Has parts tracking
 
 **MaintainProof is now a standalone product tier.**
 
@@ -249,3 +280,4 @@ Any Stage implementation requires:
 |---------|------|--------|
 | 1.0 | 2026-02-15 | Initial V2 Strategy |
 | 2.0 | 2026-02-16 | Stages 3-6 implemented, status IMPLEMENTED |
+| 2.1 | 2026-02-16 | Stage 7 Parts & Inventory (Lite) implemented |
