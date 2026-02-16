@@ -37,6 +37,7 @@ import {
 } from "@/api/maintenance";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
 import { MaintenanceLayout } from "@/contexts/maintenance/ui/MaintenanceLayout";
+import { AssetImportExport } from "./components/AssetImportExport";
 
 // Format date for display (Lovable pattern)
 function formatDate(dateStr: string): string {
@@ -431,6 +432,8 @@ export default function Assets() {
               )}
               Include inactive
             </button>
+            {/* Import/Export (Stage 16) */}
+            <AssetImportExport canEdit={hasWriteAccess} />
             {hasWriteAccess && (
               <Button size="sm" className="h-8 px-3 text-xs font-medium" onClick={handleAddNew}>
                 <Plus className="w-3.5 h-3.5 mr-1.5" />

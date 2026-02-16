@@ -3,8 +3,10 @@
 // Imported from control-hub/src/pages/WorkOrdersPage.tsx design
 // See docs/execution/LOVABLE_UI_IMPORT_PROTOCOL.md
 
-import { Plus, ChevronRight, Camera, CheckSquare, AlertTriangle, Timer } from "lucide-react";
+import { Plus, ChevronRight, Camera, CheckSquare, AlertTriangle, Timer, CalendarDays } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -25,8 +27,9 @@ import { cn } from "@/lib/utils";
 // Types
 // ============================================================================
 
-// Only valid statuses per MAINTENANCE_CONTEXT_V1_SCOPE
-export type VisitStatus = "scheduled" | "in_progress" | "completed";
+// Valid statuses per MAINTENANCE_CONTEXT_V1_SCOPE
+// cancelled is included for filtering but excluded from UI display
+export type VisitStatus = "scheduled" | "in_progress" | "completed" | "cancelled";
 
 export interface VisitLayoutItem {
   id: number | string;
@@ -72,18 +75,24 @@ interface VisitsLovableLayoutProps {
   categoryFilter?: string;
   onCategoryFilterChange?: (value: string) => void;
   categoryOptions?: FilterOption[];
+  // Stage 10: Selection props for bulk operations
+  selectable?: boolean;
+  selectedIds?: Set<number>;
+  onSelectAll?: (checked: boolean) => void;
+  onSelectOne?: (id: number, checked: boolean) => void;
 }
 
 // ============================================================================
 // Sub-components (Lovable style)
 // ============================================================================
 
-// Only valid statuses per MAINTENANCE_CONTEXT_V1_SCOPE
-// cancelled is excluded from UI
+// Valid statuses per MAINTENANCE_CONTEXT_V1_SCOPE
+// cancelled is included for proper type handling
 const statusConfig: Record<VisitStatus, { label: string; className: string }> = {
   scheduled: { label: "Scheduled", className: "status-open" },
   in_progress: { label: "In Progress", className: "status-progress" },
   completed: { label: "Completed", className: "status-completed" },
+  cancelled: { label: "Cancelled", className: "status-cancelled" },
 };
 
 function StatusPill({ status }: { status: VisitStatus }) {
@@ -312,7 +321,21 @@ export function VisitsLovableLayout({
   categoryFilter = "all",
   onCategoryFilterChange,
   categoryOptions = [],
+  // Stage 10: Selection
+  selectable = false,
+  selectedIds = new Set(),
+  onSelectAll,
+  onSelectOne,
 }: VisitsLovableLayoutProps) {
+  // Stage 10: Calculate selection state for "select all" checkbox
+  // Only count selectable visits (not completed/cancelled)
+  const selectableVisits = visits.filter(
+    (v) => v.status !== "completed" && v.status !== "cancelled"
+  );
+  const allSelectableSelected =
+    selectableVisits.length > 0 &&
+    selectableVisits.every((v) => selectedIds.has(Number(v.id)));
+  const someSelected = selectedIds.size > 0 && !allSelectableSelected;
   // Only valid statuses per MAINTENANCE_CONTEXT_V1_SCOPE
   // cancelled is excluded from display and filtering
   const statusOptions: FilterOption[] = [
@@ -326,16 +349,27 @@ export function VisitsLovableLayout({
       {/* Header */}
       <div className="page-header">
         <h1 className="page-title">Service Visits</h1>
-        {canWrite && (
+        <div className="flex items-center gap-2">
           <Button
+            variant="outline"
             size="sm"
-            className="h-8 px-3 text-xs font-medium"
-            onClick={onCreateVisit}
+            className="h-8 px-3 text-xs font-medium rounded-[6px]"
+            onClick={() => window.location.href = "/maintenance/calendar"}
           >
-            <Plus className="w-3.5 h-3.5 mr-1.5" />
-            Create Visit
+            <CalendarDays className="w-3.5 h-3.5 mr-1.5" />
+            Calendar
           </Button>
-        )}
+          {canWrite && (
+            <Button
+              size="sm"
+              className="h-8 px-3 text-xs font-medium"
+              onClick={onCreateVisit}
+            >
+              <Plus className="w-3.5 h-3.5 mr-1.5" />
+              Create Visit
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Filters */}
@@ -389,6 +423,19 @@ export function VisitsLovableLayout({
           <table className="data-table">
             <thead>
               <tr>
+                {/* Stage 10: Selection checkbox column */}
+                {selectable && (
+                  <th className="w-[40px]">
+                    <Checkbox
+                      checked={allSelectableSelected}
+                      // @ts-ignore - indeterminate is valid but not in types
+                      data-state={someSelected ? "indeterminate" : allSelectableSelected ? "checked" : "unchecked"}
+                      onCheckedChange={(checked) => onSelectAll?.(!!checked)}
+                      aria-label="Select all"
+                      className="translate-y-[2px]"
+                    />
+                  </th>
+                )}
                 <th className="w-[100px]">Status</th>
                 <th>Visit ID</th>
                 <th>Asset</th>
@@ -402,12 +449,28 @@ export function VisitsLovableLayout({
               </tr>
             </thead>
             <tbody>
-              {visits.map((visit) => (
+              {visits.map((visit) => {
+                const isSelectable = visit.status !== "completed" && visit.status !== "cancelled";
+                const isSelected = selectedIds.has(Number(visit.id));
+
+                return (
                 <tr
                   key={visit.id}
-                  className="cursor-pointer group"
+                  className={cn("cursor-pointer group", isSelected && "bg-primary/5")}
                   onClick={() => onRowClick?.(visit.id)}
                 >
+                  {/* Stage 10: Row checkbox */}
+                  {selectable && (
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={isSelected}
+                        disabled={!isSelectable}
+                        onCheckedChange={(checked) => onSelectOne?.(Number(visit.id), !!checked)}
+                        aria-label={`Select visit ${visit.id}`}
+                        className="translate-y-[2px]"
+                      />
+                    </td>
+                  )}
                   <td>
                     <StatusPill status={visit.status} />
                   </td>
@@ -446,7 +509,8 @@ export function VisitsLovableLayout({
                     <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 group-hover:text-muted-foreground" />
                   </td>
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
         )}

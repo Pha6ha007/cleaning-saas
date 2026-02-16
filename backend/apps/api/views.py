@@ -19,6 +19,7 @@ from .views_manager_company import *  # noqa
 from .views_manager_jobs import *  # noqa
 from .views_reports import *  # noqa
 from .views_maintenance import *  # noqa
+from .views_customer_portal import *  # noqa  # Stage 16: Customer Portal
 
 
 # === Default checklist templates for new companies ===

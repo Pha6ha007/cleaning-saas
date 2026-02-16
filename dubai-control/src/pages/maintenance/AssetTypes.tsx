@@ -20,12 +20,21 @@ import {
   RefreshCw,
 } from "lucide-react";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   listAssetTypes,
   createNewAssetType,
   updateExistingAssetType,
   removeAssetType,
+  getChecklistTemplates,
   maintenanceKeys,
   type AssetType,
+  type ChecklistTemplate,
 } from "@/api/maintenance";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
 import { MaintenanceLayout } from "@/contexts/maintenance/ui/MaintenanceLayout";
@@ -54,6 +63,7 @@ export default function AssetTypes() {
     name: "",
     description: "",
     is_active: true,
+    default_checklist_template_id: "" as string,
   });
 
   // Check access
@@ -73,9 +83,16 @@ export default function AssetTypes() {
     enabled: hasReadAccess,
   });
 
+  // Fetch checklist templates for dropdown
+  const { data: checklistTemplates = [] } = useQuery({
+    queryKey: maintenanceKeys.checklistTemplates.list({ is_active: true }),
+    queryFn: () => getChecklistTemplates({ is_active: true }),
+    enabled: hasWriteAccess,
+  });
+
   // Create mutation
   const createMutation = useMutation({
-    mutationFn: (data: { name: string; description?: string }) =>
+    mutationFn: (data: { name: string; description?: string; default_checklist_template_id?: number | null }) =>
       createNewAssetType(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: maintenanceKeys.assetTypes.all });
@@ -103,7 +120,7 @@ export default function AssetTypes() {
       data,
     }: {
       id: number;
-      data: Partial<{ name: string; description: string; is_active: boolean }>;
+      data: Partial<{ name: string; description: string; is_active: boolean; default_checklist_template_id: number | null }>;
     }) => updateExistingAssetType(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: maintenanceKeys.assetTypes.all });
@@ -156,6 +173,7 @@ export default function AssetTypes() {
       name: "",
       description: "",
       is_active: true,
+      default_checklist_template_id: "",
     });
     setShowModal(true);
   };
@@ -166,6 +184,7 @@ export default function AssetTypes() {
       name: type.name,
       description: type.description || "",
       is_active: type.is_active,
+      default_checklist_template_id: type.default_checklist_template?.id?.toString() || "",
     });
     setShowModal(true);
   };
@@ -177,6 +196,7 @@ export default function AssetTypes() {
       name: "",
       description: "",
       is_active: true,
+      default_checklist_template_id: "",
     });
   };
 
@@ -190,6 +210,11 @@ export default function AssetTypes() {
       return;
     }
 
+    // Parse checklist template ID
+    const checklistTemplateId = formData.default_checklist_template_id && formData.default_checklist_template_id !== "__none__"
+      ? Number(formData.default_checklist_template_id)
+      : null;
+
     if (editingType) {
       updateMutation.mutate({
         id: editingType.id,
@@ -197,12 +222,14 @@ export default function AssetTypes() {
           name: formData.name.trim(),
           description: formData.description.trim() || undefined,
           is_active: formData.is_active,
+          default_checklist_template_id: checklistTemplateId,
         },
       });
     } else {
       createMutation.mutate({
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
+        default_checklist_template_id: checklistTemplateId,
       });
     }
   };
@@ -313,6 +340,7 @@ export default function AssetTypes() {
                 <tr>
                   <th>Name</th>
                   <th>Description</th>
+                  <th>Default Checklist</th>
                   <th className="w-[80px]">Status</th>
                   {hasWriteAccess && <th className="w-[100px]">Actions</th>}
                 </tr>
@@ -323,6 +351,9 @@ export default function AssetTypes() {
                     <td className="font-medium text-foreground">{type.name}</td>
                     <td className="text-muted-foreground">
                       {type.description || "—"}
+                    </td>
+                    <td className="text-muted-foreground">
+                      {type.default_checklist_template?.name || "—"}
                     </td>
                     <td>
                       <span
@@ -415,6 +446,32 @@ export default function AssetTypes() {
                     placeholder="Optional description..."
                     rows={3}
                   />
+                </div>
+
+                {/* Default Checklist Template (Stage 9) */}
+                <div className="space-y-2">
+                  <Label htmlFor="checklist">Default Checklist</Label>
+                  <Select
+                    value={formData.default_checklist_template_id || "__none__"}
+                    onValueChange={(v) =>
+                      setFormData({ ...formData, default_checklist_template_id: v === "__none__" ? "" : v })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select checklist template" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">None</SelectItem>
+                      {checklistTemplates.map((tpl) => (
+                        <SelectItem key={tpl.id} value={String(tpl.id)}>
+                          {tpl.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Default checklist applied when creating visits for assets of this type
+                  </p>
                 </div>
 
                 {editingType && (

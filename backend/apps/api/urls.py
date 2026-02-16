@@ -599,6 +599,7 @@ urlpatterns = [
 
     # =====================
     # Stage 7: Parts & Inventory (Lite)
+    # Stage 14: Full Inventory Management
     # =====================
     path(
         "maintenance/parts/",
@@ -606,9 +607,24 @@ urlpatterns = [
         name="maintenance-parts",
     ),
     path(
+        "maintenance/parts/low-stock/",
+        api_views.PartsLowStockView.as_view(),
+        name="maintenance-parts-low-stock",
+    ),
+    path(
         "maintenance/parts/<int:pk>/",
         api_views.PartDetailView.as_view(),
         name="maintenance-part-detail",
+    ),
+    path(
+        "maintenance/parts/<int:pk>/adjust-stock/",
+        api_views.PartStockAdjustView.as_view(),
+        name="maintenance-part-adjust-stock",
+    ),
+    path(
+        "maintenance/parts/<int:pk>/stock-history/",
+        api_views.PartStockHistoryView.as_view(),
+        name="maintenance-part-stock-history",
     ),
     path(
         "maintenance/visits/<int:pk>/parts/",
@@ -619,5 +635,138 @@ urlpatterns = [
         "maintenance/visits/<int:visit_id>/parts/<int:part_id>/",
         api_views.VisitPartDeleteView.as_view(),
         name="maintenance-visit-part-delete",
+    ),
+
+    # =====================
+    # Stage 9: Checklist Templates CRUD
+    # =====================
+    path(
+        "maintenance/checklists/",
+        api_views.MaintenanceChecklistTemplatesView.as_view(),
+        name="maintenance-checklists",
+    ),
+    path(
+        "maintenance/checklists/<int:pk>/",
+        api_views.MaintenanceChecklistTemplateDetailView.as_view(),
+        name="maintenance-checklist-detail",
+    ),
+    # =====================
+    # Stage 10: Bulk Operations
+    # =====================
+    path(
+        "maintenance/visits/bulk-assign/",
+        api_views.BulkAssignTechnicianView.as_view(),
+        name="maintenance-bulk-assign",
+    ),
+    path(
+        "maintenance/visits/bulk-cancel/",
+        api_views.BulkCancelVisitsView.as_view(),
+        name="maintenance-bulk-cancel",
+    ),
+    # Stage 11.1: Calendar D&D Reschedule
+    # ====================================
+    path(
+        "maintenance/visits/<int:pk>/reschedule/",
+        api_views.RescheduleVisitView.as_view(),
+        name="maintenance-visit-reschedule",
+    ),
+    # =====================
+    # Stage 15: Asset Documents
+    # =====================
+    path(
+        "maintenance/assets/<int:asset_id>/documents/",
+        api_views.AssetDocumentListCreateView.as_view(),
+        name="maintenance-asset-documents",
+    ),
+    path(
+        "maintenance/documents/<int:pk>/",
+        api_views.AssetDocumentDetailView.as_view(),
+        name="maintenance-document-detail",
+    ),
+    # =====================
+    # Stage 16: Import/Export
+    # =====================
+    path(
+        "maintenance/assets/export/",
+        api_views.AssetExportView.as_view(),
+        name="maintenance-assets-export",
+    ),
+    path(
+        "maintenance/assets/import/",
+        api_views.AssetImportView.as_view(),
+        name="maintenance-assets-import",
+    ),
+    path(
+        "maintenance/assets/import-template/",
+        api_views.AssetImportTemplateView.as_view(),
+        name="maintenance-assets-import-template",
+    ),
+
+    # =====================
+    # Stage 16: Customer Portal
+    # =====================
+    path(
+        "customer/dashboard/",
+        api_views.CustomerDashboardView.as_view(),
+        name="customer-dashboard",
+    ),
+    path(
+        "customer/profile/",
+        api_views.CustomerProfileView.as_view(),
+        name="customer-profile",
+    ),
+    path(
+        "customer/locations/",
+        api_views.CustomerLocationsView.as_view(),
+        name="customer-locations",
+    ),
+    path(
+        "customer/assets/",
+        api_views.CustomerAssetsView.as_view(),
+        name="customer-assets",
+    ),
+    path(
+        "customer/assets/<int:pk>/",
+        api_views.CustomerAssetDetailView.as_view(),
+        name="customer-asset-detail",
+    ),
+    path(
+        "customer/visits/",
+        api_views.CustomerVisitsView.as_view(),
+        name="customer-visits",
+    ),
+    path(
+        "customer/visits/<int:pk>/",
+        api_views.CustomerVisitDetailView.as_view(),
+        name="customer-visit-detail",
+    ),
+    path(
+        "customer/contracts/",
+        api_views.CustomerContractsView.as_view(),
+        name="customer-contracts",
+    ),
+    path(
+        "customer/contracts/<int:pk>/",
+        api_views.CustomerContractDetailView.as_view(),
+        name="customer-contract-detail",
+    ),
+
+    # =====================
+    # Customer Management (for Owners/Managers)
+    # =====================
+    path(
+        "company/customers/",
+        api_views.CustomerManagementListCreateView.as_view(),
+        name="company-customers",
+    ),
+    path(
+        "company/customers/<int:pk>/",
+        api_views.CustomerManagementDetailView.as_view(),
+        name="company-customer-detail",
+    ),
+    path(
+        "company/customers/<int:pk>/reset-password/",
+        api_views.CustomerResetPasswordView.as_view(),
+        name="company-customer-reset-password",
     ),
 ]

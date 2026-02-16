@@ -5,7 +5,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, Link } from "react-router-dom";
-import { format, addDays, subDays, startOfMonth } from "date-fns";
+import { format, addDays, subDays, startOfMonth, subMonths } from "date-fns";
 import {
   Calendar,
   CalendarClock,
@@ -14,6 +14,11 @@ import {
   ChevronRight,
   Loader2,
   RefreshCw,
+  CheckCircle2,
+  Users,
+  PieChart,
+  Clock,
+  TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
@@ -21,6 +26,8 @@ import { MaintenanceLayout } from "@/contexts/maintenance/ui/MaintenanceLayout";
 import {
   listVisits,
   listAssets,
+  getMaintenanceAnalyticsSummary,
+  getMaintenanceTechniciansPerformance,
   maintenanceKeys,
   type ServiceVisit,
 } from "@/api/maintenance";
@@ -260,6 +267,49 @@ export default function MaintenanceDashboard() {
     enabled: hasAccess,
   });
 
+  // -------------------------------------------------------------------------
+  // 5. Analytics Summary (SLA Compliance)
+  // -------------------------------------------------------------------------
+  const thirtyDaysAgo = format(subMonths(new Date(), 1), "yyyy-MM-dd");
+  const {
+    data: analyticsSummary,
+    isLoading: analyticsLoading,
+    isError: analyticsError,
+    refetch: refetchAnalytics,
+  } = useQuery({
+    queryKey: ["maintenance", "analytics", "summary", thirtyDaysAgo, today],
+    queryFn: () => getMaintenanceAnalyticsSummary({ date_from: thirtyDaysAgo, date_to: today }),
+    enabled: hasAccess,
+  });
+
+  // -------------------------------------------------------------------------
+  // 6. Technician Performance
+  // -------------------------------------------------------------------------
+  const {
+    data: technicianPerformance = [],
+    isLoading: techLoading,
+    isError: techError,
+    refetch: refetchTech,
+  } = useQuery({
+    queryKey: ["maintenance", "analytics", "technicians", monthStart, today],
+    queryFn: () => getMaintenanceTechniciansPerformance({ date_from: monthStart, date_to: today }),
+    enabled: hasAccess,
+  });
+
+  // -------------------------------------------------------------------------
+  // 7. Recent Completed Visits
+  // -------------------------------------------------------------------------
+  const {
+    data: recentCompleted = [],
+    isLoading: recentLoading,
+    isError: recentError,
+    refetch: refetchRecent,
+  } = useQuery({
+    queryKey: maintenanceKeys.visits.list({ status: "completed", date_from: thirtyDaysAgo }),
+    queryFn: () => listVisits({ status: "completed", date_from: thirtyDaysAgo, date_to: today }),
+    enabled: hasAccess,
+  });
+
   // Filter out cancelled visits from all counts
   const validTodayVisits = useMemo(() => filterValidVisits(todayVisits), [todayVisits]);
   const validUpcomingVisits = useMemo(() => filterValidVisits(upcomingVisits), [upcomingVisits]);
@@ -276,6 +326,37 @@ export default function MaintenanceDashboard() {
     });
     return assetIds.size;
   }, [validMonthVisits]);
+
+  // Calculate SLA compliance percentage
+  const slaCompliancePercent = useMemo(() => {
+    if (!analyticsSummary) return 0;
+    return Math.round(analyticsSummary.sla_compliance_rate * 100);
+  }, [analyticsSummary]);
+
+  // Calculate assets by type
+  const assetsByType = useMemo(() => {
+    const counts: Record<string, number> = {};
+    allAssets.forEach((asset) => {
+      const typeName = asset.asset_type?.name || "Uncategorized";
+      counts[typeName] = (counts[typeName] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5); // Top 5
+  }, [allAssets]);
+
+  // Get top technicians by workload
+  const topTechnicians = useMemo(() => {
+    return technicianPerformance.slice(0, 3);
+  }, [technicianPerformance]);
+
+  // Recent completed visits (last 5)
+  const recentCompletedVisits = useMemo(() => {
+    return recentCompleted
+      .sort((a, b) => new Date(b.scheduled_date).getTime() - new Date(a.scheduled_date).getTime())
+      .slice(0, 5);
+  }, [recentCompleted]);
 
   // -------------------------------------------------------------------------
   // Deep link URLs with query params
@@ -390,6 +471,207 @@ export default function MaintenanceDashboard() {
                 : "teal"
             }
           />
+        </div>
+
+        {/* Stage 17: Additional Dashboard Widgets */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {/* 5. SLA Compliance */}
+          <Widget
+            title="SLA Compliance"
+            icon={<CheckCircle2 className="h-5 w-5" />}
+            value={`${slaCompliancePercent}%`}
+            subtitle="Last 30 days"
+            loading={analyticsLoading}
+            error={analyticsError}
+            onRetry={() => refetchAnalytics()}
+            linkTo="/maintenance/analytics"
+            linkLabel="Analytics"
+            variant={slaCompliancePercent >= 90 ? "success" : slaCompliancePercent >= 70 ? "warning" : "default"}
+          />
+
+          {/* 6. Avg Visit Duration */}
+          <Widget
+            title="Avg Duration"
+            icon={<Clock className="h-5 w-5" />}
+            value={analyticsSummary ? `${analyticsSummary.avg_visit_duration_hours.toFixed(1)}h` : "—"}
+            subtitle="Per visit (30 days)"
+            loading={analyticsLoading}
+            error={analyticsError}
+            onRetry={() => refetchAnalytics()}
+            variant="blue"
+          />
+
+          {/* 7. Completed This Month */}
+          <Widget
+            title="Completed"
+            icon={<TrendingUp className="h-5 w-5" />}
+            value={analyticsSummary?.visits_completed || 0}
+            subtitle={`${analyticsSummary?.visits_delta ? (analyticsSummary.visits_delta > 0 ? "+" : "") + analyticsSummary.visits_delta.toFixed(0) + "% vs prev" : "This month"}`}
+            loading={analyticsLoading}
+            error={analyticsError}
+            onRetry={() => refetchAnalytics()}
+            linkTo="/maintenance/visits?status=completed"
+            variant="purple"
+          />
+        </div>
+
+        {/* Detailed Widgets Row */}
+        <div className="grid gap-4 lg:grid-cols-2">
+          {/* Technician Workload */}
+          <div className="premium-card p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-medium flex items-center gap-2">
+                <Users className="h-4 w-4 text-muted-foreground" />
+                Top Technicians
+              </h3>
+              <Link
+                to="/maintenance/analytics"
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                View all →
+              </Link>
+            </div>
+            {techLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : techError ? (
+              <div className="text-center py-6">
+                <p className="text-sm text-destructive">Failed to load</p>
+                <Button variant="ghost" size="sm" className="mt-2" onClick={() => refetchTech()}>
+                  Retry
+                </Button>
+              </div>
+            ) : topTechnicians.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-6 text-center">No data available</p>
+            ) : (
+              <div className="space-y-3">
+                {topTechnicians.map((tech, idx) => (
+                  <div key={tech.technician_id} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="flex items-center justify-center w-6 h-6 rounded-full bg-muted text-xs font-medium">
+                        {idx + 1}
+                      </span>
+                      <span className="text-sm font-medium truncate max-w-[150px]">
+                        {tech.technician_name}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-semibold">{tech.visits_completed}</span>
+                      <span className="text-xs text-muted-foreground ml-1">visits</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Assets by Type */}
+          <div className="premium-card p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-medium flex items-center gap-2">
+                <PieChart className="h-4 w-4 text-muted-foreground" />
+                Assets by Type
+              </h3>
+              <Link
+                to="/maintenance/assets"
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                View all →
+              </Link>
+            </div>
+            {assetsLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : assetsError ? (
+              <div className="text-center py-6">
+                <p className="text-sm text-destructive">Failed to load</p>
+                <Button variant="ghost" size="sm" className="mt-2" onClick={() => refetchAssets()}>
+                  Retry
+                </Button>
+              </div>
+            ) : assetsByType.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-6 text-center">No assets found</p>
+            ) : (
+              <div className="space-y-2">
+                {assetsByType.map((type) => {
+                  const percentage = Math.round((type.count / allAssets.length) * 100);
+                  return (
+                    <div key={type.name} className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="truncate max-w-[150px]">{type.name}</span>
+                        <span className="text-muted-foreground">{type.count} ({percentage}%)</span>
+                      </div>
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-[hsl(188,45%,24%)] rounded-full transition-all"
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Recent Completions */}
+        <div className="premium-card p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+              Recent Completions
+            </h3>
+            <Link
+              to="/maintenance/visits?status=completed"
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              View all →
+            </Link>
+          </div>
+          {recentLoading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : recentError ? (
+            <div className="text-center py-6">
+              <p className="text-sm text-destructive">Failed to load</p>
+              <Button variant="ghost" size="sm" className="mt-2" onClick={() => refetchRecent()}>
+                Retry
+              </Button>
+            </div>
+          ) : recentCompletedVisits.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-6 text-center">No completed visits</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 font-medium text-muted-foreground">Asset</th>
+                    <th className="text-left py-2 font-medium text-muted-foreground">Location</th>
+                    <th className="text-left py-2 font-medium text-muted-foreground">Date</th>
+                    <th className="text-left py-2 font-medium text-muted-foreground">Technician</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentCompletedVisits.map((visit) => (
+                    <tr
+                      key={visit.id}
+                      className="border-b last:border-0 hover:bg-muted/50 cursor-pointer"
+                      onClick={() => navigate(`/maintenance/visits/${visit.id}`)}
+                    >
+                      <td className="py-2">{visit.asset?.name || "—"}</td>
+                      <td className="py-2 text-muted-foreground">{visit.location?.name || "—"}</td>
+                      <td className="py-2">{format(new Date(visit.scheduled_date), "MMM d")}</td>
+                      <td className="py-2 text-muted-foreground">{visit.cleaner?.full_name || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Quick Actions */}

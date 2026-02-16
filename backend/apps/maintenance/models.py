@@ -49,6 +49,8 @@ class AssetType(models.Model):
     Examples: HVAC, Electrical, Plumbing, Elevator, IT Infrastructure
 
     Company-scoped: each company manages their own asset types.
+
+    Stage 9: Added default_checklist_template for auto-applying checklists.
     """
     company = models.ForeignKey(
         Company,
@@ -58,6 +60,17 @@ class AssetType(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
+
+    # Stage 9: Default checklist for assets of this type
+    default_checklist_template = models.ForeignKey(
+        'apps_locations.ChecklistTemplate',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="asset_types",
+        help_text="Default checklist applied when creating visits for assets of this type"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -631,6 +644,26 @@ class Part(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Stage 14: Full Inventory Management
+    stock_quantity = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        help_text="Current stock quantity"
+    )
+    reorder_point = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        help_text="Alert threshold for low stock"
+    )
+    reorder_quantity = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        help_text="Suggested quantity to reorder"
+    )
+
     class Meta:
         ordering = ["name"]
         unique_together = ["company", "name"]
@@ -641,6 +674,88 @@ class Part(models.Model):
         if self.sku:
             return f"{self.name} ({self.sku})"
         return self.name
+
+    @property
+    def is_low_stock(self) -> bool:
+        """Check if stock is below reorder point."""
+        return self.stock_quantity <= self.reorder_point and self.reorder_point > 0
+
+    @property
+    def stock_status(self) -> str:
+        """Return stock status: ok, low, out."""
+        if self.stock_quantity <= 0:
+            return "out"
+        if self.is_low_stock:
+            return "low"
+        return "ok"
+
+
+class StockAdjustment(models.Model):
+    """
+    Track stock level changes for parts.
+
+    Stage 14: Full Inventory Management
+    """
+
+    ADJUSTMENT_IN = "in"
+    ADJUSTMENT_OUT = "out"
+    ADJUSTMENT_CORRECTION = "correction"
+
+    ADJUSTMENT_TYPE_CHOICES = [
+        (ADJUSTMENT_IN, "Stock In"),
+        (ADJUSTMENT_OUT, "Stock Out"),
+        (ADJUSTMENT_CORRECTION, "Correction"),
+    ]
+
+    part = models.ForeignKey(
+        Part,
+        on_delete=models.CASCADE,
+        related_name="stock_adjustments"
+    )
+    adjustment_type = models.CharField(
+        max_length=20,
+        choices=ADJUSTMENT_TYPE_CHOICES
+    )
+    quantity = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Positive value for adjustment amount"
+    )
+    quantity_before = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Stock quantity before adjustment"
+    )
+    quantity_after = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Stock quantity after adjustment"
+    )
+    reason = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Reason for adjustment"
+    )
+    reference = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Reference (e.g., PO number, visit ID)"
+    )
+    adjusted_at = models.DateTimeField(auto_now_add=True)
+    adjusted_by = models.ForeignKey(
+        'apps_accounts.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="stock_adjustments"
+    )
+
+    class Meta:
+        ordering = ["-adjusted_at"]
+        verbose_name = "Stock Adjustment"
+        verbose_name_plural = "Stock Adjustments"
+
+    def __str__(self):
+        return f"{self.part.name} {self.adjustment_type} {self.quantity}"
 
 
 class VisitPart(models.Model):
@@ -689,3 +804,102 @@ class VisitPart(models.Model):
 
     def __str__(self):
         return f"{self.part.name} x{self.quantity} on Job #{self.job_id}"
+
+
+# =============================================================================
+# Stage 15: Asset Documents
+# =============================================================================
+
+def asset_document_upload_path(instance, filename):
+    """
+    Generate upload path for asset documents.
+    Format: assets/documents/{company_id}/{asset_id}/{filename}
+    """
+    return f"assets/documents/{instance.asset.company_id}/{instance.asset_id}/{filename}"
+
+
+class AssetDocument(models.Model):
+    """
+    Document attached to an asset.
+
+    Supports PDFs, images, and other file types.
+    Used for manuals, certificates, warranties, inspection reports.
+
+    See: docs/product/MAINTENANCE_V2_STRATEGY.md (Stage 15)
+    """
+
+    # Document type choices
+    TYPE_MANUAL = "manual"
+    TYPE_WARRANTY = "warranty"
+    TYPE_CERTIFICATE = "certificate"
+    TYPE_INSPECTION = "inspection"
+    TYPE_PHOTO = "photo"
+    TYPE_OTHER = "other"
+
+    TYPE_CHOICES = [
+        (TYPE_MANUAL, "Manual"),
+        (TYPE_WARRANTY, "Warranty Document"),
+        (TYPE_CERTIFICATE, "Certificate"),
+        (TYPE_INSPECTION, "Inspection Report"),
+        (TYPE_PHOTO, "Photo"),
+        (TYPE_OTHER, "Other"),
+    ]
+
+    asset = models.ForeignKey(
+        Asset,
+        on_delete=models.CASCADE,
+        related_name="documents"
+    )
+    name = models.CharField(
+        max_length=200,
+        help_text="Document name or title"
+    )
+    document_type = models.CharField(
+        max_length=20,
+        choices=TYPE_CHOICES,
+        default=TYPE_OTHER
+    )
+    file = models.FileField(
+        upload_to=asset_document_upload_path,
+        help_text="Uploaded file (PDF, image, etc.)"
+    )
+    description = models.TextField(
+        blank=True,
+        help_text="Optional description or notes"
+    )
+    file_size = models.PositiveIntegerField(
+        default=0,
+        help_text="File size in bytes"
+    )
+    mime_type = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="MIME type of the file"
+    )
+
+    # Audit
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    uploaded_by = models.ForeignKey(
+        'apps_accounts.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="uploaded_asset_documents"
+    )
+
+    class Meta:
+        ordering = ["-uploaded_at"]
+        verbose_name = "Asset Document"
+        verbose_name_plural = "Asset Documents"
+
+    def __str__(self):
+        return f"{self.name} ({self.asset.name})"
+
+    def save(self, *args, **kwargs):
+        # Auto-populate file_size and mime_type on save
+        if self.file:
+            self.file_size = self.file.size
+            # Try to determine MIME type
+            import mimetypes
+            mime, _ = mimetypes.guess_type(self.file.name)
+            self.mime_type = mime or "application/octet-stream"
+        super().save(*args, **kwargs)

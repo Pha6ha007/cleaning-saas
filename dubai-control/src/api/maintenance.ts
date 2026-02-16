@@ -54,6 +54,9 @@ import {
   // PDF Reports (P5, P6 Proof Parity)
   downloadMaintenanceVisitReport,
   downloadAssetHistoryReport as downloadAssetHistoryReportClient,
+  // Maintenance Reports PDF (S2-P3)
+  downloadMaintenanceWeeklyPdf,
+  downloadMaintenanceMonthlyPdf,
   // Stage 5 Lite: Service Contracts
   getServiceContracts,
   getServiceContract,
@@ -73,6 +76,7 @@ import {
   type SendNotificationResult,
   type NotificationFilters,
   // Stage 7: Parts & Inventory (Lite)
+  // Stage 14: Full Inventory Management
   getParts,
   getPart,
   createPart,
@@ -81,24 +85,56 @@ import {
   getVisitParts,
   addVisitPart,
   removeVisitPart,
+  adjustPartStock,
+  getPartStockHistory,
+  getLowStockParts,
   type Part,
   type PartUnit,
   type VisitPart,
   type CreatePartInput,
   type AddVisitPartInput,
+  type StockAdjustment,
+  type StockAdjustmentType,
+  type AdjustStockInput,
+  // Stage 11.1: Calendar D&D
+  rescheduleServiceVisit,
+  // Stage 15: Asset Documents
+  getAssetDocuments,
+  uploadAssetDocument,
+  getAssetDocument,
+  updateAssetDocument,
+  deleteAssetDocument,
+  type AssetDocument,
+  type DocumentType,
+  type UploadDocumentInput,
+  // Stage 16: Import/Export
+  exportAssets,
+  importAssets,
+  downloadAssetImportTemplate,
+  type ExportFormat,
+  type ImportResult,
 } from "./client";
 
 // =============================================================================
 // Checklist Types (Proof Parity with Cleaning)
 // =============================================================================
 
+export type ChecklistTemplateItem = {
+  id?: number;
+  text: string;
+  is_required: boolean;
+  order: number;
+};
+
 export type ChecklistTemplate = {
   id: number;
   name: string;
   description?: string | null;
-  items?: string[] | null;         // Full list of items
-  items_preview?: string[] | null; // First 4 items for preview
+  is_active?: boolean;
+  items?: ChecklistTemplateItem[] | null;  // Full list of items (from CRUD API)
+  items_preview?: string[] | null; // First 4 items for preview (from meta API)
   items_count?: number | null;
+  usage_count?: number | null;
 };
 
 export type ChecklistItem = {
@@ -107,6 +143,20 @@ export type ChecklistItem = {
   is_required: boolean;
   is_completed: boolean;
   order: number;
+};
+
+// Stage 9: Checklist Template CRUD types
+export type CreateChecklistTemplateInput = {
+  name: string;
+  description?: string;
+  items: Array<{ text: string; is_required: boolean; order: number }>;
+};
+
+export type UpdateChecklistTemplateInput = {
+  name?: string;
+  description?: string;
+  is_active?: boolean;
+  items?: Array<{ text: string; is_required: boolean; order: number }>;
 };
 
 // =============================================================================
@@ -135,11 +185,22 @@ export type {
   SendNotificationResult,
   NotificationFilters,
   // Stage 7: Parts & Inventory (Lite)
+  // Stage 14: Full Inventory Management
   Part,
   PartUnit,
   VisitPart,
   CreatePartInput,
   AddVisitPartInput,
+  StockAdjustment,
+  StockAdjustmentType,
+  AdjustStockInput,
+  // Stage 15: Asset Documents
+  AssetDocument,
+  DocumentType,
+  UploadDocumentInput,
+  // Stage 16: Import/Export
+  ExportFormat,
+  ImportResult,
 };
 
 // =============================================================================
@@ -359,6 +420,62 @@ export async function bulkUpdateChecklist(
     { items }
   );
   return res.data;
+}
+
+// =============================================================================
+// Stage 9: Checklist Template CRUD API
+// =============================================================================
+
+/**
+ * Get all checklist templates for maintenance context.
+ * Returns templates with full item details and usage statistics.
+ */
+export async function getChecklistTemplates(filters?: { is_active?: boolean }): Promise<ChecklistTemplate[]> {
+  const params = new URLSearchParams();
+  if (filters?.is_active !== undefined) {
+    params.set("is_active", String(filters.is_active));
+  }
+  const query = params.toString();
+  const url = query ? `/api/maintenance/checklists/?${query}` : "/api/maintenance/checklists/";
+  const res = await apiClient.get<ChecklistTemplate[]>(url);
+  return res.data;
+}
+
+/**
+ * Get a single checklist template by ID.
+ */
+export async function getChecklistTemplate(id: number): Promise<ChecklistTemplate> {
+  const res = await apiClient.get<ChecklistTemplate>(`/api/maintenance/checklists/${id}/`);
+  return res.data;
+}
+
+/**
+ * Create a new checklist template for maintenance context.
+ */
+export async function createChecklistTemplate(
+  input: CreateChecklistTemplateInput
+): Promise<ChecklistTemplate> {
+  const res = await apiClient.post<ChecklistTemplate>("/api/maintenance/checklists/", input);
+  return res.data;
+}
+
+/**
+ * Update a checklist template.
+ */
+export async function updateChecklistTemplate(
+  id: number,
+  input: UpdateChecklistTemplateInput
+): Promise<ChecklistTemplate> {
+  const res = await apiClient.put<ChecklistTemplate>(`/api/maintenance/checklists/${id}/`, input);
+  return res.data;
+}
+
+/**
+ * Delete a checklist template.
+ * Will fail if template is in use by visits, recurring templates, or asset types.
+ */
+export async function deleteChecklistTemplate(id: number): Promise<void> {
+  await apiClient.delete(`/api/maintenance/checklists/${id}/`);
 }
 
 // =============================================================================
@@ -628,10 +745,7 @@ export async function getMaintenanceMonthlyReport(): Promise<MaintenanceReportDa
  * GET /api/maintenance/reports/weekly/pdf/
  */
 export async function downloadMaintenanceWeeklyReportPdf(): Promise<Blob> {
-  const res = await apiClient.get("/api/maintenance/reports/weekly/pdf/", {
-    responseType: "blob",
-  });
-  return res.data;
+  return downloadMaintenanceWeeklyPdf();
 }
 
 /**
@@ -639,10 +753,7 @@ export async function downloadMaintenanceWeeklyReportPdf(): Promise<Blob> {
  * GET /api/maintenance/reports/monthly/pdf/
  */
 export async function downloadMaintenanceMonthlyReportPdf(): Promise<Blob> {
-  const res = await apiClient.get("/api/maintenance/reports/monthly/pdf/", {
-    responseType: "blob",
-  });
-  return res.data;
+  return downloadMaintenanceMonthlyPdf();
 }
 
 /**
@@ -905,8 +1016,12 @@ export const maintenanceKeys = {
     list: (filters?: VisitFilters) => [...maintenanceKeys.visits.all, "list", filters] as const,
     detail: (id: number) => [...maintenanceKeys.visits.all, "detail", id] as const,
   },
-  // Checklists
-  checklistTemplates: ["maintenance", "checklistTemplates"] as const,
+  // Checklists (Stage 9)
+  checklistTemplates: {
+    all: ["maintenance", "checklistTemplates"] as const,
+    list: (filters?: { is_active?: boolean }) => ["maintenance", "checklistTemplates", "list", filters] as const,
+    detail: (id: number) => ["maintenance", "checklistTemplates", "detail", id] as const,
+  },
   // Shared
   locations: ["maintenance", "locations"] as const,
   technicians: ["maintenance", "technicians"] as const,
@@ -942,11 +1057,13 @@ export const maintenanceKeys = {
     all: ["maintenance", "notifications"] as const,
     list: (filters?: NotificationFilters) => [...maintenanceKeys.notifications.all, "list", filters] as const,
   },
-  // Parts (Stage 7)
+  // Parts (Stage 7) & Stock (Stage 14)
   parts: {
     all: ["maintenance", "parts"] as const,
     list: (filters?: { is_active?: boolean }) => [...maintenanceKeys.parts.all, "list", filters] as const,
     detail: (id: number) => [...maintenanceKeys.parts.all, "detail", id] as const,
+    lowStock: () => [...maintenanceKeys.parts.all, "lowStock"] as const,
+    stockHistory: (id: number) => [...maintenanceKeys.parts.all, "stockHistory", id] as const,
   },
   visitParts: {
     all: ["maintenance", "visitParts"] as const,
@@ -974,11 +1091,12 @@ export async function listNotificationLogs(
 }
 
 // =============================================================================
-// Parts API (Stage 7)
+// Parts API (Stage 7) & Stock Management (Stage 14)
 // =============================================================================
 
 export { getParts, getPart, createPart, updatePart, deletePart };
 export { getVisitParts, addVisitPart, removeVisitPart };
+export { adjustPartStock, getPartStockHistory, getLowStockParts };
 
 /**
  * List parts catalog.
@@ -995,3 +1113,104 @@ export async function listParts(filters?: { is_active?: boolean }): Promise<Part
 export async function listVisitParts(visitId: number): Promise<VisitPart[]> {
   return getVisitParts(visitId);
 }
+
+/**
+ * Adjust stock for a part.
+ * POST /api/maintenance/parts/{id}/adjust-stock/
+ */
+export async function adjustStock(
+  partId: number,
+  input: AdjustStockInput
+): Promise<Part> {
+  return adjustPartStock(partId, input);
+}
+
+/**
+ * Get stock adjustment history for a part.
+ * GET /api/maintenance/parts/{id}/stock-history/
+ */
+export async function getStockHistory(partId: number): Promise<StockAdjustment[]> {
+  return getPartStockHistory(partId);
+}
+
+/**
+ * Get parts with low stock.
+ * GET /api/maintenance/parts/low-stock/
+ */
+export async function listLowStockParts(): Promise<Part[]> {
+  return getLowStockParts();
+}
+
+// =============================================================================
+// Stage 10: Bulk Operations
+// =============================================================================
+
+/**
+ * Result type for bulk operations.
+ */
+export type BulkOperationResult = {
+  updated_count: number;
+  failed_count: number;
+  failures: Array<{ id: number; code: string; message: string }>;
+};
+
+/**
+ * Bulk assign a technician to multiple visits.
+ * POST /api/maintenance/visits/bulk-assign/
+ */
+export async function bulkAssignTechnician(
+  visitIds: number[],
+  technicianId: number
+): Promise<BulkOperationResult> {
+  const res = await apiClient.post<BulkOperationResult>(
+    "/api/maintenance/visits/bulk-assign/",
+    { visit_ids: visitIds, technician_id: technicianId }
+  );
+  return res.data;
+}
+
+/**
+ * Bulk cancel multiple visits.
+ * POST /api/maintenance/visits/bulk-cancel/
+ */
+export async function bulkCancelVisits(
+  visitIds: number[]
+): Promise<BulkOperationResult> {
+  const res = await apiClient.post<BulkOperationResult>(
+    "/api/maintenance/visits/bulk-cancel/",
+    { visit_ids: visitIds }
+  );
+  return res.data;
+}
+
+/**
+ * Reschedule a visit to a new date (Stage 11.1: Calendar D&D).
+ */
+export async function rescheduleVisit(
+  visitId: number,
+  scheduledDate: string
+): Promise<ServiceVisit> {
+  return rescheduleServiceVisit(visitId, scheduledDate);
+}
+
+// =============================================================================
+// Stage 15: Asset Documents
+// =============================================================================
+
+export {
+  getAssetDocuments,
+  uploadAssetDocument,
+  getAssetDocument,
+  updateAssetDocument,
+  deleteAssetDocument,
+};
+
+// =============================================================================
+// Stage 16: Import/Export
+// =============================================================================
+
+export {
+  exportAssets,
+  importAssets,
+  downloadAssetImportTemplate,
+};

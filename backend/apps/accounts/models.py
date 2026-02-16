@@ -294,12 +294,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     ROLE_MANAGER = "manager"
     ROLE_STAFF = "staff"
     ROLE_CLEANER = "cleaner"
+    ROLE_CUSTOMER = "customer"  # Stage 16: Customer Portal
 
     ROLE_CHOICES = [
         (ROLE_OWNER, "Owner"),
         (ROLE_MANAGER, "Manager"),
         (ROLE_STAFF, "Staff"),
         (ROLE_CLEANER, "Cleaner"),
+        (ROLE_CUSTOMER, "Customer"),  # Stage 16: Customer Portal
     ]
 
     AUTH_TYPE_PASSWORD = "password"
@@ -361,6 +363,15 @@ class User(AbstractBaseUser, PermissionsMixin):
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(default=timezone.now)
 
+    # Stage 16: Customer Portal - locations customer can access
+    # Only used when role=customer
+    customer_locations = models.ManyToManyField(
+        "apps_locations.Location",
+        blank=True,
+        related_name="customer_users",
+        help_text="Locations this customer can access (only for role=customer)"
+    )
+
     objects = UserManager()
 
     USERNAME_FIELD = "email"
@@ -370,7 +381,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         db_table = "users"
         constraints = [
             models.CheckConstraint(
-                check=models.Q(role__in=["owner", "manager", "staff", "cleaner"]),
+                check=models.Q(role__in=["owner", "manager", "staff", "cleaner", "customer"]),
                 name="users_role_valid",
             ),
         ]
@@ -399,3 +410,20 @@ class User(AbstractBaseUser, PermissionsMixin):
         current.update(kwargs)
         self.notification_preferences = current
         self.save(update_fields=["notification_preferences", "updated_at"])
+
+    # Stage 16: Customer Portal helpers
+    @property
+    def is_customer(self) -> bool:
+        """Check if user is a customer."""
+        return self.role == self.ROLE_CUSTOMER
+
+    def get_accessible_location_ids(self) -> list[int]:
+        """
+        Get IDs of locations this user can access.
+        For customers: only assigned locations.
+        For others: all company locations.
+        """
+        if self.is_customer:
+            return list(self.customer_locations.values_list("id", flat=True))
+        # Non-customers can access all company locations
+        return list(self.company.locations.filter(is_active=True).values_list("id", flat=True))

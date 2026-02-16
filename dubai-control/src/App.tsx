@@ -45,8 +45,20 @@ import MaintenanceReports from "./pages/maintenance/Reports";
 import RecurringTemplates from "./pages/maintenance/RecurringTemplates";
 import Contracts from "./pages/maintenance/Contracts";
 import Parts from "./pages/maintenance/Parts";
+import Checklists from "./pages/maintenance/Checklists";
 import AssetQRPrint from "./pages/maintenance/AssetQRPrint";
 import AssetQuickAccess from "./pages/maintenance/AssetQuickAccess";
+import MaintenanceCalendar from "./pages/maintenance/Calendar";
+import MaintenanceMap from "./pages/maintenance/Map";
+
+/* Customer Portal Pages (Stage 16) */
+import CustomerLayout from "./pages/customer/CustomerLayout";
+import CustomerDashboard from "./pages/customer/CustomerDashboard";
+import CustomerAssets from "./pages/customer/CustomerAssets";
+import CustomerVisits from "./pages/customer/CustomerVisits";
+import CustomerVisitDetail from "./pages/customer/CustomerVisitDetail";
+import CustomerContracts from "./pages/customer/CustomerContracts";
+import CustomerLocations from "./pages/customer/CustomerLocations";
 
 /* Contexts */
 import { LocationsProvider } from "@/contexts/LocationsContext";
@@ -58,6 +70,9 @@ import CleanProofDemoRequest from "@/marketing/cleanproof/CleanProofDemoRequest"
 import CleanProofContact from "@/marketing/cleanproof/CleanProofContact";
 import CleanProofUpdates from "@/marketing/cleanproof/CleanProofUpdates";
 
+/* PWA */
+import { PWAInstallBanner } from "@/components/pwa/PWAInstallBanner";
+
 import "leaflet/dist/leaflet.css";
 
 const queryClient = new QueryClient();
@@ -67,7 +82,9 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      {/* PWA Install Banner (Stage 12) */}
+      <PWAInstallBanner />
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         {/* Global scroll control */}
         <ScrollToTop />
 
@@ -139,6 +156,10 @@ const App = () => (
               <Route path="/maintenance/visits" element={<VisitList />} />
               <Route path="/maintenance/visits/new" element={<CreateVisit />} />
               <Route path="/maintenance/visits/:id" element={<VisitDetail />} />
+              {/* Calendar View (Stage 11) */}
+              <Route path="/maintenance/calendar" element={<MaintenanceCalendar />} />
+              {/* Map View (Stage 13) */}
+              <Route path="/maintenance/map" element={<MaintenanceMap />} />
               <Route path="/maintenance/assets" element={<Assets />} />
               <Route path="/maintenance/assets/new" element={<Assets />} />
               <Route path="/maintenance/assets/:id" element={<AssetDetail />} />
@@ -155,6 +176,8 @@ const App = () => (
               <Route path="/maintenance/contracts" element={<Contracts />} />
               {/* Parts Catalog (Stage 7) */}
               <Route path="/maintenance/parts" element={<Parts />} />
+              {/* Checklists (Stage 9) */}
+              <Route path="/maintenance/checklists" element={<Checklists />} />
               {/* QR Print Page (Stage 8) */}
               <Route path="/maintenance/assets/:id/qr" element={<AssetQRPrint />} />
 
@@ -187,6 +210,19 @@ const App = () => (
                 Cleaner interface (standalone)
                 ========================= */}
             <Route path="/cleaner" element={<CleanerJob />} />
+
+            {/* =========================
+                Customer Portal (Stage 16)
+                ========================= */}
+            <Route path="/customer" element={<CustomerLayout />}>
+              <Route index element={<CustomerDashboard />} />
+              <Route path="dashboard" element={<CustomerDashboard />} />
+              <Route path="assets" element={<CustomerAssets />} />
+              <Route path="visits" element={<CustomerVisits />} />
+              <Route path="visits/:id" element={<CustomerVisitDetail />} />
+              <Route path="contracts" element={<CustomerContracts />} />
+              <Route path="locations" element={<CustomerLocations />} />
+            </Route>
 
             {/* =========================
                 QR Quick Access (standalone mobile)

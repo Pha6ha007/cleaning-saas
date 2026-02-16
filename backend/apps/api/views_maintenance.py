@@ -15,6 +15,7 @@ from django.shortcuts import get_object_or_404
 
 from rest_framework import status
 from rest_framework.authentication import TokenAuthentication
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -23,6 +24,7 @@ from apps.accounts.models import User
 from apps.maintenance.models import (
     AssetType,
     Asset,
+    AssetDocument,
     MaintenanceCategory,
     ServiceContract,
     MaintenanceNotificationLog,
@@ -33,7 +35,7 @@ from apps.maintenance.notifications import (
     send_maintenance_notification,
     send_assignment_notification,
 )
-from apps.locations.models import Location
+from apps.locations.models import Location, ChecklistTemplate, ChecklistTemplateItem
 from apps.jobs.models import Job
 from apps.api.views_reports import compute_sla_status_and_reasons_for_job
 
@@ -110,7 +112,9 @@ class AssetTypeListCreateView(MaintenancePermissionMixin, APIView):
         if error:
             return error
 
-        asset_types = AssetType.objects.filter(company=company).order_by("name")
+        asset_types = AssetType.objects.filter(company=company).select_related(
+            "default_checklist_template"
+        ).order_by("name")
 
         data = [
             {
@@ -118,6 +122,10 @@ class AssetTypeListCreateView(MaintenancePermissionMixin, APIView):
                 "name": at.name,
                 "description": at.description,
                 "is_active": at.is_active,
+                "default_checklist_template": {
+                    "id": at.default_checklist_template.id,
+                    "name": at.default_checklist_template.name,
+                } if at.default_checklist_template else None,
             }
             for at in asset_types
         ]
@@ -138,6 +146,7 @@ class AssetTypeListCreateView(MaintenancePermissionMixin, APIView):
 
         name = (request.data.get("name") or "").strip()
         description = (request.data.get("description") or "").strip()
+        default_checklist_template_id = request.data.get("default_checklist_template_id")
 
         if not name:
             return Response(
@@ -152,11 +161,27 @@ class AssetTypeListCreateView(MaintenancePermissionMixin, APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # Validate checklist template if provided
+        default_checklist_template = None
+        if default_checklist_template_id:
+            try:
+                default_checklist_template = ChecklistTemplate.objects.get(
+                    pk=default_checklist_template_id,
+                    company=company,
+                    context=ChecklistTemplate.CONTEXT_MAINTENANCE,
+                )
+            except ChecklistTemplate.DoesNotExist:
+                return Response(
+                    {"code": "VALIDATION_ERROR", "message": "Checklist template not found.", "fields": {"default_checklist_template_id": ["Invalid checklist template."]}},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
         asset_type = AssetType.objects.create(
             company=company,
             name=name,
             description=description,
             is_active=True,
+            default_checklist_template=default_checklist_template,
         )
 
         return Response(
@@ -165,6 +190,10 @@ class AssetTypeListCreateView(MaintenancePermissionMixin, APIView):
                 "name": asset_type.name,
                 "description": asset_type.description,
                 "is_active": asset_type.is_active,
+                "default_checklist_template": {
+                    "id": asset_type.default_checklist_template.id,
+                    "name": asset_type.default_checklist_template.name,
+                } if asset_type.default_checklist_template else None,
             },
             status=status.HTTP_201_CREATED,
         )
@@ -183,7 +212,23 @@ class AssetTypeDetailView(MaintenancePermissionMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def _get_asset_type(self, company, pk):
-        return get_object_or_404(AssetType, pk=pk, company=company)
+        return get_object_or_404(
+            AssetType.objects.select_related("default_checklist_template"),
+            pk=pk,
+            company=company
+        )
+
+    def _serialize_asset_type(self, asset_type):
+        return {
+            "id": asset_type.id,
+            "name": asset_type.name,
+            "description": asset_type.description,
+            "is_active": asset_type.is_active,
+            "default_checklist_template": {
+                "id": asset_type.default_checklist_template.id,
+                "name": asset_type.default_checklist_template.name,
+            } if asset_type.default_checklist_template else None,
+        }
 
     def get(self, request, pk):
         company, error = self._check_read_access(request)
@@ -192,15 +237,7 @@ class AssetTypeDetailView(MaintenancePermissionMixin, APIView):
 
         asset_type = self._get_asset_type(company, pk)
 
-        return Response(
-            {
-                "id": asset_type.id,
-                "name": asset_type.name,
-                "description": asset_type.description,
-                "is_active": asset_type.is_active,
-            },
-            status=status.HTTP_200_OK,
-        )
+        return Response(self._serialize_asset_type(asset_type), status=status.HTTP_200_OK)
 
     def patch(self, request, pk):
         company, error = self._check_write_access(request)
@@ -212,6 +249,7 @@ class AssetTypeDetailView(MaintenancePermissionMixin, APIView):
         name = request.data.get("name")
         description = request.data.get("description")
         is_active = request.data.get("is_active")
+        default_checklist_template_id = request.data.get("default_checklist_template_id")
 
         update_fields = []
 
@@ -239,18 +277,33 @@ class AssetTypeDetailView(MaintenancePermissionMixin, APIView):
             asset_type.is_active = bool(is_active)
             update_fields.append("is_active")
 
+        # Handle default_checklist_template_id (can be null to clear)
+        if "default_checklist_template_id" in request.data:
+            if default_checklist_template_id is None:
+                asset_type.default_checklist_template = None
+                update_fields.append("default_checklist_template")
+            else:
+                try:
+                    checklist_template = ChecklistTemplate.objects.get(
+                        pk=default_checklist_template_id,
+                        company=company,
+                        context=ChecklistTemplate.CONTEXT_MAINTENANCE,
+                    )
+                    asset_type.default_checklist_template = checklist_template
+                    update_fields.append("default_checklist_template")
+                except ChecklistTemplate.DoesNotExist:
+                    return Response(
+                        {"code": "VALIDATION_ERROR", "message": "Checklist template not found.", "fields": {"default_checklist_template_id": ["Invalid checklist template."]}},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
         if update_fields:
             asset_type.save(update_fields=update_fields)
 
-        return Response(
-            {
-                "id": asset_type.id,
-                "name": asset_type.name,
-                "description": asset_type.description,
-                "is_active": asset_type.is_active,
-            },
-            status=status.HTTP_200_OK,
-        )
+        # Refresh to get the updated relationship
+        asset_type.refresh_from_db()
+
+        return Response(self._serialize_asset_type(asset_type), status=status.HTTP_200_OK)
 
     def delete(self, request, pk):
         company, error = self._check_write_access(request)
@@ -454,6 +507,11 @@ class AssetDetailView(MaintenancePermissionMixin, APIView):
             "asset_type": {
                 "id": asset.asset_type.id,
                 "name": asset.asset_type.name,
+                # Stage 9: Include default checklist for auto-apply
+                "default_checklist_template": {
+                    "id": asset.asset_type.default_checklist_template.id,
+                    "name": asset.asset_type.default_checklist_template.name,
+                } if asset.asset_type.default_checklist_template else None,
             },
             # Stage 5 Lite: Warranty
             "warranty_start_date": asset.warranty_start_date.isoformat() if asset.warranty_start_date else None,
@@ -1897,13 +1955,16 @@ class MaintenanceMonthlyReportPdfView(MaintenancePermissionMixin, APIView):
         return response
 
 
-def _send_maintenance_report_email(company, user, report: dict, frequency: str, to_email: str) -> bool:
+def _send_maintenance_report_email(company, user, report: dict, frequency: str, to_email: str) -> tuple[bool, str]:
     """
     Send maintenance report PDF via email.
-    Returns True on success, False on failure.
+    Returns (True, "") on success, (False, error_message) on failure.
     """
+    import logging
     from apps.api.pdf import generate_maintenance_report_pdf
     from apps.marketing.models import ReportEmailLog
+
+    logger = logging.getLogger(__name__)
 
     period_from = report["period"]["from"]
     period_to = report["period"]["to"]
@@ -1914,18 +1975,6 @@ def _send_maintenance_report_email(company, user, report: dict, frequency: str, 
         f"Period: {period_from} – {period_to}."
     )
 
-    pdf_bytes = generate_maintenance_report_pdf(company, report, frequency)
-    filename = f"maintenance_{frequency.lower()}_report_{period_from}_to_{period_to}.pdf"
-
-    # Create email
-    email_msg = EmailMessage(
-        subject=subject,
-        body=body,
-        from_email=None,  # Uses DEFAULT_FROM_EMAIL
-        to=[to_email],
-    )
-    email_msg.attach(filename, pdf_bytes, "application/pdf")
-
     # Determine log kind
     log_kind = (
         ReportEmailLog.KIND_WEEKLY_REPORT
@@ -1934,11 +1983,23 @@ def _send_maintenance_report_email(company, user, report: dict, frequency: str, 
     )
 
     try:
+        pdf_bytes = generate_maintenance_report_pdf(company, report, frequency)
+        filename = f"maintenance_{frequency.lower()}_report_{period_from}_to_{period_to}.pdf"
+
+        # Create email
+        email_msg = EmailMessage(
+            subject=subject,
+            body=body,
+            from_email=None,  # Uses DEFAULT_FROM_EMAIL
+            to=[to_email],
+        )
+        email_msg.attach(filename, pdf_bytes, "application/pdf")
+
         email_msg.send(fail_silently=False)
 
-        # Log success
+        # Log success (company_id is BigIntegerField, not FK)
         ReportEmailLog.objects.create(
-            company=company,
+            company_id=company.id,
             user=user,
             kind=log_kind,
             period_from=period_from,
@@ -1947,21 +2008,27 @@ def _send_maintenance_report_email(company, user, report: dict, frequency: str, 
             subject=subject,
             status=ReportEmailLog.STATUS_SENT,
         )
-        return True
+        logger.info(f"Maintenance report email sent to {to_email}")
+        return True, ""
     except Exception as e:
+        error_msg = str(e)[:500]
+        logger.error(f"Failed to send maintenance report email: {error_msg}")
         # Log failure
-        ReportEmailLog.objects.create(
-            company=company,
-            user=user,
-            kind=log_kind,
-            period_from=period_from,
-            period_to=period_to,
-            to_email=to_email,
-            subject=subject,
-            status=ReportEmailLog.STATUS_FAILED,
-            error_message=str(e)[:500],
-        )
-        return False
+        try:
+            ReportEmailLog.objects.create(
+                company_id=company.id,
+                user=user,
+                kind=log_kind,
+                period_from=period_from,
+                period_to=period_to,
+                to_email=to_email,
+                subject=subject,
+                status=ReportEmailLog.STATUS_FAILED,
+                error_message=error_msg,
+            )
+        except Exception:
+            pass  # Don't fail if logging fails
+        return False, error_msg
 
 
 class MaintenanceWeeklyReportEmailView(MaintenancePermissionMixin, APIView):
@@ -1990,7 +2057,7 @@ class MaintenanceWeeklyReportEmailView(MaintenancePermissionMixin, APIView):
             )
 
         report = _get_maintenance_report(company, days=7)
-        success = _send_maintenance_report_email(company, user, report, "Weekly", to_email)
+        success, error_msg = _send_maintenance_report_email(company, user, report, "Weekly", to_email)
 
         if success:
             return Response(
@@ -1999,7 +2066,7 @@ class MaintenanceWeeklyReportEmailView(MaintenancePermissionMixin, APIView):
             )
         else:
             return Response(
-                {"code": "EMAIL_FAILED", "message": "Failed to send email. Please try again."},
+                {"code": "EMAIL_FAILED", "message": error_msg or "Failed to send email. Please try again."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -2030,7 +2097,7 @@ class MaintenanceMonthlyReportEmailView(MaintenancePermissionMixin, APIView):
             )
 
         report = _get_maintenance_report(company, days=30)
-        success = _send_maintenance_report_email(company, user, report, "Monthly", to_email)
+        success, error_msg = _send_maintenance_report_email(company, user, report, "Monthly", to_email)
 
         if success:
             return Response(
@@ -2039,7 +2106,7 @@ class MaintenanceMonthlyReportEmailView(MaintenancePermissionMixin, APIView):
             )
         else:
             return Response(
-                {"code": "EMAIL_FAILED", "message": "Failed to send email. Please try again."},
+                {"code": "EMAIL_FAILED", "message": error_msg or "Failed to send email. Please try again."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -3227,6 +3294,12 @@ class PartListCreateView(MaintenancePermissionMixin, APIView):
                 "unit_display": part.get_unit_display(),
                 "is_active": part.is_active,
                 "created_at": part.created_at.isoformat(),
+                # Stage 14: Stock Management
+                "stock_quantity": float(part.stock_quantity),
+                "reorder_point": float(part.reorder_point),
+                "reorder_quantity": float(part.reorder_quantity),
+                "stock_status": part.stock_status,
+                "is_low_stock": part.is_low_stock,
             }
             for part in parts
         ]
@@ -3260,6 +3333,10 @@ class PartListCreateView(MaintenancePermissionMixin, APIView):
             sku=data.get("sku", "").strip(),
             description=data.get("description", ""),
             unit=data.get("unit", Part.UNIT_PCS),
+            # Stage 14: Stock Management
+            stock_quantity=data.get("stock_quantity", 0),
+            reorder_point=data.get("reorder_point", 0),
+            reorder_quantity=data.get("reorder_quantity", 0),
         )
 
         return Response(
@@ -3272,6 +3349,12 @@ class PartListCreateView(MaintenancePermissionMixin, APIView):
                 "unit_display": part.get_unit_display(),
                 "is_active": part.is_active,
                 "created_at": part.created_at.isoformat(),
+                # Stage 14: Stock Management
+                "stock_quantity": float(part.stock_quantity),
+                "reorder_point": float(part.reorder_point),
+                "reorder_quantity": float(part.reorder_quantity),
+                "stock_status": part.stock_status,
+                "is_low_stock": part.is_low_stock,
             },
             status=status.HTTP_201_CREATED,
         )
@@ -3311,6 +3394,12 @@ class PartDetailView(MaintenancePermissionMixin, APIView):
                 "usage_count": usage_count,
                 "created_at": part.created_at.isoformat(),
                 "updated_at": part.updated_at.isoformat(),
+                # Stage 14: Stock Management
+                "stock_quantity": float(part.stock_quantity),
+                "reorder_point": float(part.reorder_point),
+                "reorder_quantity": float(part.reorder_quantity),
+                "stock_status": part.stock_status,
+                "is_low_stock": part.is_low_stock,
             },
             status=status.HTTP_200_OK,
         )
@@ -3341,6 +3430,11 @@ class PartDetailView(MaintenancePermissionMixin, APIView):
             part.unit = data["unit"]
         if "is_active" in data:
             part.is_active = data["is_active"]
+        # Stage 14: Stock Management fields
+        if "reorder_point" in data:
+            part.reorder_point = data["reorder_point"]
+        if "reorder_quantity" in data:
+            part.reorder_quantity = data["reorder_quantity"]
 
         part.save()
 
@@ -3352,6 +3446,12 @@ class PartDetailView(MaintenancePermissionMixin, APIView):
                 "unit": part.unit,
                 "is_active": part.is_active,
                 "updated_at": part.updated_at.isoformat(),
+                # Stage 14: Stock Management
+                "stock_quantity": float(part.stock_quantity),
+                "reorder_point": float(part.reorder_point),
+                "reorder_quantity": float(part.reorder_quantity),
+                "stock_status": part.stock_status,
+                "is_low_stock": part.is_low_stock,
             },
             status=status.HTTP_200_OK,
         )
@@ -3381,6 +3481,194 @@ class PartDetailView(MaintenancePermissionMixin, APIView):
             {"deleted": True, "id": part_id},
             status=status.HTTP_200_OK,
         )
+
+
+# =============================================================================
+# Stage 14: Stock Management
+# =============================================================================
+
+class PartStockAdjustView(MaintenancePermissionMixin, APIView):
+    """
+    Adjust stock for a part.
+
+    POST /api/maintenance/parts/{id}/adjust-stock/
+        Body: {
+            adjustment_type: "in" | "out" | "correction",
+            quantity: number (positive),
+            reason?: string,
+            reference?: string
+        }
+    """
+
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        from apps.maintenance.models import StockAdjustment
+
+        company, error = self._check_write_access(request)
+        if error:
+            return error
+
+        part = get_object_or_404(Part, pk=pk, company=company)
+        data = request.data
+
+        adjustment_type = data.get("adjustment_type")
+        if adjustment_type not in ["in", "out", "correction"]:
+            return Response(
+                {"code": "VALIDATION_ERROR", "message": "Invalid adjustment_type. Must be 'in', 'out', or 'correction'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            quantity = float(data.get("quantity", 0))
+            if quantity <= 0:
+                raise ValueError("Quantity must be positive")
+        except (TypeError, ValueError):
+            return Response(
+                {"code": "VALIDATION_ERROR", "message": "Quantity must be a positive number."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        quantity_before = part.stock_quantity
+
+        # Calculate new quantity
+        if adjustment_type == "in":
+            quantity_after = quantity_before + quantity
+        elif adjustment_type == "out":
+            quantity_after = quantity_before - quantity
+            if quantity_after < 0:
+                return Response(
+                    {"code": "INSUFFICIENT_STOCK", "message": f"Insufficient stock. Current: {quantity_before}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        else:  # correction
+            quantity_after = quantity  # Set to exact value
+
+        # Create adjustment record
+        adjustment = StockAdjustment.objects.create(
+            part=part,
+            adjustment_type=adjustment_type,
+            quantity=quantity,
+            quantity_before=quantity_before,
+            quantity_after=quantity_after,
+            reason=data.get("reason", ""),
+            reference=data.get("reference", ""),
+            adjusted_by=request.user,
+        )
+
+        # Update part stock
+        part.stock_quantity = quantity_after
+        part.save(update_fields=["stock_quantity", "updated_at"])
+
+        return Response(
+            {
+                "adjustment": {
+                    "id": adjustment.id,
+                    "adjustment_type": adjustment.adjustment_type,
+                    "quantity": float(adjustment.quantity),
+                    "quantity_before": float(adjustment.quantity_before),
+                    "quantity_after": float(adjustment.quantity_after),
+                    "reason": adjustment.reason,
+                    "reference": adjustment.reference,
+                    "adjusted_at": adjustment.adjusted_at.isoformat(),
+                    "adjusted_by": adjustment.adjusted_by.full_name if adjustment.adjusted_by else None,
+                },
+                "part": {
+                    "id": part.id,
+                    "name": part.name,
+                    "stock_quantity": float(part.stock_quantity),
+                    "stock_status": part.stock_status,
+                    "is_low_stock": part.is_low_stock,
+                },
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class PartStockHistoryView(MaintenancePermissionMixin, APIView):
+    """
+    Get stock adjustment history for a part.
+
+    GET /api/maintenance/parts/{id}/stock-history/
+    """
+
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        from apps.maintenance.models import StockAdjustment
+
+        company, error = self._check_read_access(request)
+        if error:
+            return error
+
+        part = get_object_or_404(Part, pk=pk, company=company)
+        adjustments = StockAdjustment.objects.filter(part=part).select_related("adjusted_by")[:50]
+
+        data = [
+            {
+                "id": adj.id,
+                "adjustment_type": adj.adjustment_type,
+                "adjustment_type_display": adj.get_adjustment_type_display(),
+                "quantity": float(adj.quantity),
+                "quantity_before": float(adj.quantity_before),
+                "quantity_after": float(adj.quantity_after),
+                "reason": adj.reason,
+                "reference": adj.reference,
+                "adjusted_at": adj.adjusted_at.isoformat(),
+                "adjusted_by": {
+                    "id": adj.adjusted_by.id,
+                    "name": adj.adjusted_by.full_name,
+                } if adj.adjusted_by else None,
+            }
+            for adj in adjustments
+        ]
+
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class PartsLowStockView(MaintenancePermissionMixin, APIView):
+    """
+    List parts with low stock (below reorder point).
+
+    GET /api/maintenance/parts/low-stock/
+    """
+
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from django.db.models import F
+
+        company, error = self._check_read_access(request)
+        if error:
+            return error
+
+        # Parts where stock_quantity <= reorder_point AND reorder_point > 0
+        low_stock_parts = Part.objects.filter(
+            company=company,
+            is_active=True,
+            reorder_point__gt=0,
+            stock_quantity__lte=F("reorder_point")
+        ).order_by("stock_quantity")
+
+        data = [
+            {
+                "id": part.id,
+                "name": part.name,
+                "sku": part.sku,
+                "unit": part.unit,
+                "unit_display": part.get_unit_display(),
+                "stock_quantity": float(part.stock_quantity),
+                "reorder_point": float(part.reorder_point),
+                "reorder_quantity": float(part.reorder_quantity),
+                "stock_status": part.stock_status,
+            }
+            for part in low_stock_parts
+        ]
+
+        return Response(data, status=status.HTTP_200_OK)
 
 
 class VisitPartsListCreateView(MaintenancePermissionMixin, APIView):
@@ -3540,3 +3828,1212 @@ class VisitPartDeleteView(MaintenancePermissionMixin, APIView):
             {"deleted": True, "id": visit_part_id},
             status=status.HTTP_200_OK,
         )
+
+
+# =============================================================================
+# Stage 9: Checklist Templates CRUD
+# =============================================================================
+
+class MaintenanceChecklistTemplatesView(MaintenancePermissionMixin, APIView):
+    """
+    List and create checklist templates for maintenance context.
+
+    GET /api/maintenance/checklists/
+    POST /api/maintenance/checklists/
+
+    RBAC:
+    - owner, manager: full CRUD
+    - staff: read-only
+    """
+
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def _serialize_template(self, template):
+        items = list(template.items.order_by("order", "id").values(
+            "id", "text", "is_required", "order"
+        ))
+        return {
+            "id": template.id,
+            "name": template.name,
+            "description": template.description,
+            "is_active": template.is_active,
+            "items": items,
+            "items_count": len(items),
+            "usage_count": Job.objects.filter(
+                checklist_template=template,
+                context=Job.CONTEXT_MAINTENANCE,
+            ).count(),
+        }
+
+    def get(self, request):
+        company, error = self._check_read_access(request)
+        if error:
+            return error
+
+        templates = ChecklistTemplate.objects.filter(
+            company=company,
+            context=ChecklistTemplate.CONTEXT_MAINTENANCE,
+        ).prefetch_related("items").order_by("-is_active", "name")
+
+        # Optional filtering
+        is_active = request.query_params.get("is_active")
+        if is_active is not None:
+            is_active_bool = is_active.lower() in ("true", "1", "yes")
+            templates = templates.filter(is_active=is_active_bool)
+
+        data = [self._serialize_template(t) for t in templates]
+        return Response(data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        company, error = self._check_write_access(request)
+        if error:
+            return error
+
+        # Trial/blocked checks
+        if company.is_blocked():
+            code = "trial_expired" if company.is_trial_expired() else "company_blocked"
+            return Response(
+                {"code": code, "message": "Account access restricted. Please upgrade or contact support."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        name = (request.data.get("name") or "").strip()
+        description = (request.data.get("description") or "").strip()
+        items = request.data.get("items", [])
+
+        if not name:
+            return Response(
+                {"code": "VALIDATION_ERROR", "message": "Name is required.", "fields": {"name": ["Name is required."]}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Check uniqueness within maintenance context
+        if ChecklistTemplate.objects.filter(
+            company=company,
+            context=ChecklistTemplate.CONTEXT_MAINTENANCE,
+            name__iexact=name
+        ).exists():
+            return Response(
+                {"code": "VALIDATION_ERROR", "message": "Checklist template with this name already exists.", "fields": {"name": ["Checklist template with this name already exists."]}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Validate items
+        if not isinstance(items, list):
+            return Response(
+                {"code": "VALIDATION_ERROR", "message": "Items must be a list.", "fields": {"items": ["Items must be a list."]}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Create template
+        template = ChecklistTemplate.objects.create(
+            company=company,
+            name=name,
+            description=description,
+            context=ChecklistTemplate.CONTEXT_MAINTENANCE,
+            is_active=True,
+        )
+
+        # Create items
+        for idx, item_data in enumerate(items):
+            text = (item_data.get("text") or "").strip()
+            if not text:
+                continue
+            is_required = item_data.get("is_required", True)
+            order = item_data.get("order", idx + 1)
+
+            ChecklistTemplateItem.objects.create(
+                template=template,
+                text=text,
+                is_required=bool(is_required),
+                order=order,
+            )
+
+        return Response(self._serialize_template(template), status=status.HTTP_201_CREATED)
+
+
+class MaintenanceChecklistTemplateDetailView(MaintenancePermissionMixin, APIView):
+    """
+    Retrieve, update, delete checklist template.
+
+    GET /api/maintenance/checklists/<id>/
+    PUT /api/maintenance/checklists/<id>/
+    DELETE /api/maintenance/checklists/<id>/
+    """
+
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def _get_template(self, company, pk):
+        return get_object_or_404(
+            ChecklistTemplate.objects.prefetch_related("items"),
+            pk=pk,
+            company=company,
+            context=ChecklistTemplate.CONTEXT_MAINTENANCE,
+        )
+
+    def _serialize_template(self, template):
+        items = list(template.items.order_by("order", "id").values(
+            "id", "text", "is_required", "order"
+        ))
+        return {
+            "id": template.id,
+            "name": template.name,
+            "description": template.description,
+            "is_active": template.is_active,
+            "items": items,
+            "items_count": len(items),
+            "usage_count": Job.objects.filter(
+                checklist_template=template,
+                context=Job.CONTEXT_MAINTENANCE,
+            ).count(),
+        }
+
+    def get(self, request, pk):
+        company, error = self._check_read_access(request)
+        if error:
+            return error
+
+        template = self._get_template(company, pk)
+        return Response(self._serialize_template(template), status=status.HTTP_200_OK)
+
+    def put(self, request, pk):
+        company, error = self._check_write_access(request)
+        if error:
+            return error
+
+        template = self._get_template(company, pk)
+
+        name = request.data.get("name")
+        description = request.data.get("description")
+        is_active = request.data.get("is_active")
+        items = request.data.get("items")
+
+        if name is not None:
+            name = name.strip()
+            if not name:
+                return Response(
+                    {"code": "VALIDATION_ERROR", "message": "Name cannot be empty.", "fields": {"name": ["Name cannot be empty."]}},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            # Check uniqueness (exclude self)
+            if ChecklistTemplate.objects.filter(
+                company=company,
+                context=ChecklistTemplate.CONTEXT_MAINTENANCE,
+                name__iexact=name
+            ).exclude(pk=pk).exists():
+                return Response(
+                    {"code": "VALIDATION_ERROR", "message": "Checklist template with this name already exists.", "fields": {"name": ["Checklist template with this name already exists."]}},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            template.name = name
+
+        if description is not None:
+            template.description = description.strip()
+
+        if is_active is not None:
+            template.is_active = bool(is_active)
+
+        template.save()
+
+        # Update items if provided (replace all)
+        if items is not None:
+            if not isinstance(items, list):
+                return Response(
+                    {"code": "VALIDATION_ERROR", "message": "Items must be a list.", "fields": {"items": ["Items must be a list."]}},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Delete existing items and create new ones
+            template.items.all().delete()
+
+            for idx, item_data in enumerate(items):
+                text = (item_data.get("text") or "").strip()
+                if not text:
+                    continue
+                is_required = item_data.get("is_required", True)
+                order = item_data.get("order", idx + 1)
+
+                ChecklistTemplateItem.objects.create(
+                    template=template,
+                    text=text,
+                    is_required=bool(is_required),
+                    order=order,
+                )
+
+        # Refresh to get updated items
+        template.refresh_from_db()
+        template = self._get_template(company, pk)
+
+        return Response(self._serialize_template(template), status=status.HTTP_200_OK)
+
+    def delete(self, request, pk):
+        company, error = self._check_write_access(request)
+        if error:
+            return error
+
+        template = self._get_template(company, pk)
+
+        # Check if template is in use by any jobs
+        usage_count = Job.objects.filter(
+            checklist_template=template,
+            context=Job.CONTEXT_MAINTENANCE,
+        ).count()
+
+        if usage_count > 0:
+            return Response(
+                {"code": "CONFLICT", "message": f"Cannot delete checklist template. It is used by {usage_count} visit(s). Deactivate instead."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        # Check if used by recurring templates
+        recurring_count = template.recurring_maintenance_templates.count()
+        if recurring_count > 0:
+            return Response(
+                {"code": "CONFLICT", "message": f"Cannot delete checklist template. It is linked to {recurring_count} recurring template(s)."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        # Check if used by asset types
+        asset_type_count = template.asset_types.count()
+        if asset_type_count > 0:
+            return Response(
+                {"code": "CONFLICT", "message": f"Cannot delete checklist template. It is set as default for {asset_type_count} asset type(s)."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        template.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# =============================================================================
+# Stage 10: Bulk Operations
+# =============================================================================
+
+class BulkAssignTechnicianView(MaintenancePermissionMixin, APIView):
+    """
+    Bulk assign a technician to multiple visits.
+
+    POST /api/maintenance/visits/bulk-assign/
+
+    Request:
+    {
+        "visit_ids": [1, 2, 3],
+        "technician_id": 42
+    }
+
+    Response:
+    {
+        "updated_count": 2,
+        "failed_count": 1,
+        "failures": [{"id": 3, "code": "INVALID_STATE", "message": "Visit already completed"}]
+    }
+
+    RBAC: owner, manager only
+    """
+
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        company, error = self._check_write_access(request)
+        if error:
+            return error
+
+        visit_ids = request.data.get("visit_ids", [])
+        technician_id = request.data.get("technician_id")
+
+        # Validation
+        if not visit_ids:
+            return Response(
+                {"code": "VALIDATION_ERROR", "message": "visit_ids is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not technician_id:
+            return Response(
+                {"code": "VALIDATION_ERROR", "message": "technician_id is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Validate technician exists and belongs to company
+        try:
+            technician = User.objects.get(
+                pk=technician_id,
+                company=company,
+                role=User.ROLE_CLEANER,
+            )
+        except User.DoesNotExist:
+            return Response(
+                {"code": "NOT_FOUND", "message": "Technician not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Get visits
+        visits = Job.objects.filter(
+            pk__in=visit_ids,
+            company=company,
+            context=Job.CONTEXT_MAINTENANCE,
+        )
+
+        updated_count = 0
+        failures = []
+
+        # Immutable statuses - cannot reassign
+        immutable_statuses = [
+            Job.STATUS_COMPLETED,
+            Job.STATUS_COMPLETED_UNVERIFIED,
+            Job.STATUS_CANCELLED,
+        ]
+
+        for visit in visits:
+            if visit.status in immutable_statuses:
+                failures.append({
+                    "id": visit.id,
+                    "code": "INVALID_STATE",
+                    "message": f"Cannot assign: visit is {visit.status}",
+                })
+                continue
+
+            visit.cleaner = technician
+            visit.save(update_fields=["cleaner"])
+            updated_count += 1
+
+        # Check for IDs that weren't found
+        found_ids = set(v.id for v in visits)
+        for visit_id in visit_ids:
+            if visit_id not in found_ids:
+                failures.append({
+                    "id": visit_id,
+                    "code": "NOT_FOUND",
+                    "message": "Visit not found",
+                })
+
+        return Response({
+            "updated_count": updated_count,
+            "failed_count": len(failures),
+            "failures": failures,
+        }, status=status.HTTP_200_OK)
+
+
+class BulkCancelVisitsView(MaintenancePermissionMixin, APIView):
+    """
+    Bulk cancel multiple visits.
+
+    POST /api/maintenance/visits/bulk-cancel/
+
+    Request:
+    {
+        "visit_ids": [1, 2, 3]
+    }
+
+    Response:
+    {
+        "updated_count": 3,
+        "failed_count": 0,
+        "failures": []
+    }
+
+    Allowed transitions:
+    - scheduled → cancelled
+    - in_progress → cancelled
+
+    NOT allowed:
+    - completed → cancelled (immutable)
+
+    RBAC: owner, manager only
+    """
+
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        company, error = self._check_write_access(request)
+        if error:
+            return error
+
+        visit_ids = request.data.get("visit_ids", [])
+
+        # Validation
+        if not visit_ids:
+            return Response(
+                {"code": "VALIDATION_ERROR", "message": "visit_ids is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Get visits
+        visits = Job.objects.filter(
+            pk__in=visit_ids,
+            company=company,
+            context=Job.CONTEXT_MAINTENANCE,
+        )
+
+        updated_count = 0
+        failures = []
+
+        # Immutable statuses - cannot cancel
+        immutable_statuses = [
+            Job.STATUS_COMPLETED,
+            Job.STATUS_COMPLETED_UNVERIFIED,
+            Job.STATUS_CANCELLED,
+        ]
+
+        for visit in visits:
+            if visit.status in immutable_statuses:
+                failures.append({
+                    "id": visit.id,
+                    "code": "INVALID_STATE",
+                    "message": f"Cannot cancel: visit is {visit.status}",
+                })
+                continue
+
+            visit.status = Job.STATUS_CANCELLED
+            visit.save(update_fields=["status"])
+            updated_count += 1
+
+        # Check for IDs that weren't found
+        found_ids = set(v.id for v in visits)
+        for visit_id in visit_ids:
+            if visit_id not in found_ids:
+                failures.append({
+                    "id": visit_id,
+                    "code": "NOT_FOUND",
+                    "message": "Visit not found",
+                })
+
+        return Response({
+            "updated_count": updated_count,
+            "failed_count": len(failures),
+            "failures": failures,
+        }, status=status.HTTP_200_OK)
+
+
+class RescheduleVisitView(MaintenancePermissionMixin, APIView):
+    """
+    Reschedule a single visit to a new date (Stage 11.1: Calendar D&D).
+
+    PATCH /api/maintenance/visits/<id>/reschedule/
+
+    Request:
+    {
+        "scheduled_date": "2026-02-20"
+    }
+
+    Response (200 OK):
+    {
+        "id": 123,
+        "scheduled_date": "2026-02-20",
+        "status": "scheduled",
+        ...
+    }
+
+    Allowed statuses for reschedule:
+    - scheduled
+    - in_progress
+
+    NOT allowed:
+    - completed (immutable)
+    - cancelled (inactive)
+
+    RBAC: owner, manager only
+    """
+
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        company, error = self._check_write_access(request)
+        if error:
+            return error
+
+        # Get visit
+        try:
+            visit = Job.objects.select_related(
+                "location", "cleaner", "asset", "asset__asset_type", "maintenance_category"
+            ).get(pk=pk, company=company, context=Job.CONTEXT_MAINTENANCE)
+        except Job.DoesNotExist:
+            return Response(
+                {"code": "NOT_FOUND", "message": "Visit not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Check status - cannot reschedule completed/cancelled visits
+        immutable_statuses = [
+            Job.STATUS_COMPLETED,
+            Job.STATUS_COMPLETED_UNVERIFIED,
+            Job.STATUS_CANCELLED,
+        ]
+        if visit.status in immutable_statuses:
+            return Response(
+                {
+                    "code": "INVALID_STATE",
+                    "message": f"Cannot reschedule: visit is {visit.status}",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Validate scheduled_date
+        scheduled_date = request.data.get("scheduled_date")
+        if not scheduled_date:
+            return Response(
+                {"code": "VALIDATION_ERROR", "message": "scheduled_date is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Parse and validate date format
+        from datetime import datetime
+        try:
+            parsed_date = datetime.strptime(scheduled_date, "%Y-%m-%d").date()
+        except ValueError:
+            return Response(
+                {"code": "VALIDATION_ERROR", "message": "Invalid date format. Use YYYY-MM-DD."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Update visit
+        visit.scheduled_date = parsed_date
+        visit.save(update_fields=["scheduled_date"])
+
+        # Return updated visit data
+        location = visit.location
+        cleaner = visit.cleaner
+        asset = visit.asset
+        category = visit.maintenance_category
+
+        data = {
+            "id": visit.id,
+            "status": visit.status,
+            "scheduled_date": str(visit.scheduled_date),
+            "scheduled_start_time": str(visit.scheduled_start_time) if visit.scheduled_start_time else None,
+            "scheduled_end_time": str(visit.scheduled_end_time) if visit.scheduled_end_time else None,
+            "location": {
+                "id": location.id,
+                "name": location.name,
+            } if location else None,
+            "cleaner": {
+                "id": cleaner.id,
+                "full_name": cleaner.full_name,
+            } if cleaner else None,
+            "asset": {
+                "id": asset.id,
+                "name": asset.name,
+                "asset_type": {
+                    "id": asset.asset_type_id,
+                    "name": asset.asset_type.name if asset.asset_type else None,
+                } if asset.asset_type_id else None,
+            } if asset else None,
+            "category": {
+                "id": category.id,
+                "name": category.name,
+            } if category else None,
+            "priority": visit.priority,
+            "sla_deadline": str(visit.sla_deadline) if visit.sla_deadline else None,
+        }
+
+        return Response(data, status=status.HTTP_200_OK)
+
+
+# =============================================================================
+# Stage 15: Asset Documents
+# =============================================================================
+
+
+
+class AssetDocumentListCreateView(MaintenancePermissionMixin, APIView):
+    """
+    List and upload documents for an asset.
+
+    GET /api/maintenance/assets/<asset_id>/documents/
+    POST /api/maintenance/assets/<asset_id>/documents/
+
+    RBAC:
+    - owner, manager: full access
+    - staff: read-only
+    """
+
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def _get_asset(self, company, asset_id):
+        return get_object_or_404(Asset, pk=asset_id, company=company)
+
+    def _serialize_document(self, doc):
+        return {
+            "id": doc.id,
+            "name": doc.name,
+            "document_type": doc.document_type,
+            "document_type_display": doc.get_document_type_display(),
+            "file_url": doc.file.url if doc.file else None,
+            "file_name": doc.file.name.split("/")[-1] if doc.file else None,
+            "file_size": doc.file_size,
+            "mime_type": doc.mime_type,
+            "description": doc.description,
+            "uploaded_at": doc.uploaded_at.isoformat(),
+            "uploaded_by": {
+                "id": doc.uploaded_by.id,
+                "full_name": doc.uploaded_by.full_name,
+            } if doc.uploaded_by else None,
+        }
+
+    def get(self, request, asset_id):
+        company, error = self._check_read_access(request)
+        if error:
+            return error
+
+        asset = self._get_asset(company, asset_id)
+        documents = AssetDocument.objects.filter(asset=asset).select_related("uploaded_by")
+
+        # Optional filtering by document_type
+        doc_type = request.query_params.get("document_type")
+        if doc_type:
+            documents = documents.filter(document_type=doc_type)
+
+        data = [self._serialize_document(doc) for doc in documents]
+        return Response(data, status=status.HTTP_200_OK)
+
+    def post(self, request, asset_id):
+        company, error = self._check_write_access(request)
+        if error:
+            return error
+
+        # Trial/blocked checks
+        if company.is_blocked():
+            code = "trial_expired" if company.is_trial_expired() else "company_blocked"
+            return Response(
+                {"code": code, "message": "Account access restricted."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        asset = self._get_asset(company, asset_id)
+
+        # Validate required fields
+        name = (request.data.get("name") or "").strip()
+        file = request.FILES.get("file")
+
+        errors = {}
+        if not name:
+            errors["name"] = ["Document name is required."]
+        if not file:
+            errors["file"] = ["File is required."]
+
+        if errors:
+            return Response(
+                {"code": "VALIDATION_ERROR", "message": "Validation failed.", "fields": errors},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Validate file size (max 10MB)
+        max_size = 10 * 1024 * 1024  # 10MB
+        if file.size > max_size:
+            return Response(
+                {"code": "VALIDATION_ERROR", "message": "File too large. Maximum size is 10MB.", "fields": {"file": ["File size exceeds 10MB limit."]}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Create document
+        document_type = request.data.get("document_type", AssetDocument.TYPE_OTHER)
+        valid_types = [t[0] for t in AssetDocument.TYPE_CHOICES]
+        if document_type not in valid_types:
+            document_type = AssetDocument.TYPE_OTHER
+
+        description = (request.data.get("description") or "").strip()
+
+        doc = AssetDocument.objects.create(
+            asset=asset,
+            name=name,
+            document_type=document_type,
+            file=file,
+            description=description,
+            uploaded_by=request.user,
+        )
+
+        return Response(self._serialize_document(doc), status=status.HTTP_201_CREATED)
+
+
+class AssetDocumentDetailView(MaintenancePermissionMixin, APIView):
+    """
+    Retrieve, update, delete a document.
+
+    GET /api/maintenance/documents/<id>/
+    PATCH /api/maintenance/documents/<id>/
+    DELETE /api/maintenance/documents/<id>/
+
+    RBAC:
+    - owner, manager: full access
+    - staff: read-only
+    """
+
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def _get_document(self, company, pk):
+        return get_object_or_404(
+            AssetDocument.objects.select_related("asset", "uploaded_by"),
+            pk=pk,
+            asset__company=company,
+        )
+
+    def _serialize_document(self, doc):
+        return {
+            "id": doc.id,
+            "name": doc.name,
+            "document_type": doc.document_type,
+            "document_type_display": doc.get_document_type_display(),
+            "file_url": doc.file.url if doc.file else None,
+            "file_name": doc.file.name.split("/")[-1] if doc.file else None,
+            "file_size": doc.file_size,
+            "mime_type": doc.mime_type,
+            "description": doc.description,
+            "uploaded_at": doc.uploaded_at.isoformat(),
+            "uploaded_by": {
+                "id": doc.uploaded_by.id,
+                "full_name": doc.uploaded_by.full_name,
+            } if doc.uploaded_by else None,
+            "asset": {
+                "id": doc.asset.id,
+                "name": doc.asset.name,
+            },
+        }
+
+    def get(self, request, pk):
+        company, error = self._check_read_access(request)
+        if error:
+            return error
+
+        doc = self._get_document(company, pk)
+        return Response(self._serialize_document(doc), status=status.HTTP_200_OK)
+
+    def patch(self, request, pk):
+        company, error = self._check_write_access(request)
+        if error:
+            return error
+
+        doc = self._get_document(company, pk)
+
+        update_fields = []
+
+        # Update name
+        if "name" in request.data:
+            name = (request.data.get("name") or "").strip()
+            if name:
+                doc.name = name
+                update_fields.append("name")
+
+        # Update document_type
+        if "document_type" in request.data:
+            document_type = request.data.get("document_type")
+            valid_types = [t[0] for t in AssetDocument.TYPE_CHOICES]
+            if document_type in valid_types:
+                doc.document_type = document_type
+                update_fields.append("document_type")
+
+        # Update description
+        if "description" in request.data:
+            doc.description = (request.data.get("description") or "").strip()
+            update_fields.append("description")
+
+        if update_fields:
+            doc.save(update_fields=update_fields)
+
+        return Response(self._serialize_document(doc), status=status.HTTP_200_OK)
+
+    def delete(self, request, pk):
+        company, error = self._check_write_access(request)
+        if error:
+            return error
+
+        doc = self._get_document(company, pk)
+
+        # Delete file from storage
+        if doc.file:
+            doc.file.delete(save=False)
+
+        doc.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# =============================================================================
+# Stage 16: Import/Export
+# =============================================================================
+
+import csv
+import io
+from django.http import HttpResponse
+from openpyxl import Workbook, load_workbook
+from openpyxl.utils import get_column_letter
+
+
+class AssetExportView(MaintenancePermissionMixin, APIView):
+    """
+    Export assets to CSV or Excel.
+    
+    GET /api/maintenance/assets/export/?format=csv|xlsx
+    """
+    
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        company, error = self._check_read_access(request)
+        if error:
+            return error
+        
+        export_format = request.query_params.get("format", "csv").lower()
+        
+        assets = Asset.objects.filter(
+            company=company
+        ).select_related("location", "asset_type").order_by("name")
+        
+        # Prepare data
+        headers = [
+            "ID", "Name", "Serial Number", "Asset Type", "Location",
+            "Description", "Is Active", "Warranty Start", "Warranty End",
+            "Warranty Provider", "Warranty Notes", "Created At"
+        ]
+        
+        rows = []
+        for asset in assets:
+            rows.append([
+                asset.id,
+                asset.name,
+                asset.serial_number or "",
+                asset.asset_type.name if asset.asset_type else "",
+                asset.location.name if asset.location else "",
+                asset.description or "",
+                "Yes" if asset.is_active else "No",
+                str(asset.warranty_start_date) if asset.warranty_start_date else "",
+                str(asset.warranty_end_date) if asset.warranty_end_date else "",
+                asset.warranty_provider or "",
+                asset.warranty_notes or "",
+                asset.created_at.strftime("%Y-%m-%d %H:%M") if asset.created_at else "",
+            ])
+        
+        if export_format == "xlsx":
+            return self._export_xlsx(headers, rows, "assets")
+        else:
+            return self._export_csv(headers, rows, "assets")
+    
+    def _export_csv(self, headers, rows, filename):
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = f'attachment; filename="{filename}.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow(headers)
+        for row in rows:
+            writer.writerow(row)
+        
+        return response
+    
+    def _export_xlsx(self, headers, rows, filename):
+        wb = Workbook()
+        ws = wb.active
+        ws.title = filename.capitalize()
+        
+        # Write headers
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = cell.font.copy(bold=True)
+        
+        # Write data
+        for row_idx, row in enumerate(rows, 2):
+            for col_idx, value in enumerate(row, 1):
+                ws.cell(row=row_idx, column=col_idx, value=value)
+        
+        # Auto-width columns
+        for col in range(1, len(headers) + 1):
+            ws.column_dimensions[get_column_letter(col)].width = 15
+        
+        # Save to bytes
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+        
+        response = HttpResponse(
+            output.read(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        response["Content-Disposition"] = f'attachment; filename="{filename}.xlsx"'
+        return response
+
+
+class AssetImportView(MaintenancePermissionMixin, APIView):
+    """
+    Import assets from CSV or Excel.
+    
+    POST /api/maintenance/assets/import/
+    Body: multipart/form-data with 'file' field
+    """
+    
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+    
+    def post(self, request):
+        company, error = self._check_write_access(request)
+        if error:
+            return error
+        
+        if company.is_blocked():
+            return Response(
+                {"code": "company_blocked", "message": "Account access restricted."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        
+        file = request.FILES.get("file")
+        if not file:
+            return Response(
+                {"code": "VALIDATION_ERROR", "message": "File is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+        filename = file.name.lower()
+        
+        try:
+            if filename.endswith(".xlsx"):
+                rows = self._parse_xlsx(file)
+            elif filename.endswith(".csv"):
+                rows = self._parse_csv(file)
+            else:
+                return Response(
+                    {"code": "VALIDATION_ERROR", "message": "Unsupported file format. Use CSV or XLSX."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        except Exception as e:
+            return Response(
+                {"code": "PARSE_ERROR", "message": f"Failed to parse file: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+        # Process rows
+        created = 0
+        updated = 0
+        errors = []
+        
+        # Cache lookups
+        asset_types = {at.name.lower(): at for at in AssetType.objects.filter(company=company)}
+        locations = {loc.name.lower(): loc for loc in Location.objects.filter(company=company)}
+        
+        for idx, row in enumerate(rows, 2):  # Start at 2 (after header)
+            try:
+                result = self._process_row(company, row, asset_types, locations, request.user)
+                if result == "created":
+                    created += 1
+                elif result == "updated":
+                    updated += 1
+            except Exception as e:
+                errors.append({"row": idx, "error": str(e)})
+        
+        return Response({
+            "created": created,
+            "updated": updated,
+            "errors": errors,
+            "total_processed": created + updated,
+        }, status=status.HTTP_200_OK)
+    
+    def _parse_csv(self, file):
+        content = file.read().decode("utf-8-sig")  # Handle BOM
+        reader = csv.DictReader(io.StringIO(content))
+        return list(reader)
+    
+    def _parse_xlsx(self, file):
+        wb = load_workbook(file, read_only=True)
+        ws = wb.active
+        
+        rows = list(ws.iter_rows(values_only=True))
+        if not rows:
+            return []
+        
+        headers = [str(h).strip().lower() if h else "" for h in rows[0]]
+        
+        result = []
+        for row in rows[1:]:
+            row_dict = {}
+            for i, value in enumerate(row):
+                if i < len(headers) and headers[i]:
+                    row_dict[headers[i]] = value
+            if any(row_dict.values()):  # Skip empty rows
+                result.append(row_dict)
+        
+        return result
+    
+    def _process_row(self, company, row, asset_types, locations, user):
+        # Normalize keys
+        row = {k.lower().strip(): v for k, v in row.items() if k}
+        
+        name = str(row.get("name", "") or "").strip()
+        if not name:
+            raise ValueError("Name is required")
+        
+        # Get or create asset type
+        asset_type_name = str(row.get("asset type", "") or row.get("asset_type", "") or "").strip()
+        asset_type = None
+        if asset_type_name:
+            asset_type = asset_types.get(asset_type_name.lower())
+            if not asset_type:
+                # Create new asset type
+                asset_type = AssetType.objects.create(
+                    company=company,
+                    name=asset_type_name,
+                )
+                asset_types[asset_type_name.lower()] = asset_type
+        
+        # Get location
+        location_name = str(row.get("location", "") or "").strip()
+        location = None
+        if location_name:
+            location = locations.get(location_name.lower())
+            if not location:
+                raise ValueError(f"Location '{location_name}' not found")
+        
+        if not location:
+            raise ValueError("Location is required")
+        
+        if not asset_type:
+            raise ValueError("Asset Type is required")
+        
+        # Check if asset exists (by name + location)
+        existing = Asset.objects.filter(
+            company=company,
+            name__iexact=name,
+            location=location,
+        ).first()
+        
+        # Prepare fields
+        serial_number = str(row.get("serial number", "") or row.get("serial_number", "") or "").strip()
+        description = str(row.get("description", "") or "").strip()
+        is_active_str = str(row.get("is active", "") or row.get("is_active", "") or "yes").strip().lower()
+        is_active = is_active_str in ("yes", "true", "1", "active")
+        
+        # Warranty fields
+        warranty_start = row.get("warranty start", "") or row.get("warranty_start", "")
+        warranty_end = row.get("warranty end", "") or row.get("warranty_end", "")
+        warranty_provider = str(row.get("warranty provider", "") or row.get("warranty_provider", "") or "").strip()
+        warranty_notes = str(row.get("warranty notes", "") or row.get("warranty_notes", "") or "").strip()
+        
+        # Parse dates
+        from datetime import datetime as dt
+        warranty_start_date = None
+        warranty_end_date = None
+        
+        if warranty_start:
+            try:
+                if isinstance(warranty_start, str):
+                    warranty_start_date = dt.strptime(warranty_start, "%Y-%m-%d").date()
+                else:
+                    warranty_start_date = warranty_start.date() if hasattr(warranty_start, 'date') else warranty_start
+            except (ValueError, AttributeError):
+                pass
+        
+        if warranty_end:
+            try:
+                if isinstance(warranty_end, str):
+                    warranty_end_date = dt.strptime(warranty_end, "%Y-%m-%d").date()
+                else:
+                    warranty_end_date = warranty_end.date() if hasattr(warranty_end, 'date') else warranty_end
+            except (ValueError, AttributeError):
+                pass
+        
+        if existing:
+            # Update
+            existing.serial_number = serial_number
+            existing.description = description
+            existing.is_active = is_active
+            existing.asset_type = asset_type
+            existing.warranty_start_date = warranty_start_date
+            existing.warranty_end_date = warranty_end_date
+            existing.warranty_provider = warranty_provider
+            existing.warranty_notes = warranty_notes
+            existing.save()
+            return "updated"
+        else:
+            # Create
+            Asset.objects.create(
+                company=company,
+                name=name,
+                location=location,
+                asset_type=asset_type,
+                serial_number=serial_number,
+                description=description,
+                is_active=is_active,
+                warranty_start_date=warranty_start_date,
+                warranty_end_date=warranty_end_date,
+                warranty_provider=warranty_provider,
+                warranty_notes=warranty_notes,
+            )
+            return "created"
+
+
+class AssetImportTemplateView(MaintenancePermissionMixin, APIView):
+    """
+    Download import template for assets.
+    
+    GET /api/maintenance/assets/import-template/?format=csv|xlsx
+    """
+    
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        company, error = self._check_read_access(request)
+        if error:
+            return error
+        
+        export_format = request.query_params.get("format", "csv").lower()
+        
+        headers = [
+            "Name", "Serial Number", "Asset Type", "Location",
+            "Description", "Is Active", "Warranty Start", "Warranty End",
+            "Warranty Provider", "Warranty Notes"
+        ]
+        
+        # Example row
+        example = [
+            "HVAC Unit 1", "SN-12345", "HVAC", "Main Building",
+            "Central air conditioning unit", "Yes", "2024-01-01", "2026-12-31",
+            "Carrier", "3 year full warranty"
+        ]
+        
+        if export_format == "xlsx":
+            return self._create_xlsx_template(headers, [example])
+        else:
+            return self._create_csv_template(headers, [example])
+    
+    def _create_csv_template(self, headers, examples):
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="asset_import_template.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow(headers)
+        for row in examples:
+            writer.writerow(row)
+        
+        return response
+    
+    def _create_xlsx_template(self, headers, examples):
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Assets"
+        
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = cell.font.copy(bold=True)
+        
+        for row_idx, row in enumerate(examples, 2):
+            for col_idx, value in enumerate(row, 1):
+                ws.cell(row=row_idx, column=col_idx, value=value)
+        
+        for col in range(1, len(headers) + 1):
+            ws.column_dimensions[get_column_letter(col)].width = 18
+        
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+        
+        response = HttpResponse(
+            output.read(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        response["Content-Disposition"] = 'attachment; filename="asset_import_template.xlsx"'
+        return response

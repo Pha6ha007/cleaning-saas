@@ -78,6 +78,9 @@ export default function CreateVisit() {
   // Filter assets by selected location
   const [filteredAssets, setFilteredAssets] = useState<Asset[]>([]);
 
+  // Stage 9: Track if checklist was auto-applied from asset type
+  const [autoAppliedChecklist, setAutoAppliedChecklist] = useState<string | null>(null);
+
   // Fetch locations
   const { data: locations = [], isLoading: locationsLoading } = useQuery({
     queryKey: maintenanceKeys.locations,
@@ -108,7 +111,7 @@ export default function CreateVisit() {
 
   // Fetch checklist templates
   const { data: checklistTemplates = [] } = useQuery({
-    queryKey: maintenanceKeys.checklistTemplates,
+    queryKey: maintenanceKeys.checklistTemplates.all,
     queryFn: listChecklistTemplates,
     enabled: canCreate,
   });
@@ -157,6 +160,27 @@ export default function CreateVisit() {
   useEffect(() => {
     setChecklistExpanded(false);
   }, [formData.checklist_template_id]);
+
+  // Stage 9: Auto-apply checklist from asset type when asset changes
+  useEffect(() => {
+    if (formData.asset_id && formData.asset_id !== "__none__") {
+      const selectedAsset = assets.find((a) => a.id === Number(formData.asset_id));
+      if (selectedAsset?.asset_type?.default_checklist_template) {
+        const defaultChecklist = selectedAsset.asset_type.default_checklist_template;
+        // Only auto-apply if no checklist is currently selected
+        if (!formData.checklist_template_id || formData.checklist_template_id === "__none__") {
+          setFormData((prev) => ({
+            ...prev,
+            checklist_template_id: String(defaultChecklist.id),
+          }));
+          setAutoAppliedChecklist(defaultChecklist.name);
+        }
+      }
+    } else {
+      // Clear auto-applied hint when asset is deselected
+      setAutoAppliedChecklist(null);
+    }
+  }, [formData.asset_id, assets]);
 
   // Create mutation
   const createMutation = useMutation({
@@ -450,7 +474,11 @@ export default function CreateVisit() {
               <Label htmlFor="checklist_template_id">Checklist Template (optional)</Label>
               <Select
                 value={formData.checklist_template_id}
-                onValueChange={(v) => setFormData({ ...formData, checklist_template_id: v })}
+                onValueChange={(v) => {
+                  setFormData({ ...formData, checklist_template_id: v });
+                  // Clear auto-applied hint when user manually changes checklist
+                  setAutoAppliedChecklist(null);
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select checklist template" />
@@ -468,6 +496,12 @@ export default function CreateVisit() {
               <p className="text-xs text-muted-foreground">
                 Assign a checklist for the technician to complete during the visit
               </p>
+              {/* Stage 9: Show hint when checklist was auto-applied from asset type */}
+              {autoAppliedChecklist && formData.checklist_template_id && formData.checklist_template_id !== "__none__" && (
+                <p className="text-xs text-primary font-medium">
+                  ✓ Auto-applied from asset type: {autoAppliedChecklist}
+                </p>
+              )}
               {/* Show preview of selected template */}
               {formData.checklist_template_id && formData.checklist_template_id !== "__none__" && (() => {
                 const template = checklistTemplates.find(

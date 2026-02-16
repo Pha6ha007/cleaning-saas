@@ -1,5 +1,6 @@
 // dubai-control/src/pages/maintenance/Parts.tsx
 // Parts catalog management page for Maintenance context (Stage 7)
+// Stage 14: Full Inventory Management with stock levels and adjustments
 // Uses Lovable-style CSS classes: .page-header, .page-title, .premium-card, .data-table
 
 import { useState } from "react";
@@ -25,17 +26,25 @@ import {
   Pencil,
   Trash2,
   RefreshCw,
+  AlertTriangle,
+  ArrowUpCircle,
+  ArrowDownCircle,
+  History,
 } from "lucide-react";
 import {
   listParts,
-  getPart,
   createPart,
   updatePart,
   deletePart,
+  adjustStock,
+  getStockHistory,
   maintenanceKeys,
   type Part,
   type PartUnit,
   type CreatePartInput,
+  type StockAdjustment,
+  type StockAdjustmentType,
+  type AdjustStockInput,
 } from "@/api/maintenance";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
 import { MaintenanceLayout } from "@/contexts/maintenance/ui/MaintenanceLayout";
@@ -68,6 +77,18 @@ export default function Parts() {
   const [editingPart, setEditingPart] = useState<Part | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<Part | null>(null);
 
+  // Stock adjustment modal
+  const [stockAdjustPart, setStockAdjustPart] = useState<Part | null>(null);
+  const [stockAdjustData, setStockAdjustData] = useState({
+    adjustment_type: "in" as StockAdjustmentType,
+    quantity: "",
+    reason: "",
+    reference: "",
+  });
+
+  // Stock history modal
+  const [stockHistoryPart, setStockHistoryPart] = useState<Part | null>(null);
+
   // Form state
   const [formData, setFormData] = useState({
     name: "",
@@ -75,6 +96,9 @@ export default function Parts() {
     description: "",
     unit: "pcs" as PartUnit,
     is_active: true,
+    stock_quantity: "",
+    reorder_point: "",
+    reorder_quantity: "",
   });
 
   // Check access
@@ -170,6 +194,45 @@ export default function Parts() {
     },
   });
 
+  // Stock adjustment mutation
+  const stockAdjustMutation = useMutation({
+    mutationFn: ({ partId, input }: { partId: number; input: AdjustStockInput }) =>
+      adjustStock(partId, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: maintenanceKeys.parts.all });
+      toast({
+        title: "Success",
+        description: "Stock adjusted successfully",
+      });
+      setStockAdjustPart(null);
+      setStockAdjustData({
+        adjustment_type: "in",
+        quantity: "",
+        reason: "",
+        reference: "",
+      });
+    },
+    onError: (error: any) => {
+      const message =
+        error?.response?.data?.message || "Failed to adjust stock";
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: message,
+      });
+    },
+  });
+
+  // Stock history query
+  const {
+    data: stockHistory = [],
+    isLoading: isLoadingHistory,
+  } = useQuery({
+    queryKey: maintenanceKeys.parts.stockHistory(stockHistoryPart?.id ?? 0),
+    queryFn: () => getStockHistory(stockHistoryPart!.id),
+    enabled: !!stockHistoryPart,
+  });
+
   const handleAddNew = () => {
     setEditingPart(null);
     setFormData({
@@ -178,6 +241,9 @@ export default function Parts() {
       description: "",
       unit: "pcs",
       is_active: true,
+      stock_quantity: "0",
+      reorder_point: "0",
+      reorder_quantity: "0",
     });
     setShowModal(true);
   };
@@ -190,6 +256,9 @@ export default function Parts() {
       description: part.description || "",
       unit: part.unit,
       is_active: part.is_active,
+      stock_quantity: part.stock_quantity || "0",
+      reorder_point: part.reorder_point || "0",
+      reorder_quantity: part.reorder_quantity || "0",
     });
     setShowModal(true);
   };
@@ -203,6 +272,42 @@ export default function Parts() {
       description: "",
       unit: "pcs",
       is_active: true,
+      stock_quantity: "0",
+      reorder_point: "0",
+      reorder_quantity: "0",
+    });
+  };
+
+  const handleOpenStockAdjust = (part: Part) => {
+    setStockAdjustPart(part);
+    setStockAdjustData({
+      adjustment_type: "in",
+      quantity: "",
+      reason: "",
+      reference: "",
+    });
+  };
+
+  const handleSaveStockAdjust = () => {
+    const qty = parseFloat(stockAdjustData.quantity);
+    if (isNaN(qty) || qty <= 0) {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Quantity must be a positive number",
+      });
+      return;
+    }
+    if (!stockAdjustPart) return;
+
+    stockAdjustMutation.mutate({
+      partId: stockAdjustPart.id,
+      input: {
+        adjustment_type: stockAdjustData.adjustment_type,
+        quantity: qty,
+        reason: stockAdjustData.reason.trim() || undefined,
+        reference: stockAdjustData.reference.trim() || undefined,
+      },
     });
   };
 
@@ -216,6 +321,10 @@ export default function Parts() {
       return;
     }
 
+    const stockQty = parseFloat(formData.stock_quantity) || 0;
+    const reorderPoint = parseFloat(formData.reorder_point) || 0;
+    const reorderQty = parseFloat(formData.reorder_quantity) || 0;
+
     if (editingPart) {
       updateMutation.mutate({
         id: editingPart.id,
@@ -225,6 +334,9 @@ export default function Parts() {
           description: formData.description.trim() || undefined,
           unit: formData.unit,
           is_active: formData.is_active,
+          stock_quantity: stockQty,
+          reorder_point: reorderPoint,
+          reorder_quantity: reorderQty,
         },
       });
     } else {
@@ -233,6 +345,9 @@ export default function Parts() {
         sku: formData.sku.trim() || undefined,
         description: formData.description.trim() || undefined,
         unit: formData.unit,
+        stock_quantity: stockQty,
+        reorder_point: reorderPoint,
+        reorder_quantity: reorderQty,
       });
     }
   };
@@ -309,9 +424,32 @@ export default function Parts() {
     );
   }
 
+  // Calculate low stock count
+  const lowStockParts = parts.filter(
+    (p) => p.is_active && (p.is_low_stock || p.stock_status === "low_stock" || p.stock_status === "out_of_stock")
+  );
+  const hasLowStock = lowStockParts.length > 0;
+
   return (
     <MaintenanceLayout>
       <div className="space-y-4">
+        {/* Low Stock Alert Banner */}
+        {hasLowStock && (
+          <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <p className="text-sm font-medium text-amber-700">
+                Low Stock Alert
+              </p>
+            </div>
+            <p className="mt-1 text-sm text-amber-600">
+              {lowStockParts.length} part{lowStockParts.length !== 1 ? "s" : ""} {lowStockParts.length !== 1 ? "are" : "is"} below reorder point:{" "}
+              {lowStockParts.slice(0, 3).map((p) => p.name).join(", ")}
+              {lowStockParts.length > 3 && ` and ${lowStockParts.length - 3} more`}
+            </p>
+          </div>
+        )}
+
         {/* Header - Lovable style */}
         <div className="page-header">
           <h1 className="page-title">Parts Catalog</h1>
@@ -344,55 +482,114 @@ export default function Parts() {
                   <th>Name</th>
                   <th>SKU</th>
                   <th>Unit</th>
+                  <th className="text-right">Stock</th>
+                  <th className="text-right">Reorder Pt.</th>
+                  <th className="w-[100px]">Stock Status</th>
                   <th className="w-[80px]">Status</th>
-                  {hasWriteAccess && <th className="w-[100px]">Actions</th>}
+                  {hasWriteAccess && <th className="w-[140px]">Actions</th>}
                 </tr>
               </thead>
               <tbody>
-                {parts.map((part) => (
-                  <tr key={part.id}>
-                    <td className="font-medium text-foreground">{part.name}</td>
-                    <td className="text-muted-foreground">
-                      {part.sku || "—"}
-                    </td>
-                    <td className="text-muted-foreground">
-                      {part.unit_display || part.unit}
-                    </td>
-                    <td>
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                          part.is_active
-                            ? "bg-green-500/10 text-green-600"
-                            : "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {part.is_active ? "Active" : "Inactive"}
+                {parts.map((part) => {
+                  const stockQty = parseFloat(part.stock_quantity) || 0;
+                  const reorderPt = parseFloat(part.reorder_point) || 0;
+
+                  // Determine stock status
+                  let stockStatusBadge;
+                  if (part.stock_status === "out_of_stock" || stockQty <= 0) {
+                    stockStatusBadge = (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-600">
+                        <AlertTriangle className="h-3 w-3" />
+                        Out of Stock
                       </span>
-                    </td>
-                    {hasWriteAccess && (
-                      <td>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0"
-                            onClick={() => handleEdit(part)}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                            onClick={() => handleDelete(part)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
+                    );
+                  } else if (part.stock_status === "low_stock" || part.is_low_stock) {
+                    stockStatusBadge = (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600">
+                        <AlertTriangle className="h-3 w-3" />
+                        Low Stock
+                      </span>
+                    );
+                  } else {
+                    stockStatusBadge = (
+                      <span className="inline-flex items-center rounded-full bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-600">
+                        In Stock
+                      </span>
+                    );
+                  }
+
+                  return (
+                    <tr key={part.id}>
+                      <td className="font-medium text-foreground">{part.name}</td>
+                      <td className="text-muted-foreground">
+                        {part.sku || "—"}
                       </td>
-                    )}
-                  </tr>
-                ))}
+                      <td className="text-muted-foreground">
+                        {part.unit_display || part.unit}
+                      </td>
+                      <td className="text-right font-mono text-sm">
+                        {stockQty.toFixed(0)}
+                      </td>
+                      <td className="text-right font-mono text-sm text-muted-foreground">
+                        {reorderPt.toFixed(0)}
+                      </td>
+                      <td>{stockStatusBadge}</td>
+                      <td>
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                            part.is_active
+                              ? "bg-green-500/10 text-green-600"
+                              : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {part.is_active ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+                      {hasWriteAccess && (
+                        <td>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                              onClick={() => handleOpenStockAdjust(part)}
+                              title="Adjust Stock"
+                            >
+                              <ArrowUpCircle className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                              onClick={() => setStockHistoryPart(part)}
+                              title="Stock History"
+                            >
+                              <History className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                              onClick={() => handleEdit(part)}
+                              title="Edit Part"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                              onClick={() => handleDelete(part)}
+                              title="Delete Part"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
@@ -484,6 +681,60 @@ export default function Parts() {
                   />
                 </div>
 
+                {/* Stock Management Fields */}
+                <div className="pt-2 border-t border-border">
+                  <h4 className="text-sm font-medium text-foreground mb-3">
+                    Inventory Settings
+                  </h4>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="stock_quantity">Current Stock</Label>
+                      <Input
+                        id="stock_quantity"
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={formData.stock_quantity}
+                        onChange={(e) =>
+                          setFormData({ ...formData, stock_quantity: e.target.value })
+                        }
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="reorder_point">Reorder Point</Label>
+                      <Input
+                        id="reorder_point"
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={formData.reorder_point}
+                        onChange={(e) =>
+                          setFormData({ ...formData, reorder_point: e.target.value })
+                        }
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="reorder_quantity">Reorder Qty</Label>
+                      <Input
+                        id="reorder_quantity"
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={formData.reorder_quantity}
+                        onChange={(e) =>
+                          setFormData({ ...formData, reorder_quantity: e.target.value })
+                        }
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Low stock alert triggers when stock falls below reorder point.
+                  </p>
+                </div>
+
                 {editingPart && (
                   <div className="flex items-center gap-3">
                     <Switch
@@ -567,6 +818,235 @@ export default function Parts() {
                     Delete
                   </Button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Stock Adjustment Modal */}
+        {stockAdjustPart && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="w-full max-w-md rounded-xl border border-border bg-card shadow-xl">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between border-b border-border px-6 py-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">
+                    Adjust Stock
+                  </h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {stockAdjustPart.name} (Current: {parseFloat(stockAdjustPart.stock_quantity).toFixed(0)} {stockAdjustPart.unit_display})
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setStockAdjustPart(null)}
+                  disabled={stockAdjustMutation.isPending}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 space-y-4">
+                <div className="space-y-2">
+                  <Label>Adjustment Type</Label>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={stockAdjustData.adjustment_type === "in" ? "default" : "outline"}
+                      className={stockAdjustData.adjustment_type === "in" ? "bg-green-600 hover:bg-green-700" : ""}
+                      onClick={() => setStockAdjustData({ ...stockAdjustData, adjustment_type: "in" })}
+                    >
+                      <ArrowUpCircle className="mr-1.5 h-4 w-4" />
+                      Stock In
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={stockAdjustData.adjustment_type === "out" ? "default" : "outline"}
+                      className={stockAdjustData.adjustment_type === "out" ? "bg-amber-600 hover:bg-amber-700" : ""}
+                      onClick={() => setStockAdjustData({ ...stockAdjustData, adjustment_type: "out" })}
+                    >
+                      <ArrowDownCircle className="mr-1.5 h-4 w-4" />
+                      Stock Out
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={stockAdjustData.adjustment_type === "correction" ? "default" : "outline"}
+                      onClick={() => setStockAdjustData({ ...stockAdjustData, adjustment_type: "correction" })}
+                    >
+                      Correction
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="adjust_quantity">Quantity *</Label>
+                  <Input
+                    id="adjust_quantity"
+                    type="number"
+                    min="0.01"
+                    step="1"
+                    value={stockAdjustData.quantity}
+                    onChange={(e) =>
+                      setStockAdjustData({ ...stockAdjustData, quantity: e.target.value })
+                    }
+                    placeholder="Enter quantity"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="adjust_reason">Reason</Label>
+                  <Input
+                    id="adjust_reason"
+                    value={stockAdjustData.reason}
+                    onChange={(e) =>
+                      setStockAdjustData({ ...stockAdjustData, reason: e.target.value })
+                    }
+                    placeholder="e.g., Received shipment, Used on visit, Inventory count"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="adjust_reference">Reference</Label>
+                  <Input
+                    id="adjust_reference"
+                    value={stockAdjustData.reference}
+                    onChange={(e) =>
+                      setStockAdjustData({ ...stockAdjustData, reference: e.target.value })
+                    }
+                    placeholder="e.g., PO-12345, Visit-789"
+                  />
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex justify-end gap-3 border-t border-border px-6 py-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setStockAdjustPart(null)}
+                  disabled={stockAdjustMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSaveStockAdjust}
+                  disabled={stockAdjustMutation.isPending}
+                >
+                  {stockAdjustMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Adjust Stock
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Stock History Modal */}
+        {stockHistoryPart && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="w-full max-w-2xl max-h-[80vh] rounded-xl border border-border bg-card shadow-xl flex flex-col">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between border-b border-border px-6 py-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">
+                    Stock History
+                  </h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {stockHistoryPart.name}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setStockHistoryPart(null)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="flex-1 overflow-auto p-6">
+                {isLoadingHistory ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : stockHistory.length === 0 ? (
+                  <div className="py-8 text-center text-muted-foreground">
+                    <History className="mx-auto h-10 w-10 text-muted-foreground/50 mb-3" />
+                    <p className="font-medium text-foreground">No adjustments yet</p>
+                    <p className="mt-1 text-sm">
+                      Stock adjustments will appear here
+                    </p>
+                  </div>
+                ) : (
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th className="text-right">Qty</th>
+                        <th className="text-right">Before</th>
+                        <th className="text-right">After</th>
+                        <th>Reason</th>
+                        <th>By</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {stockHistory.map((adj) => {
+                        const typeLabel = adj.adjustment_type === "in" ? "Stock In" :
+                          adj.adjustment_type === "out" ? "Stock Out" : "Correction";
+                        const typeClass = adj.adjustment_type === "in"
+                          ? "bg-green-500/10 text-green-600"
+                          : adj.adjustment_type === "out"
+                            ? "bg-amber-500/10 text-amber-600"
+                            : "bg-blue-500/10 text-blue-600";
+
+                        return (
+                          <tr key={adj.id}>
+                            <td className="text-muted-foreground text-sm">
+                              {new Date(adj.adjusted_at).toLocaleDateString()}
+                            </td>
+                            <td>
+                              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${typeClass}`}>
+                                {typeLabel}
+                              </span>
+                            </td>
+                            <td className="text-right font-mono text-sm">
+                              {adj.adjustment_type === "out" ? "-" : "+"}{parseFloat(adj.quantity).toFixed(0)}
+                            </td>
+                            <td className="text-right font-mono text-sm text-muted-foreground">
+                              {parseFloat(adj.quantity_before).toFixed(0)}
+                            </td>
+                            <td className="text-right font-mono text-sm font-medium">
+                              {parseFloat(adj.quantity_after).toFixed(0)}
+                            </td>
+                            <td className="text-muted-foreground text-sm max-w-[150px] truncate">
+                              {adj.reason || adj.reference || "—"}
+                            </td>
+                            <td className="text-muted-foreground text-sm">
+                              {adj.adjusted_by?.name || "System"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex justify-end gap-3 border-t border-border px-6 py-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setStockHistoryPart(null)}
+                >
+                  Close
+                </Button>
               </div>
             </div>
           </div>

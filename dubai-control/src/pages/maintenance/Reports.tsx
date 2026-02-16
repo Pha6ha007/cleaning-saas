@@ -19,7 +19,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Dialog,
@@ -246,6 +245,10 @@ function EmailDialog({ open, onClose, onSend, userEmail, mode }: EmailDialogProp
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
 
+  // Maintenance theme: Deep Teal hsl(188 45% 24%) = #1F4F56
+  const tealColor = "hsl(188 45% 24%)";
+  const tealHoverColor = "hsl(188 45% 20%)";
+
   const handleSend = async () => {
     setError("");
 
@@ -265,8 +268,10 @@ function EmailDialog({ open, onClose, onSend, userEmail, mode }: EmailDialogProp
     try {
       await onSend(email);
       onClose();
-    } catch (err) {
-      setError("Failed to send email. Please try again.");
+    } catch (err: any) {
+      // Extract error message from API response if available
+      const apiMessage = err?.response?.data?.message;
+      setError(apiMessage || "Failed to send email. Please try again.");
     } finally {
       setSending(false);
     }
@@ -274,53 +279,108 @@ function EmailDialog({ open, onClose, onSend, userEmail, mode }: EmailDialogProp
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md rounded-[6px] border-border bg-background">
         <DialogHeader>
-          <DialogTitle>Send {mode === "weekly" ? "Weekly" : "Monthly"} Report</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-foreground text-base font-semibold">
+            Send {mode === "weekly" ? "Weekly" : "Monthly"} Report
+          </DialogTitle>
+          <DialogDescription className="text-muted-foreground text-sm">
             The report will be sent as a PDF attachment.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-3 py-3">
           <RadioGroup
             value={emailOption}
             onValueChange={(v) => setEmailOption(v as "self" | "custom")}
+            className="space-y-2"
           >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="self" id="self" />
-              <Label htmlFor="self" className="text-sm">
-                Send to my email ({userEmail})
-              </Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="custom" id="custom" />
-              <Label htmlFor="custom" className="text-sm">
-                Send to different email
-              </Label>
-            </div>
+            <label
+              htmlFor="self"
+              className="flex items-center space-x-3 rounded-[6px] border p-3 cursor-pointer transition-colors"
+              style={{
+                borderColor: emailOption === "self" ? tealColor : undefined,
+                backgroundColor: emailOption === "self" ? "hsl(188 30% 96%)" : undefined,
+              }}
+            >
+              <RadioGroupItem
+                value="self"
+                id="self"
+                className="border-muted-foreground"
+                style={{
+                  borderColor: emailOption === "self" ? tealColor : undefined,
+                  backgroundColor: emailOption === "self" ? tealColor : undefined,
+                  color: emailOption === "self" ? "white" : undefined,
+                }}
+              />
+              <div className="flex-1">
+                <span className="text-sm text-foreground">Send to my email</span>
+                <span className="block text-xs text-muted-foreground">{userEmail}</span>
+              </div>
+            </label>
+            <label
+              htmlFor="custom"
+              className="flex items-center space-x-3 rounded-[6px] border p-3 cursor-pointer transition-colors"
+              style={{
+                borderColor: emailOption === "custom" ? tealColor : undefined,
+                backgroundColor: emailOption === "custom" ? "hsl(188 30% 96%)" : undefined,
+              }}
+            >
+              <RadioGroupItem
+                value="custom"
+                id="custom"
+                className="border-muted-foreground"
+                style={{
+                  borderColor: emailOption === "custom" ? tealColor : undefined,
+                  backgroundColor: emailOption === "custom" ? tealColor : undefined,
+                  color: emailOption === "custom" ? "white" : undefined,
+                }}
+              />
+              <span className="text-sm text-foreground flex-1">Send to different email</span>
+            </label>
           </RadioGroup>
 
           {emailOption === "custom" && (
-            <div className="space-y-2">
+            <div className="pl-1">
               <Input
                 type="email"
                 placeholder="email@example.com"
                 value={customEmail}
                 onChange={(e) => setCustomEmail(e.target.value)}
                 disabled={sending}
+                className="rounded-[6px] border-border bg-background text-foreground placeholder:text-muted-foreground"
+                style={{
+                  outlineColor: tealColor,
+                }}
               />
             </div>
           )}
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && (
+            <div className="flex items-center gap-2 rounded-[6px] bg-destructive/10 border border-destructive/20 p-3">
+              <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" />
+              <p className="text-sm text-destructive">{error}</p>
+            </div>
+          )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={sending}>
+        <DialogFooter className="gap-2 sm:gap-2">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            disabled={sending}
+            className="rounded-[6px] border-border text-foreground hover:bg-muted/50"
+          >
             Cancel
           </Button>
-          <Button onClick={handleSend} disabled={sending}>
+          <Button
+            onClick={handleSend}
+            disabled={sending}
+            className="rounded-[6px] text-white"
+            style={{ backgroundColor: tealColor }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = tealHoverColor)}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = tealColor)}
+          >
             {sending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -329,7 +389,7 @@ function EmailDialog({ open, onClose, onSend, userEmail, mode }: EmailDialogProp
             ) : (
               <>
                 <Mail className="mr-2 h-4 w-4" />
-                Send
+                Send Report
               </>
             )}
           </Button>

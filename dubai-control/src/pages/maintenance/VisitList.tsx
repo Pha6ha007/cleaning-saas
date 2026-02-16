@@ -4,16 +4,34 @@
 // See docs/execution/LOVABLE_UI_IMPORT_PROTOCOL.md
 
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { format, subDays } from "date-fns";
 import { Loader2, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useToast } from "@/components/ui/use-toast";
+import {
   listVisits,
   listAssets,
   listTechnicians,
   listCategories,
+  bulkAssignTechnician,
+  bulkCancelVisits,
   maintenanceKeys,
   type ServiceVisit,
   type VisitFilters,
@@ -26,6 +44,7 @@ import {
   type FilterOption,
 } from "@/contexts/maintenance/ui/VisitsLovableLayout";
 import { MaintenanceLayout } from "@/contexts/maintenance/ui/MaintenanceLayout";
+import { BulkActionBar } from "@/contexts/maintenance/ui/BulkActionBar";
 
 // ============================================================================
 // RBAC
@@ -76,6 +95,14 @@ export default function VisitList() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const user = useUserRole();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  // Stage 10: Selection state for bulk operations
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
+  const [bulkCancelOpen, setBulkCancelOpen] = useState(false);
+  const [selectedTechnicianId, setSelectedTechnicianId] = useState<string>("");
 
   // Default date range: last 30 days
   const today = format(new Date(), "yyyy-MM-dd");
@@ -240,6 +267,109 @@ export default function VisitList() {
     navigate(`/maintenance/visits/${id}`);
   };
 
+  // Stage 10: Selection handlers
+  const handleSelectAll = useCallback((checked: boolean) => {
+    if (checked) {
+      // Select all non-completed/cancelled visits
+      const selectableIds = visits
+        .filter((v) => v.status !== "completed" && v.status !== "cancelled")
+        .map((v) => v.id);
+      setSelectedIds(new Set(selectableIds));
+    } else {
+      setSelectedIds(new Set());
+    }
+  }, [visits]);
+
+  const handleSelectOne = useCallback((id: number, checked: boolean) => {
+    setSelectedIds((prev) => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(id);
+      } else {
+        newSet.delete(id);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
+  // Stage 10: Bulk assign mutation
+  const bulkAssignMutation = useMutation({
+    mutationFn: ({ visitIds, technicianId }: { visitIds: number[]; technicianId: number }) =>
+      bulkAssignTechnician(visitIds, technicianId),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: maintenanceKeys.visits.all });
+      clearSelection();
+      setBulkAssignOpen(false);
+      setSelectedTechnicianId("");
+
+      if (result.failed_count === 0) {
+        toast({
+          title: "Success",
+          description: `${result.updated_count} visit${result.updated_count !== 1 ? "s" : ""} assigned successfully`,
+        });
+      } else {
+        toast({
+          title: "Partial Success",
+          description: `${result.updated_count} assigned, ${result.failed_count} failed`,
+          variant: "destructive",
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error?.response?.data?.message || "Failed to assign visits",
+      });
+    },
+  });
+
+  // Stage 10: Bulk cancel mutation
+  const bulkCancelMutation = useMutation({
+    mutationFn: (visitIds: number[]) => bulkCancelVisits(visitIds),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: maintenanceKeys.visits.all });
+      clearSelection();
+      setBulkCancelOpen(false);
+
+      if (result.failed_count === 0) {
+        toast({
+          title: "Success",
+          description: `${result.updated_count} visit${result.updated_count !== 1 ? "s" : ""} cancelled`,
+        });
+      } else {
+        toast({
+          title: "Partial Success",
+          description: `${result.updated_count} cancelled, ${result.failed_count} failed`,
+          variant: "destructive",
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error?.response?.data?.message || "Failed to cancel visits",
+      });
+    },
+  });
+
+  const handleBulkAssign = () => {
+    if (!selectedTechnicianId) return;
+    bulkAssignMutation.mutate({
+      visitIds: Array.from(selectedIds),
+      technicianId: Number(selectedTechnicianId),
+    });
+  };
+
+  const handleBulkCancel = () => {
+    bulkCancelMutation.mutate(Array.from(selectedIds));
+  };
+
   // Access restricted view
   if (!hasAccess) {
     return (
@@ -329,7 +459,82 @@ export default function VisitList() {
         categoryFilter={categoryFilter}
         onCategoryFilterChange={handleCategoryChange}
         categoryOptions={categoryOptions}
+        // Stage 10: Selection props for bulk operations
+        selectable={canCreate}
+        selectedIds={selectedIds}
+        onSelectAll={handleSelectAll}
+        onSelectOne={handleSelectOne}
       />
+
+      {/* Stage 10: Bulk Action Bar */}
+      <BulkActionBar
+        selectedCount={selectedIds.size}
+        onAssign={() => setBulkAssignOpen(true)}
+        onCancel={() => setBulkCancelOpen(true)}
+        onClear={clearSelection}
+        canWrite={canCreate}
+      />
+
+      {/* Stage 10: Bulk Assign Modal */}
+      <Dialog open={bulkAssignOpen} onOpenChange={setBulkAssignOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Technician</DialogTitle>
+            <DialogDescription>
+              Assign a technician to {selectedIds.size} selected visit{selectedIds.size !== 1 ? "s" : ""}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Select value={selectedTechnicianId} onValueChange={setSelectedTechnicianId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select technician" />
+              </SelectTrigger>
+              <SelectContent>
+                {technicians.filter((t) => t.is_active).map((tech) => (
+                  <SelectItem key={tech.id} value={String(tech.id)}>
+                    {tech.full_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkAssignOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleBulkAssign}
+              disabled={!selectedTechnicianId || bulkAssignMutation.isPending}
+            >
+              {bulkAssignMutation.isPending ? "Assigning..." : "Assign"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Stage 10: Bulk Cancel Confirmation Dialog */}
+      <Dialog open={bulkCancelOpen} onOpenChange={setBulkCancelOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel Visits</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel {selectedIds.size} visit{selectedIds.size !== 1 ? "s" : ""}? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkCancelOpen(false)}>
+              Keep Visits
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBulkCancel}
+              disabled={bulkCancelMutation.isPending}
+            >
+              {bulkCancelMutation.isPending ? "Cancelling..." : "Cancel Visits"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MaintenanceLayout>
   );
 }

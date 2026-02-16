@@ -27,8 +27,12 @@ import {
   ShieldCheck,
   AlertTriangle,
   QrCode,
+  List,
+  GitBranch,
 } from "lucide-react";
 import { AssetQRModal } from "./components/AssetQRModal";
+import { AssetHistoryTimeline } from "./components/AssetHistoryTimeline";
+import { AssetDocuments } from "./components/AssetDocuments";
 import { format } from "date-fns";
 import {
   getAsset,
@@ -111,6 +115,7 @@ export default function AssetDetail() {
   const assetId = Number(id);
   const [isDownloading, setIsDownloading] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
+  const [historyView, setHistoryView] = useState<"list" | "timeline">("timeline");
 
   // Download PDF handler
   const handleDownloadPdf = async () => {
@@ -374,100 +379,145 @@ export default function AssetDetail() {
         </div>
       )}
 
+      {/* Documents (Stage 15) */}
+      <div className="detail-card mt-4">
+        <div className="detail-section">
+          <AssetDocuments
+            assetId={asset.id}
+            canEdit={user.role === "owner" || user.role === "manager"}
+          />
+        </div>
+      </div>
+
       {/* Service History */}
       <div className="detail-card mt-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <h2 className="detail-card-title">
             <Calendar />
             Service History
           </h2>
-          {visits.length > 0 && (
-            <span className="text-xs text-muted-foreground">
-              {visits.length} visit{visits.length !== 1 ? "s" : ""}
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {/* View toggle */}
+            <div className="flex items-center gap-1 rounded-[6px] border border-border p-1">
+              <Button
+                variant={historyView === "list" ? "default" : "ghost"}
+                size="sm"
+                className="h-6 px-2 text-xs rounded-[4px]"
+                onClick={() => setHistoryView("list")}
+              >
+                <List className="h-3 w-3 mr-1" />
+                List
+              </Button>
+              <Button
+                variant={historyView === "timeline" ? "default" : "ghost"}
+                size="sm"
+                className="h-6 px-2 text-xs rounded-[4px]"
+                onClick={() => setHistoryView("timeline")}
+              >
+                <GitBranch className="h-3 w-3 mr-1" />
+                Timeline
+              </Button>
+            </div>
+            {visits.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {visits.length} visit{visits.length !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
         </div>
 
-        {visits.length === 0 ? (
-          <div className="py-8 text-center">
-            <Calendar className="mx-auto h-8 w-8 text-muted-foreground/50" />
-            <p className="mt-3 text-sm text-muted-foreground">
-              No service visits recorded yet
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-4"
-              onClick={() => navigate(`/maintenance/visits/new?asset_id=${asset.id}&location_id=${asset.location?.id}`)}
-            >
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-              Schedule First Visit
-            </Button>
+        {/* Timeline View (Stage 13) */}
+        {historyView === "timeline" && (
+          <div className="mt-4">
+            <AssetHistoryTimeline visits={visits} assetId={asset.id} />
           </div>
-        ) : (
-          <div className="mt-4 space-y-3">
-            {visits.map((visit) => (
-              <Link
-                key={visit.id}
-                to={`/maintenance/visits/${visit.id}`}
-                className="block rounded-lg border border-border bg-card p-4 transition-colors hover:bg-muted/50"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    {/* Date and Status */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-foreground">
-                        {formatDate(visit.scheduled_date)}
-                      </span>
-                      <StatusBadge status={visit.status} />
+        )}
+
+        {/* List View */}
+        {historyView === "list" && (
+          <>
+            {visits.length === 0 ? (
+              <div className="py-8 text-center">
+                <Calendar className="mx-auto h-8 w-8 text-muted-foreground/50" />
+                <p className="mt-3 text-sm text-muted-foreground">
+                  No service visits recorded yet
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-4"
+                  onClick={() => navigate(`/maintenance/visits/new?asset_id=${asset.id}&location_id=${asset.location?.id}`)}
+                >
+                  <Plus className="mr-1.5 h-3.5 w-3.5" />
+                  Schedule First Visit
+                </Button>
+              </div>
+            ) : (
+              <div className="mt-4 space-y-3">
+                {visits.map((visit) => (
+                  <Link
+                    key={visit.id}
+                    to={`/maintenance/visits/${visit.id}`}
+                    className="block rounded-lg border border-border bg-card p-4 transition-colors hover:bg-muted/50"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        {/* Date and Status */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-foreground">
+                            {formatDate(visit.scheduled_date)}
+                          </span>
+                          <StatusBadge status={visit.status} />
+                        </div>
+
+                        {/* Time */}
+                        {visit.scheduled_start_time && (
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            {formatTime(visit.scheduled_start_time)}
+                          </div>
+                        )}
+
+                        {/* Technician */}
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <User className="h-3 w-3" />
+                          {visit.technician?.name || "Unassigned"}
+                        </div>
+
+                        {/* Category */}
+                        {visit.category && (
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Tag className="h-3 w-3" />
+                            {visit.category.name}
+                          </div>
+                        )}
+
+                        {/* Notes preview */}
+                        {(visit.manager_notes || visit.cleaner_notes) && (
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <FileText className="h-3 w-3" />
+                            <span className="truncate max-w-[200px]">
+                              {visit.manager_notes || visit.cleaner_notes}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <ExternalLink className="h-4 w-4 text-muted-foreground" />
                     </div>
 
-                    {/* Time */}
-                    {visit.scheduled_start_time && (
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        {formatTime(visit.scheduled_start_time)}
+                    {/* Actual times for completed visits */}
+                    {visit.status === "completed" && (visit.actual_start_time || visit.actual_end_time) && (
+                      <div className="mt-2 rounded bg-green-50 px-2 py-1 text-xs text-green-700">
+                        Completed: {visit.actual_start_time && formatTime(visit.actual_start_time)}
+                        {visit.actual_end_time && ` - ${formatTime(visit.actual_end_time)}`}
                       </div>
                     )}
-
-                    {/* Technician */}
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <User className="h-3 w-3" />
-                      {visit.technician?.name || "Unassigned"}
-                    </div>
-
-                    {/* Category */}
-                    {visit.category && (
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <Tag className="h-3 w-3" />
-                        {visit.category.name}
-                      </div>
-                    )}
-
-                    {/* Notes preview */}
-                    {(visit.manager_notes || visit.cleaner_notes) && (
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <FileText className="h-3 w-3" />
-                        <span className="truncate max-w-[200px]">
-                          {visit.manager_notes || visit.cleaner_notes}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                </div>
-
-                {/* Actual times for completed visits */}
-                {visit.status === "completed" && (visit.actual_start_time || visit.actual_end_time) && (
-                  <div className="mt-2 rounded bg-green-50 px-2 py-1 text-xs text-green-700">
-                    Completed: {visit.actual_start_time && formatTime(visit.actual_start_time)}
-                    {visit.actual_end_time && ` - ${formatTime(visit.actual_end_time)}`}
-                  </div>
-                )}
-              </Link>
-            ))}
-          </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
 

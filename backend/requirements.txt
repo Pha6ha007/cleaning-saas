@@ -27,10 +27,18 @@ sqlparse==0.5.5
 charset-normalizer==3.4.4
 
 # =============================================================================
+# Task Queue (Stage 14: Automated Visit Generation)
+# =============================================================================
+celery==5.4.0
+django-celery-beat==2.8.1
+redis==5.0.1
+
+# =============================================================================
 # Production Dependencies (install separately on server)
 # =============================================================================
 # gunicorn>=21.0.0        # WSGI server
 # psycopg2-binary>=2.9.0  # PostgreSQL adapter
+# redis-server            # Redis for Celery broker
 #
 # Install on production server:
 #   pip install gunicorn psycopg2-binary

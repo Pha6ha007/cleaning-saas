@@ -191,3 +191,53 @@ def send_completion_notification(job, manager_email: str, triggered_by=None) -> 
         recipient_user=None,  # Manager may not be a specific user
         triggered_by=triggered_by,
     )
+
+
+def send_sla_warning(job, is_overdue: bool = False, triggered_by=None) -> bool:
+    """
+    Send SLA warning notification.
+    Called by automated task when SLA deadline is approaching or exceeded.
+
+    Notifications are sent to:
+    1. Assigned technician (if any)
+    2. Company owner/manager email
+
+    Args:
+        job: Job instance with SLA deadline
+        is_overdue: True if deadline already passed
+        triggered_by: User who triggered (None for automated)
+
+    Returns True if at least one notification sent successfully.
+    """
+    sent_any = False
+
+    # Build modified subject/body for overdue vs warning
+    kind = MaintenanceNotificationLog.KIND_SLA_WARNING
+
+    # Send to technician if assigned
+    if job.cleaner and job.cleaner.email:
+        success = send_maintenance_notification(
+            company=job.company,
+            kind=kind,
+            job=job,
+            to_email=job.cleaner.email,
+            recipient_user=job.cleaner,
+            triggered_by=triggered_by,
+        )
+        if success:
+            sent_any = True
+
+    # Send to company owner
+    if job.company.owner and job.company.owner.email:
+        success = send_maintenance_notification(
+            company=job.company,
+            kind=kind,
+            job=job,
+            to_email=job.company.owner.email,
+            recipient_user=job.company.owner,
+            triggered_by=triggered_by,
+        )
+        if success:
+            sent_any = True
+
+    return sent_any

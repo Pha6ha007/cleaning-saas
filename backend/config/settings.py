@@ -63,12 +63,13 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-    # сторонние библиотеки
+    # Third-party libraries
     "corsheaders",
     "rest_framework",
     "rest_framework.authtoken",
+    "django_celery_beat",  # Stage 14: Periodic tasks
 
-    # наши приложения
+    # Our apps
     "apps.accounts",
     "apps.locations",
     "apps.jobs",
@@ -354,3 +355,19 @@ if not DEBUG:
     else:
         # Default to CORS origins if not explicitly set
         CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
+
+
+# =============================================================================
+# Celery Configuration (Stage 14: Automated Visit Generation)
+# =============================================================================
+
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = "Asia/Dubai"  # Match Django TIME_ZONE
+CELERY_ENABLE_UTC = True
+
+# Use django-celery-beat for database-backed periodic tasks
+CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"

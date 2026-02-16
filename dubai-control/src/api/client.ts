@@ -199,6 +199,11 @@ export interface AssetType {
   name: string;
   description: string;
   is_active: boolean;
+  // Stage 9: Default checklist for assets of this type
+  default_checklist_template?: {
+    id: number;
+    name: string;
+  } | null;
 }
 
 export interface Asset {
@@ -214,6 +219,11 @@ export interface Asset {
   asset_type: {
     id: number;
     name: string;
+    // Stage 9: Default checklist for auto-apply in CreateVisit
+    default_checklist_template?: {
+      id: number;
+      name: string;
+    } | null;
   };
   created_at: string;
   updated_at: string;
@@ -913,6 +923,28 @@ export async function downloadAssetHistoryReport(assetId: number): Promise<Blob>
   });
 }
 
+/**
+ * Download weekly maintenance report as PDF.
+ * GET /api/maintenance/reports/weekly/pdf/
+ */
+export async function downloadMaintenanceWeeklyPdf(): Promise<Blob> {
+  await loginManager();
+  return apiFetchBlob("/api/maintenance/reports/weekly/pdf/", {
+    method: "GET",
+  });
+}
+
+/**
+ * Download monthly maintenance report as PDF.
+ * GET /api/maintenance/reports/monthly/pdf/
+ */
+export async function downloadMaintenanceMonthlyPdf(): Promise<Blob> {
+  await loginManager();
+  return apiFetchBlob("/api/maintenance/reports/monthly/pdf/", {
+    method: "GET",
+  });
+}
+
 // Email job PDF report to manager (optionally to custom email)
 export async function emailJobReportPdf(
   jobId: number,
@@ -1176,6 +1208,7 @@ export async function getAssetType(id: number): Promise<AssetType> {
 export async function createAssetType(input: {
   name: string;
   description?: string;
+  default_checklist_template_id?: number | null;
 }): Promise<AssetType> {
   await loginManager();
   return apiFetch<AssetType>("/api/manager/asset-types/", {
@@ -1190,6 +1223,7 @@ export async function updateAssetType(
     name: string;
     description: string;
     is_active: boolean;
+    default_checklist_template_id: number | null;
   }>
 ): Promise<AssetType> {
   await loginManager();
@@ -2056,6 +2090,23 @@ export async function deleteServiceContract(id: number): Promise<void> {
   });
 }
 
+// ---------- Stage 11.1: Calendar D&D Reschedule API ----------
+
+/**
+ * Reschedule a visit to a new date.
+ * PATCH /api/maintenance/visits/{id}/reschedule/
+ */
+export async function rescheduleServiceVisit(
+  visitId: number,
+  scheduledDate: string
+): Promise<ServiceVisit> {
+  await loginManager();
+  return apiFetch<ServiceVisit>(`/api/maintenance/visits/${visitId}/reschedule/`, {
+    method: "PATCH",
+    body: JSON.stringify({ scheduled_date: scheduledDate }),
+  });
+}
+
 // ---------- Stage 6: Notifications Layer API ----------
 
 export type NotificationKind =
@@ -2147,6 +2198,30 @@ export type Part = {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  // Stage 14: Full Inventory Management
+  stock_quantity: string; // Decimal as string
+  reorder_point: string;  // Decimal as string
+  reorder_quantity: string; // Decimal as string
+  is_low_stock: boolean;
+  stock_status: "in_stock" | "low_stock" | "out_of_stock";
+};
+
+// Stage 14: Stock Adjustment
+export type StockAdjustmentType = "in" | "out" | "correction";
+
+export type StockAdjustment = {
+  id: number;
+  adjustment_type: StockAdjustmentType;
+  quantity: string; // Decimal as string
+  quantity_before: string;
+  quantity_after: string;
+  reason: string;
+  reference: string;
+  adjusted_at: string;
+  adjusted_by: {
+    id: number;
+    name: string;
+  } | null;
 };
 
 export type VisitPart = {
@@ -2172,6 +2247,18 @@ export type CreatePartInput = {
   sku?: string;
   description?: string;
   unit?: PartUnit;
+  // Stage 14: Stock fields
+  stock_quantity?: number;
+  reorder_point?: number;
+  reorder_quantity?: number;
+};
+
+// Stage 14: Stock Adjustment input
+export type AdjustStockInput = {
+  adjustment_type: StockAdjustmentType;
+  quantity: number;
+  reason?: string;
+  reference?: string;
 };
 
 export type AddVisitPartInput = {
@@ -2250,4 +2337,201 @@ export async function removeVisitPart(
   await apiFetch(`/api/maintenance/visits/${visitId}/parts/${partId}/`, {
     method: "DELETE",
   });
+}
+
+// ---------- Stage 14: Full Inventory Management API ----------
+
+/**
+ * Adjust stock for a part.
+ * POST /api/maintenance/parts/{id}/adjust-stock/
+ */
+export async function adjustPartStock(
+  partId: number,
+  input: AdjustStockInput
+): Promise<Part> {
+  await loginManager();
+  return apiFetch<Part>(`/api/maintenance/parts/${partId}/adjust-stock/`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+/**
+ * Get stock adjustment history for a part.
+ * GET /api/maintenance/parts/{id}/stock-history/
+ */
+export async function getPartStockHistory(partId: number): Promise<StockAdjustment[]> {
+  await loginManager();
+  return apiFetch<StockAdjustment[]>(`/api/maintenance/parts/${partId}/stock-history/`);
+}
+
+/**
+ * Get parts with low stock.
+ * GET /api/maintenance/parts/low-stock/
+ */
+export async function getLowStockParts(): Promise<Part[]> {
+  await loginManager();
+  return apiFetch<Part[]>("/api/maintenance/parts/low-stock/");
+}
+
+// ---------- Stage 15: Asset Documents API ----------
+
+export type DocumentType = "manual" | "warranty" | "certificate" | "inspection" | "photo" | "other";
+
+export interface AssetDocument {
+  id: number;
+  name: string;
+  document_type: DocumentType;
+  document_type_display: string;
+  file_url: string | null;
+  file_name: string | null;
+  file_size: number;
+  mime_type: string;
+  description: string;
+  uploaded_at: string;
+  uploaded_by: {
+    id: number;
+    full_name: string;
+  } | null;
+  asset?: {
+    id: number;
+    name: string;
+  };
+}
+
+export interface UploadDocumentInput {
+  name: string;
+  document_type?: DocumentType;
+  description?: string;
+  file: File;
+}
+
+export async function getAssetDocuments(
+  assetId: number,
+  documentType?: DocumentType
+): Promise<AssetDocument[]> {
+  await loginManager();
+  const params = new URLSearchParams();
+  if (documentType) params.append("document_type", documentType);
+  const query = params.toString() ? `?${params.toString()}` : "";
+  return apiFetch<AssetDocument[]>(`/api/maintenance/assets/${assetId}/documents/${query}`);
+}
+
+export async function uploadAssetDocument(
+  assetId: number,
+  input: UploadDocumentInput
+): Promise<AssetDocument> {
+  await loginManager();
+
+  const formData = new FormData();
+  formData.append("name", input.name);
+  formData.append("file", input.file);
+  if (input.document_type) formData.append("document_type", input.document_type);
+  if (input.description) formData.append("description", input.description);
+
+  const token = localStorage.getItem("token");
+  const response = await fetch(`${API_BASE_URL}/api/maintenance/assets/${assetId}/documents/`, {
+    method: "POST",
+    headers: {
+      Authorization: `Token ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    const errorMessage = error.message || `Upload failed: ${response.status}`;
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+}
+
+export async function getAssetDocument(documentId: number): Promise<AssetDocument> {
+  await loginManager();
+  return apiFetch<AssetDocument>(`/api/maintenance/documents/${documentId}/`);
+}
+
+export async function updateAssetDocument(
+  documentId: number,
+  input: { name?: string; document_type?: DocumentType; description?: string }
+): Promise<AssetDocument> {
+  await loginManager();
+  return apiFetch<AssetDocument>(`/api/maintenance/documents/${documentId}/`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteAssetDocument(documentId: number): Promise<void> {
+  await loginManager();
+  await apiFetch(`/api/maintenance/documents/${documentId}/`, {
+    method: "DELETE",
+  });
+}
+
+// ---------- Stage 16: Import/Export API ----------
+
+export type ExportFormat = "csv" | "xlsx";
+
+export interface ImportResult {
+  created: number;
+  updated: number;
+  errors: Array<{ row: number; error: string }>;
+  total_processed: number;
+}
+
+export async function exportAssets(format: ExportFormat = "csv"): Promise<Blob> {
+  await loginManager();
+  const token = localStorage.getItem("token");
+  const response = await fetch(`${API_BASE_URL}/api/maintenance/assets/export/?format=${format}`, {
+    headers: {
+      Authorization: `Token ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Export failed: ${response.status}`);
+  }
+
+  return response.blob();
+}
+
+export async function importAssets(file: File): Promise<ImportResult> {
+  await loginManager();
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const token = localStorage.getItem("token");
+  const response = await fetch(`${API_BASE_URL}/api/maintenance/assets/import/`, {
+    method: "POST",
+    headers: {
+      Authorization: `Token ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || `Import failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+export async function downloadAssetImportTemplate(format: ExportFormat = "csv"): Promise<Blob> {
+  await loginManager();
+  const token = localStorage.getItem("token");
+  const response = await fetch(`${API_BASE_URL}/api/maintenance/assets/import-template/?format=${format}`, {
+    headers: {
+      Authorization: `Token ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Download failed: ${response.status}`);
+  }
+
+  return response.blob();
 }
