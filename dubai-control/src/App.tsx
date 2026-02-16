@@ -45,6 +45,8 @@ import MaintenanceReports from "./pages/maintenance/Reports";
 import RecurringTemplates from "./pages/maintenance/RecurringTemplates";
 import Contracts from "./pages/maintenance/Contracts";
 import Parts from "./pages/maintenance/Parts";
+import AssetQRPrint from "./pages/maintenance/AssetQRPrint";
+import AssetQuickAccess from "./pages/maintenance/AssetQuickAccess";
 
 /* Contexts */
 import { LocationsProvider } from "@/contexts/LocationsContext";
@@ -153,6 +155,8 @@ const App = () => (
               <Route path="/maintenance/contracts" element={<Contracts />} />
               {/* Parts Catalog (Stage 7) */}
               <Route path="/maintenance/parts" element={<Parts />} />
+              {/* QR Print Page (Stage 8) */}
+              <Route path="/maintenance/assets/:id/qr" element={<AssetQRPrint />} />
 
               {/* Legacy /assets redirect to maintenance context */}
               <Route
@@ -183,6 +187,11 @@ const App = () => (
                 Cleaner interface (standalone)
                 ========================= */}
             <Route path="/cleaner" element={<CleanerJob />} />
+
+            {/* =========================
+                QR Quick Access (standalone mobile)
+                ========================= */}
+            <Route path="/maintenance/qr/:id" element={<AssetQuickAccess />} />
 
             {/* =========================
                 Catch-all

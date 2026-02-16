@@ -26,7 +26,9 @@ import {
   Download,
   ShieldCheck,
   AlertTriangle,
+  QrCode,
 } from "lucide-react";
+import { AssetQRModal } from "./components/AssetQRModal";
 import { format } from "date-fns";
 import {
   getAsset,
@@ -108,6 +110,7 @@ export default function AssetDetail() {
   const hasAccess = canReadAssets(user.role);
   const assetId = Number(id);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
 
   // Download PDF handler
   const handleDownloadPdf = async () => {
@@ -229,6 +232,14 @@ export default function AssetDetail() {
             </div>
           </div>
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowQRModal(true)}
+              size="sm"
+            >
+              <QrCode className="mr-1.5 h-3.5 w-3.5" />
+              QR Code
+            </Button>
             <Button
               variant="outline"
               onClick={handleDownloadPdf}
@@ -459,6 +470,13 @@ export default function AssetDetail() {
           </div>
         )}
       </div>
+
+      {/* QR Code Modal */}
+      <AssetQRModal
+        asset={asset}
+        open={showQRModal}
+        onClose={() => setShowQRModal(false)}
+      />
     </MaintenanceLayout>
   );
 }
