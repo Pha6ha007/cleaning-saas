@@ -1,7 +1,7 @@
 # MAINTENANCE CONTEXT — V2 STRATEGY
 
 **Status:** IMPLEMENTED
-**Version:** 2.1
+**Version:** 2.2
 **Created:** 2026-02-15
 **Updated:** 2026-02-16
 **Authority:** Platform Strategy
@@ -221,6 +221,37 @@ Constraints:
 
 ---
 
+# STAGE 8 — QR Codes for Assets ✅ COMPLETED
+
+**Commit:** `1690401`
+
+**Goal:** Enable quick asset access via QR code scanning.
+
+Add:
+
+- QR code generation (client-side, qrcode.react)
+- "QR Code" button in Asset Detail page
+- AssetQRModal component (display, print, download)
+- AssetQRPrint page (/maintenance/assets/:id/qr) for label printing
+- AssetQuickAccess page (/maintenance/qr/:id) for technicians
+  - Mobile-first standalone design
+  - Asset info display
+  - "Start Visit" button
+
+Flow:
+1. Manager prints QR sticker from Asset Detail
+2. Sticker attached to physical asset
+3. Technician scans QR with phone
+4. Quick Access page opens with "Start Visit" button
+
+Constraints:
+
+- Frontend-only (no backend changes)
+- Client-side QR generation
+- No QR tracking/analytics
+
+---
+
 ## 4. Architectural Guardrails
 
 Maintenance must never:
@@ -257,6 +288,7 @@ Maintenance becomes standalone when:
 - ✅ Has release lock document
 - ✅ Has notifications layer
 - ✅ Has parts tracking
+- ✅ Has QR codes for assets
 
 **MaintainProof is now a standalone product tier.**
 
@@ -281,3 +313,4 @@ Any Stage implementation requires:
 | 1.0 | 2026-02-15 | Initial V2 Strategy |
 | 2.0 | 2026-02-16 | Stages 3-6 implemented, status IMPLEMENTED |
 | 2.1 | 2026-02-16 | Stage 7 Parts & Inventory (Lite) implemented |
+| 2.2 | 2026-02-16 | Stage 8 QR Codes for Assets implemented |
