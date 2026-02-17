@@ -11,6 +11,10 @@ RBAC:
 - cleaner: no access
 """
 
+import uuid
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 
 from rest_framework import status
@@ -36,8 +40,11 @@ from apps.maintenance.notifications import (
     send_assignment_notification,
 )
 from apps.locations.models import Location, ChecklistTemplate, ChecklistTemplateItem
-from apps.jobs.models import Job
+from apps.jobs.models import Job, JobPhoto, File
+from apps.jobs.image_utils import normalize_job_photo_to_jpeg
+from apps.jobs.utils import distance_m, extract_exif_data
 from apps.api.views_reports import compute_sla_status_and_reasons_for_job
+from apps.api.serializers import JobPhotoUploadSerializer
 
 
 # =============================================================================
@@ -5037,3 +5044,277 @@ class AssetImportTemplateView(MaintenancePermissionMixin, APIView):
         )
         response["Content-Disposition"] = 'attachment; filename="asset_import_template.xlsx"'
         return response
+
+
+# =============================================================================
+# Visit Photo Upload (Maintenance Context) - V3 PWA Enhancement
+# =============================================================================
+
+class VisitPhotoUploadView(APIView):
+    """
+    Upload before/after photos for maintenance visits.
+
+    POST /api/maintenance/visits/<id>/upload-photo/
+      multipart: photo_type=before|after, file=<file>
+
+    GET /api/maintenance/visits/<id>/photos/
+
+    RBAC:
+    - GET: owner, manager, staff can view photos
+    - POST: only staff (technicians) can upload photos, only during in_progress visits
+    - cleaner: no access (maintenance context)
+    """
+
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get(self, request, pk: int):
+        """List photos for a visit."""
+        user = request.user
+
+        # RBAC: owner/manager/staff only
+        if user.role not in (User.ROLE_OWNER, User.ROLE_MANAGER, User.ROLE_STAFF):
+            return Response(
+                {"detail": "Insufficient permissions."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Get visit (Job with context=maintenance)
+        visit = get_object_or_404(
+            Job,
+            pk=pk,
+            company=user.company,
+            context=Job.CONTEXT_MAINTENANCE
+        )
+
+        photos = (
+            JobPhoto.objects.filter(job=visit)
+            .select_related("file")
+            .order_by("photo_type", "id")
+        )
+
+        data = []
+        for p in photos:
+            file_url = p.file.file_url if p.file else None
+            if file_url and file_url.startswith("/"):
+                file_url = request.build_absolute_uri(file_url)
+
+            data.append(
+                {
+                    "photo_type": p.photo_type,
+                    "file_url": file_url,
+                    "latitude": p.latitude,
+                    "longitude": p.longitude,
+                    "photo_timestamp": p.photo_timestamp,
+                    "created_at": p.created_at,
+                }
+            )
+
+        return Response(data, status=status.HTTP_200_OK)
+
+    def post(self, request, pk: int):
+        """Upload a photo (before or after) for a visit."""
+        user = request.user
+
+        # RBAC: only staff (technicians) can upload photos
+        if user.role != User.ROLE_STAFF:
+            return Response(
+                {"detail": "Only technicians can upload photos."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Atomic transaction for photo upload
+        with transaction.atomic():
+            visit = get_object_or_404(
+                Job.objects.select_related("location"),
+                pk=pk,
+                company=user.company,
+                context=Job.CONTEXT_MAINTENANCE
+            )
+
+            # Check visit status: photos can only be uploaded during active visit
+            if visit.status != Job.STATUS_IN_PROGRESS:
+                return Response(
+                    {"detail": f"Photos can only be uploaded during in-progress visits. Current status: {visit.status}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Validate input
+            serializer = JobPhotoUploadSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+
+            photo_type = serializer.validated_data["photo_type"]
+            uploaded = serializer.validated_data["file"]
+
+            # AFTER requires BEFORE (optional constraint - can be disabled)
+            if photo_type == JobPhoto.TYPE_AFTER:
+                if not JobPhoto.objects.filter(
+                    job=visit, photo_type=JobPhoto.TYPE_BEFORE
+                ).exists():
+                    return Response(
+                        {"detail": "Cannot upload after photo before before photo."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+            # Max one photo per type
+            if JobPhoto.objects.filter(job=visit, photo_type=photo_type).exists():
+                return Response(
+                    {"detail": f"{photo_type} photo already exists for this visit."},
+                    status=status.HTTP_409_CONFLICT,
+                )
+
+            # Extract EXIF data
+            exif_lat, exif_lon, exif_dt, exif_missing = extract_exif_data(uploaded)
+
+            # Optional: validate location distance (only if location has coordinates)
+            loc = visit.location
+            if exif_lat is not None and exif_lon is not None:
+                if loc.latitude is not None and loc.longitude is not None:
+                    dist = distance_m(exif_lat, exif_lon, loc.latitude, loc.longitude)
+                    # For maintenance, allow wider radius (500m instead of 100m)
+                    if dist > 500:
+                        return Response(
+                            {
+                                "detail": "Photo too far from visit location.",
+                                "distance_m": round(dist, 2),
+                            },
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+
+            # Normalize to JPEG format
+            try:
+                normalized_file = normalize_job_photo_to_jpeg(uploaded)
+            except Exception as exc:
+                return Response(
+                    {"detail": f"Unsupported image format: {exc}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Generate storage key
+            ext = ".jpg"
+            key = (
+                f"company/{visit.company_id}/maintenance/visits/{visit.id}/photos/"
+                f"{photo_type}/{uuid.uuid4().hex}{ext}"
+            )
+
+            # Save to storage
+            try:
+                normalized_file.seek(0)
+            except Exception:
+                pass
+
+            saved_path = default_storage.save(
+                key,
+                ContentFile(normalized_file.read()),
+            )
+            file_url = default_storage.url(saved_path)
+
+            # Create File record
+            db_file = File.objects.create(
+                file_url=file_url,
+                original_name=uploaded.name or "",
+                content_type=getattr(normalized_file, "content_type", "")
+                or getattr(uploaded, "content_type", "")
+                or "",
+                size_bytes=getattr(normalized_file, "size", None)
+                or getattr(uploaded, "size", None),
+            )
+
+            # Create JobPhoto record
+            job_photo = JobPhoto.objects.create(
+                job=visit,
+                file=db_file,
+                photo_type=photo_type,
+                latitude=exif_lat,
+                longitude=exif_lon,
+                photo_timestamp=exif_dt,
+            )
+
+        # Build response
+        out_file_url = db_file.file_url
+        if out_file_url and out_file_url.startswith("/"):
+            out_file_url = request.build_absolute_uri(out_file_url)
+
+        out = {
+            "photo_type": job_photo.photo_type,
+            "file_url": out_file_url,
+            "latitude": job_photo.latitude,
+            "longitude": job_photo.longitude,
+            "photo_timestamp": job_photo.photo_timestamp,
+            "created_at": job_photo.created_at,
+            "exif_missing": bool(exif_missing),
+        }
+
+        return Response(out, status=status.HTTP_201_CREATED)
+
+
+class VisitPhotoDeleteView(APIView):
+    """
+    Delete a photo (before or after) for maintenance visits.
+
+    DELETE /api/maintenance/visits/<id>/photos/<photo_type>/
+
+    RBAC:
+    - owner, manager: can delete
+    - staff, cleaner: cannot delete
+    """
+
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, pk: int, photo_type: str):
+        user = request.user
+
+        # RBAC: owner/manager only
+        if user.role not in (User.ROLE_OWNER, User.ROLE_MANAGER):
+            return Response(
+                {"detail": "Only owners and managers can delete photos."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Validate photo_type
+        if photo_type not in (JobPhoto.TYPE_BEFORE, JobPhoto.TYPE_AFTER):
+            return Response(
+                {"detail": "Invalid photo_type."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Get visit
+        visit = get_object_or_404(
+            Job,
+            pk=pk,
+            company=user.company,
+            context=Job.CONTEXT_MAINTENANCE
+        )
+
+        # Get photo
+        try:
+            job_photo = JobPhoto.objects.select_related("file").get(
+                job=visit,
+                photo_type=photo_type
+            )
+        except JobPhoto.DoesNotExist:
+            return Response(
+                {"detail": f"No {photo_type} photo found for this visit."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Delete file from storage
+        if job_photo.file and job_photo.file.file_url:
+            try:
+                # Extract path from URL
+                file_path = job_photo.file.file_url
+                if file_path.startswith("/media/"):
+                    file_path = file_path[7:]  # Remove /media/ prefix
+                default_storage.delete(file_path)
+            except Exception:
+                pass  # Ignore storage errors
+
+        # Delete DB records
+        file_obj = job_photo.file
+        job_photo.delete()
+        if file_obj:
+            file_obj.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)

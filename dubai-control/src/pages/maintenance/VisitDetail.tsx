@@ -61,9 +61,12 @@ import {
   type VisitPart,
 } from "@/api/maintenance";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
+import { useOfflinePhotos } from "@/hooks/useOfflinePhotos";
 import { MaintenanceLayout } from "@/contexts/maintenance/ui/MaintenanceLayout";
 import { CompletionBlockersPanel } from "@/contexts/maintenance/ui/ApiErrorPanel";
 import { buildCompletionBlockers } from "@/contexts/maintenance/utils/completionErrors";
+import { PhotoCapture } from "@/components/maintenance/PhotoCapture";
+import { OfflineIndicator } from "@/components/maintenance/OfflineIndicator";
 
 // Extended visit detail type for maintenance (API returns objects, not strings)
 type MaintenanceVisitDetail = {
@@ -259,6 +262,17 @@ function isTechnician(role: UserRole): boolean {
   return role === "cleaner";
 }
 
+// V3 PWA Enhancement: Photo upload RBAC
+// Only technicians can upload photos, and only during active visits
+function canUploadPhotos(role: UserRole, visitStatus: string): boolean {
+  return role === "staff" && visitStatus === "in_progress";
+}
+
+// Managers and owners can delete photos if needed
+function canDeletePhotos(role: UserRole): boolean {
+  return role === "owner" || role === "manager";
+}
+
 export default function VisitDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -304,11 +318,34 @@ export default function VisitDetail() {
   });
 
   // Fetch visit parts
-  const { data: visitParts = [], refetch: refetchParts } = useQuery({
+  const { data: visitParts = [] } = useQuery({
     queryKey: maintenanceKeys.visitParts.list(visitId),
     queryFn: () => listVisitParts(visitId),
     enabled: hasAccess && !isNaN(visitId),
   });
+
+  // Offline photos hook (V3 PWA Enhancement)
+  const offlinePhotos = useOfflinePhotos(visitId);
+
+  // Handle offline photo capture
+  const handlePhotoCaptured = async (file: File, photoType: "before" | "after") => {
+    try {
+      await offlinePhotos.capturePhoto(file, photoType);
+      toast({
+        title: "Photo saved offline",
+        description: `${photoType} photo will be uploaded when online`,
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to save photo",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Photo uploads are handled automatically by background sync
+  // Offline photos hook will trigger refetch when upload succeeds
 
   // Add part mutation
   const addPartMutation = useMutation({
@@ -882,49 +919,27 @@ export default function VisitDetail() {
 
       {/* Evidence + Timing Row */}
       <div className="grid gap-4 md:grid-cols-2 mt-4">
-        {/* Evidence Photos */}
+        {/* Evidence Photos (V3 PWA Enhancement: Offline Photo Capture) */}
         <div className="detail-card">
           <h2 className="detail-card-title">Evidence Photos</h2>
-          {(visit.photos?.before || visit.photos?.after) ? (
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <div>
-                <div className="text-[10px] font-medium text-muted-foreground mb-1">BEFORE</div>
-                {visit.photos?.before ? (
-                  <a href={visit.photos.before.url} target="_blank" rel="noopener noreferrer">
-                    <img
-                      src={visit.photos.before.url}
-                      alt="Before"
-                      className="w-full h-20 object-cover rounded border border-border hover:opacity-90"
-                    />
-                  </a>
-                ) : (
-                  <div className="w-full h-20 rounded border border-dashed border-border bg-muted/30 flex items-center justify-center">
-                    <span className="text-[10px] text-muted-foreground">No photo</span>
-                  </div>
-                )}
-              </div>
-              <div>
-                <div className="text-[10px] font-medium text-muted-foreground mb-1">AFTER</div>
-                {visit.photos?.after ? (
-                  <a href={visit.photos.after.url} target="_blank" rel="noopener noreferrer">
-                    <img
-                      src={visit.photos.after.url}
-                      alt="After"
-                      className="w-full h-20 object-cover rounded border border-border hover:opacity-90"
-                    />
-                  </a>
-                ) : (
-                  <div className="w-full h-20 rounded border border-dashed border-border bg-muted/30 flex items-center justify-center">
-                    <span className="text-[10px] text-muted-foreground">No photo</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="mt-2 py-4 text-center">
-              <div className="text-xs text-muted-foreground">No photos uploaded</div>
-            </div>
-          )}
+          <div className="mt-2 grid grid-cols-2 gap-4">
+            <PhotoCapture
+              visitId={visitId}
+              photoType="before"
+              existingPhoto={visit.photos?.before}
+              offlinePhoto={offlinePhotos.getPhotoByType("before")}
+              onPhotoCaptured={(file) => handlePhotoCaptured(file, "before")}
+              disabled={!canUploadPhotos(user.role, visit.status)}
+            />
+            <PhotoCapture
+              visitId={visitId}
+              photoType="after"
+              existingPhoto={visit.photos?.after}
+              offlinePhoto={offlinePhotos.getPhotoByType("after")}
+              onPhotoCaptured={(file) => handlePhotoCaptured(file, "after")}
+              disabled={!canUploadPhotos(user.role, visit.status)}
+            />
+          </div>
         </div>
 
         {/* Timing & Check Events */}
@@ -1176,6 +1191,9 @@ export default function VisitDetail() {
           </div>
         </div>
       )}
+
+      {/* Offline Sync Indicator (V3 PWA Enhancement) */}
+      <OfflineIndicator />
     </MaintenanceLayout>
   );
 }

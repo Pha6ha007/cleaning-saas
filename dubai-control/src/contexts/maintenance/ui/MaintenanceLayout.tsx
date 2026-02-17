@@ -5,8 +5,10 @@
 // This component only provides:
 // - .maintenance-root class for scoped CSS (typography, colors)
 // - No layout-related styling
+// - Background photo sync (V3 PWA Enhancement)
 
 import { ReactNode } from "react";
+import { usePhotoSync } from "@/hooks/usePhotoSync";
 import "./maintenance.css";
 
 interface MaintenanceLayoutProps {
@@ -22,8 +24,13 @@ interface MaintenanceLayoutProps {
  * - Component-specific overrides
  *
  * Layout is handled by AppLayout via shellMode="compact".
+ *
+ * V3 PWA Enhancement: Enables background photo sync for offline uploads
  */
 export function MaintenanceLayout({ children }: MaintenanceLayoutProps) {
+  // Enable background photo sync across all maintenance pages
+  usePhotoSync();
+
   return (
     <div className="maintenance-root">
       {children}

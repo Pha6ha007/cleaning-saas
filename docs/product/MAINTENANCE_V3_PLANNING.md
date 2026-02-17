@@ -64,14 +64,16 @@ V3 focuses on **operational efficiency** and **mobile-first experience**.
 - ✅ Service Worker with Workbox
 - ✅ Asset caching (JS, CSS, images)
 - ✅ Install banner with cooldown
-- ⏸️ Offline photo capture (deferred)
-- ⏸️ GPS check-in/out (deferred)
-- ⏸️ Push notifications (deferred)
-- ⏸️ Offline data persistence (deferred)
+- ✅ Offline photo capture (V3 Phase 1 - 2026-02-17)
+- ⏸️ GPS check-in/out (deferred to V4)
+- ⏸️ Push notifications (deferred to V4)
+- ⏸️ Offline form data persistence (deferred to V4)
 
 **Value:** Technicians work efficiently in the field without network dependency.
 
-**Implementation:** See V2 Strategy Stage 12
+**Implementation:**
+- V2 Strategy Stage 12 (Basic PWA)
+- V3 Phase 1 (Offline Photo Capture) — See `MAINTENANCE_V3_PWA_OFFLINE_PHOTOS.md`
 
 ---
 
@@ -226,7 +228,7 @@ V3 focuses on **operational efficiency** and **mobile-first experience**.
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| PWA: Offline photo capture | ⏸️ Deferred | Requires IndexedDB |
+| PWA: Offline photo capture | ✅ Done | V3 Phase 1 (2026-02-17) |
 | PWA: Push notifications | ⏸️ Deferred | Requires VAPID setup |
 | PWA: GPS check-in/out | ⏸️ Deferred | |
 | Map: Route planning | ⏸️ Deferred | Requires routing API |
@@ -299,3 +301,4 @@ Additional for V3:
 | 0.1 | 2026-02-16 | Initial V3 planning document |
 | 0.2 | 2026-02-16 | Marked completed stages with ✅, updated status |
 | 0.3 | 2026-02-16 | Stage 16 Customer Portal completed |
+| 0.4 | 2026-02-17 | V3 Phase 1: Offline Photo Capture completed |

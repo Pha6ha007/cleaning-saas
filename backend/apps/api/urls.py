@@ -769,4 +769,18 @@ urlpatterns = [
         api_views.CustomerResetPasswordView.as_view(),
         name="company-customer-reset-password",
     ),
+
+    # =====================
+    # V3 PWA Enhancement: Visit Photo Upload
+    # =====================
+    path(
+        "maintenance/visits/<int:pk>/upload-photo/",
+        api_views.VisitPhotoUploadView.as_view(),
+        name="maintenance-visit-upload-photo",
+    ),
+    path(
+        "maintenance/visits/<int:pk>/photos/<str:photo_type>/",
+        api_views.VisitPhotoDeleteView.as_view(),
+        name="maintenance-visit-delete-photo",
+    ),
 ]

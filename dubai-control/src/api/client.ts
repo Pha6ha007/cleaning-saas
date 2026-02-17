@@ -2535,3 +2535,92 @@ export async function downloadAssetImportTemplate(format: ExportFormat = "csv"):
 
   return response.blob();
 }
+
+// =============================================================================
+// V3 PWA Enhancement: Visit Photo Upload
+// =============================================================================
+
+export interface VisitPhoto {
+  photo_type: "before" | "after";
+  file_url: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  photo_timestamp?: string | null;
+  created_at: string;
+  exif_missing?: boolean;
+}
+
+export interface UploadVisitPhotoInput {
+  photo_type: "before" | "after";
+  file: File;
+}
+
+/**
+ * Upload a photo (before or after) for a maintenance visit
+ */
+export async function uploadVisitPhoto(
+  visitId: number,
+  input: UploadVisitPhotoInput
+): Promise<VisitPhoto> {
+  await loginManager();
+
+  const formData = new FormData();
+  formData.append("photo_type", input.photo_type);
+  formData.append("file", input.file);
+
+  const token = localStorage.getItem("token");
+  const response = await fetch(
+    `${API_BASE_URL}/api/maintenance/visits/${visitId}/upload-photo/`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Token ${token}`,
+      },
+      body: formData,
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    const errorMessage = error.detail || `Upload failed: ${response.status}`;
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get all photos for a visit
+ */
+export async function getVisitPhotos(visitId: number): Promise<VisitPhoto[]> {
+  await loginManager();
+  return apiFetch<VisitPhoto[]>(
+    `/api/maintenance/visits/${visitId}/upload-photo/`
+  );
+}
+
+/**
+ * Delete a photo (before or after) from a visit
+ */
+export async function deleteVisitPhoto(
+  visitId: number,
+  photoType: "before" | "after"
+): Promise<void> {
+  await loginManager();
+  const token = localStorage.getItem("token");
+  const response = await fetch(
+    `${API_BASE_URL}/api/maintenance/visits/${visitId}/photos/${photoType}/`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Token ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    const errorMessage = error.detail || `Delete failed: ${response.status}`;
+    throw new Error(errorMessage);
+  }
+}
