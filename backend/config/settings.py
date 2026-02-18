@@ -66,7 +66,9 @@ INSTALLED_APPS = [
     # Third-party libraries
     "corsheaders",
     "rest_framework",
-    "rest_framework.authtoken",
+    "rest_framework.authtoken",  # Legacy token auth (kept for backwards compatibility)
+    "rest_framework_simplejwt",  # PR4: JWT authentication
+    "rest_framework_simplejwt.token_blacklist",  # PR4: Token blacklisting on logout
     "django_celery_beat",  # Stage 14: Periodic tasks
 
     # Our apps
@@ -197,12 +199,54 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        # PR4: JWT as primary authentication (tokens expire)
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        # Legacy: Keep old token auth for backwards compatibility during migration
         "rest_framework.authentication.TokenAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+}
+
+
+# =============================================================================
+# JWT Settings (PR4: Token Security)
+# =============================================================================
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    # Token lifetimes
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=30),   # PR4: Access tokens expire after 30 days
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=90),  # PR4: Refresh tokens expire after 90 days
+
+    # Security: Rotate refresh tokens on each use
+    "ROTATE_REFRESH_TOKENS": True,  # New refresh token on each refresh
+    "BLACKLIST_AFTER_ROTATION": True,  # Old refresh token goes to blacklist
+
+    # Token claims
+    "UPDATE_LAST_LOGIN": True,  # Update user.last_login on token generation
+
+    # Algorithms
+    "ALGORITHM": "HS256",  # HMAC with SHA-256
+    "SIGNING_KEY": SECRET_KEY,  # Use Django SECRET_KEY for signing
+
+    # Token types
+    "AUTH_HEADER_TYPES": ("Bearer",),  # Authorization: Bearer <token>
+    "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
+
+    # User identification
+    "USER_ID_FIELD": "id",
+    "USER_ID_CLAIM": "user_id",
+
+    # Token classes
+    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
+    "TOKEN_TYPE_CLAIM": "token_type",
+
+    # Sliding tokens (disabled - we use access/refresh pair)
+    "SLIDING_TOKEN_LIFETIME": timedelta(days=30),
+    "SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=90),
 }
 
 

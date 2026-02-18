@@ -5,6 +5,9 @@
 Django==5.2.9
 djangorestframework==3.16.1
 
+# JWT Authentication (PR4: Token Security)
+djangorestframework-simplejwt==5.4.0  # JWT tokens with expiration & refresh
+
 # CORS headers
 django-cors-headers==4.9.0
 

@@ -16,6 +16,9 @@ from . import views
 # - views_reports.py
 from apps.api import views as api_views
 
+# PR4: JWT authentication views
+from apps.api import views_auth_jwt as jwt_views
+
 # 👉 ВАЖНО: импортируем из apps.locations.app.views, а НЕ из apps.locations.api.views
 from apps.locations.app.views import (
     ManagerLocationsListCreateView,
@@ -56,6 +59,35 @@ urlpatterns = [
         "auth/signup/",
         api_views.ManagerSignupView.as_view(),
         name="api-auth-signup",
+    ),
+
+    # =====================
+    # JWT Authentication (PR4: Token Security)
+    # =====================
+    path(
+        "auth/jwt/login/",
+        jwt_views.JWTLoginView.as_view(),
+        name="api-jwt-login",
+    ),
+    path(
+        "auth/jwt/cleaner-login/",
+        jwt_views.JWTCleanerPinLoginView.as_view(),
+        name="api-jwt-cleaner-login",
+    ),
+    path(
+        "manager/auth/jwt/login/",
+        jwt_views.JWTManagerLoginView.as_view(),
+        name="api-jwt-manager-login",
+    ),
+    path(
+        "auth/jwt/refresh/",
+        jwt_views.JWTRefreshView.as_view(),
+        name="api-jwt-refresh",
+    ),
+    path(
+        "auth/jwt/logout/",
+        jwt_views.JWTLogoutView.as_view(),
+        name="api-jwt-logout",
     ),
 
     # =====================
