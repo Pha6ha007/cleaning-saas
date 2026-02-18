@@ -1,0 +1,35 @@
+# Bandit Security Linter Configuration
+# https://bandit.readthedocs.io/
+
+[bandit]
+# Directories to scan
+targets = apps/
+
+# Directories to exclude from scanning
+exclude_dirs =
+    /tests/
+    /migrations/
+    /venv/
+    /env/
+    /.venv/
+    /node_modules/
+
+# Test IDs to skip (comma-separated)
+# B101: assert_used - Acceptable in test code
+# B601: paramiko_calls - Not using paramiko
+skips = B101,B601
+
+# Severity level: all, low, medium, high
+level = medium
+
+# Confidence level: all, low, medium, high
+confidence = medium
+
+# Output format: txt, json, csv, xml, html, screen, yaml
+format = screen
+
+# Recursively scan directories
+recursive = True
+
+# Enable/disable verbose output
+verbose = False

@@ -34,6 +34,24 @@ django-celery-beat==2.8.1
 redis==5.0.1
 
 # =============================================================================
+# Security (Foundation Plan PR3-PR6)
+# =============================================================================
+# PR3: Critical Validation Fixes
+bleach==6.2.0           # HTML sanitization to prevent XSS
+python-magic==0.4.27    # MIME type detection
+
+# PR4: Token Security
+djangorestframework-simplejwt==5.4.0  # JWT authentication
+
+# PR5: Virus Scanning + Rate Limiting
+clamd==1.0.2              # ClamAV Python client for virus scanning
+django-ratelimit==4.1.0   # Rate limiting for brute-force protection
+
+# PR6: Security Testing Tools (dev/CI only)
+bandit==1.8.0            # Python security linter
+safety==3.2.18           # Dependency vulnerability scanner
+
+# =============================================================================
 # Production Dependencies (install separately on server)
 # =============================================================================
 # gunicorn>=21.0.0        # WSGI server
