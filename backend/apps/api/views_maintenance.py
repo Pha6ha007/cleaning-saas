@@ -43,6 +43,7 @@ from apps.locations.models import Location, ChecklistTemplate, ChecklistTemplate
 from apps.jobs.models import Job, JobPhoto, File
 from apps.jobs.image_utils import normalize_job_photo_to_jpeg
 from apps.jobs.utils import distance_m, extract_exif_data
+from apps.jobs.virus_scan import scan_file_for_viruses  # PR5: Virus scanning
 from apps.api.views_reports import compute_sla_status_and_reasons_for_job
 from apps.api.serializers import JobPhotoUploadSerializer, JobPhotoSerializer
 
@@ -5158,6 +5159,17 @@ class VisitPhotoUploadView(APIView):
 
             photo_type = serializer.validated_data["photo_type"]
             uploaded = serializer.validated_data["file"]
+
+            # PR5: Virus scanning before processing
+            is_clean, virus_name = scan_file_for_viruses(uploaded)
+            if not is_clean:
+                return Response(
+                    {
+                        "detail": f"Malware detected: {virus_name}. Upload rejected.",
+                        "virus_detected": virus_name
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
             # Validate file size (max 10MB)
             max_size = 10 * 1024 * 1024  # 10MB

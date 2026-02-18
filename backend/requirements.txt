@@ -21,6 +21,10 @@ openpyxl==3.1.5
 # Environment variables
 python-dotenv==1.2.1
 
+# Security (PR5: Virus Scanning + Rate Limiting)
+clamd==1.0.2              # ClamAV Python client for virus scanning
+django-ratelimit==4.1.0   # Rate limiting for brute-force protection
+
 # Django internals
 asgiref==3.11.0
 sqlparse==0.5.5

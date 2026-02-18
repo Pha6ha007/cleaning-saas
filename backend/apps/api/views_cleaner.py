@@ -8,6 +8,8 @@ from django.core.files.storage import default_storage
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django_ratelimit.decorators import ratelimit  # PR5: Rate limiting
 
 from rest_framework import status
 from rest_framework.authentication import TokenAuthentication
@@ -25,6 +27,7 @@ from apps.jobs.models import (
     JobPhoto,
 )
 from apps.jobs.utils import distance_m, extract_exif_data
+from apps.jobs.virus_scan import scan_file_for_viruses  # PR5: Virus scanning
 
 from .serializers import (
     ChecklistBulkUpdateSerializer,
@@ -388,6 +391,7 @@ class ChecklistBulkUpdateView(APIView):
         return Response({"updated_count": len(found)}, status=status.HTTP_200_OK)
 
 
+@method_decorator(ratelimit(key='user', rate='10/m', method='POST'), name='dispatch')
 class JobPhotosView(APIView):
     """
     Upload + list job photos (before/after).
@@ -396,6 +400,8 @@ class JobPhotosView(APIView):
       multipart: photo_type=before|after, file=<file>
 
     GET /api/jobs/<id>/photos/
+
+    Security: PR5 - Rate limited to 10 photo uploads per minute per user
     """
 
     authentication_classes = [TokenAuthentication]
@@ -465,6 +471,17 @@ class JobPhotosView(APIView):
 
             photo_type = serializer.validated_data["photo_type"]
             uploaded = serializer.validated_data["file"]
+
+            # PR5: Virus scanning before processing
+            is_clean, virus_name = scan_file_for_viruses(uploaded)
+            if not is_clean:
+                return Response(
+                    {
+                        "detail": f"Malware detected: {virus_name}. Upload rejected.",
+                        "virus_detected": virus_name
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
             # AFTER требует BEFORE
             if photo_type == JobPhoto.TYPE_AFTER:

@@ -1,6 +1,8 @@
 # backend/apps/api/views_auth.py
 
 from django.contrib.auth.hashers import check_password
+from django.utils.decorators import method_decorator
+from django_ratelimit.decorators import ratelimit  # PR5: Rate limiting
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
@@ -9,10 +11,13 @@ from rest_framework.views import APIView
 from apps.accounts.models import Company, User
 
 
+@method_decorator(ratelimit(key='ip', rate='5/m', method='POST'), name='dispatch')
 class LoginView(APIView):
     """
     MVP Login.
     Авторизация по email + password (cleaner).
+
+    Security: PR5 - Rate limited to 5 attempts per minute per IP
     """
 
     authentication_classes = []
@@ -70,10 +75,13 @@ class LoginView(APIView):
         )
 
 
+@method_decorator(ratelimit(key='ip', rate='5/m', method='POST'), name='dispatch')
 class CleanerPinLoginView(APIView):
     """
     Login для клинера по phone + PIN.
     Используется мобильным приложением.
+
+    Security: PR5 - Rate limited to 5 attempts per minute per IP
     """
 
     authentication_classes = []
@@ -137,9 +145,12 @@ class CleanerPinLoginView(APIView):
         )
 
 
+@method_decorator(ratelimit(key='ip', rate='5/m', method='POST'), name='dispatch')
 class ManagerLoginView(APIView):
     """
     Login для менеджера (web dashboard).
+
+    Security: PR5 - Rate limited to 5 attempts per minute per IP
     """
 
     authentication_classes = []
