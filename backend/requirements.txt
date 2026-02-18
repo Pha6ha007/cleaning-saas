@@ -21,6 +21,10 @@ openpyxl==3.1.5
 # Environment variables
 python-dotenv==1.2.1
 
+# Security (PR3: Critical Validation Fixes)
+bleach==6.2.0           # HTML sanitization to prevent XSS
+python-magic==0.4.27    # MIME type detection (requires libmagic: brew install libmagic)
+
 # Django internals
 asgiref==3.11.0
 sqlparse==0.5.5

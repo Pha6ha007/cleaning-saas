@@ -1,11 +1,18 @@
 # backend/apps/api/serializers.py
 from django.contrib.auth import get_user_model
+from django.core.validators import MinValueValidator, MaxValueValidator
 from rest_framework import serializers
 
 from apps.jobs.models import Job, JobChecklistItem, JobCheckEvent, JobPhoto
 from apps.locations.models import Location, ChecklistTemplate, ChecklistTemplateItem
 from apps.marketing.models import ReportEmailLog
 from apps.maintenance.models import Asset, MaintenanceCategory
+from apps.api.validators import (
+    FileSizeValidator,
+    ImageFileValidator,
+    IMAGE_EXTENSION_VALIDATOR,
+    sanitize_html,
+)
 
 User = get_user_model()
 
@@ -102,9 +109,15 @@ class JobCheckInSerializer(serializers.Serializer):
     """
     Сериализатор для check-in / check-out клинера.
     Принимаем только координаты.
+
+    Security: PR3 - Added coordinate range validation
     """
-    latitude = serializers.FloatField()
-    longitude = serializers.FloatField()
+    latitude = serializers.FloatField(
+        validators=[MinValueValidator(-90.0), MaxValueValidator(90.0)]
+    )
+    longitude = serializers.FloatField(
+        validators=[MinValueValidator(-180.0), MaxValueValidator(180.0)]
+    )
 
 
 class JobChecklistItemSerializer(serializers.ModelSerializer):
@@ -199,17 +212,37 @@ class ChecklistBulkUpdateSerializer(serializers.Serializer):
     items = ChecklistBulkItemSerializer(many=True)
 
     def validate_items(self, items):
+        """
+        Security: PR3 - Added max items limit to prevent DoS
+        """
         if not items:
             raise serializers.ValidationError("items must be a non-empty list")
+
+        if len(items) > 100:
+            raise serializers.ValidationError(
+                "Maximum 100 items allowed per bulk update. Split into multiple requests."
+            )
+
         return items
 
 
 class JobPhotoUploadSerializer(serializers.Serializer):
     """
     Upload job photo (before / after).
+
+    Security: PR3 - Added file validation:
+    - Max size: 10MB
+    - Allowed types: jpg, jpeg, png, heic, heif
+    - MIME type verification (if python-magic available)
     """
     photo_type = serializers.ChoiceField(choices=["before", "after"])
-    file = serializers.FileField()
+    file = serializers.FileField(
+        validators=[
+            FileSizeValidator(max_mb=10),
+            IMAGE_EXTENSION_VALIDATOR,
+            ImageFileValidator(),
+        ]
+    )
 
 
 class JobPhotoSerializer(serializers.Serializer):
@@ -284,7 +317,14 @@ class ManagerJobCreateSerializer(serializers.Serializer):
     # Maintenance Context V1: optional asset binding and category
     asset_id = serializers.IntegerField(required=False, allow_null=True)
     maintenance_category_id = serializers.IntegerField(required=False, allow_null=True)
-    manager_notes = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+    # Security: PR3 - Added max_length limit and HTML sanitization
+    manager_notes = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        max_length=2000  # Prevent database bloat / DoS
+    )
 
     # Context separation: cleaning (CleanProof) or maintenance (MaintainProof)
     # IMPORTANT: Context MUST NOT rely on asset nullability - it's set explicitly
@@ -302,7 +342,18 @@ class ManagerJobCreateSerializer(serializers.Serializer):
     )
     sla_deadline = serializers.DateTimeField(required=False, allow_null=True)
 
+    def validate_manager_notes(self, value):
+        """
+        Security: PR3 - Sanitize HTML to prevent XSS
+        """
+        if value:
+            return sanitize_html(value)
+        return value
+
     def validate(self, attrs):
+        """
+        Security: PR3 - Added business logic validation for dates/times
+        """
         request = self.context["request"]
         user = request.user
         company = getattr(user, "company", None)
@@ -377,6 +428,22 @@ class ManagerJobCreateSerializer(serializers.Serializer):
                 raise serializers.ValidationError(
                     {"maintenance_category_id": "Invalid maintenance category"}
                 )
+
+        # Security: PR3 - Validate time logic
+        start_time = attrs.get("scheduled_start_time")
+        end_time = attrs.get("scheduled_end_time")
+        if start_time and end_time and start_time >= end_time:
+            raise serializers.ValidationError({
+                "scheduled_end_time": "End time must be after start time"
+            })
+
+        # Security: PR3 - Prevent scheduling jobs in the past
+        from django.utils import timezone
+        scheduled_date = attrs.get("scheduled_date")
+        if scheduled_date and scheduled_date < timezone.now().date():
+            raise serializers.ValidationError({
+                "scheduled_date": "Cannot schedule jobs in the past"
+            })
 
         attrs["_location"] = location
         attrs["_cleaner"] = cleaner
