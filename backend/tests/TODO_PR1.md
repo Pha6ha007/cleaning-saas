@@ -91,41 +91,46 @@ This is correct API behavior - tests have wrong expectations.
 
 ## Current Status
 
-**Test Results:** **39 passed, 24 failed (out of 63 total)** ✅
+**Test Results:** **47 passed, 16 failed (out of 63 total)** ✅✅ **(75% success rate!)**
 
-**Progress:** 8 → 17 → 36 → 39 passing tests!
+**Progress:** 8 → 17 → 36 → 39 → **47 passing tests!**
 
-**Passing Tests:**
-- ✅ All fixture/model creation tests
-- ✅ Most check-in tests (RBAC working!)
+**Passing Tests (47):**
+- ✅ **All RBAC tests (16/16)** - full permission coverage!
+- ✅ All check-in tests
 - ✅ Most force-complete tests
-- ✅ Many RBAC tests
+- ✅ All fixture/model creation tests
+- ✅ Job creation API tests
 - ✅ Some invariant tests
 
-**Failing Tests Breakdown (24 remaining):**
+**Failing Tests Breakdown (16 remaining):**
 
-### Production Code Bugs (Cannot Fix in PR1):
-1. **Check-out tests (6 failures)** - `Job.check_out()` has bug with ValidationError
+### 🐛 Production Code Bugs (BLOCKED - Cannot Fix in PR1):
+1. **Check-out tests (6 failures)** - `Job.check_out()` has ValidationError bug
    - `AttributeError: 'ValidationError' object has no attribute 'error_list'`
    - Line 345 in apps/jobs/models.py
-   - **Action:** Report as separate bug, skip these tests for now
+   - **Status:** BLOCKED - requires production code fix
+   - **Tests:** All TestCheckOut tests fail
 
-### API Payload Mismatches:
-2. **Job creation tests (3 failures)** - Tests send `scheduled_duration` in payload
-   - API expects different format (needs investigation)
-   - **Action:** Check actual API serializer, fix test payloads
-
-### DB Constraint Tests (Expected to Fail):
-3. **Invariant tests (4 failures)** - Tests expect DB-level constraints that don't exist:
+### 🟡 Minor Fixes Needed (7 failures):
+2. **Invariant tests (4)** - Expect DB-level constraints that don't exist:
    - `test_actual_start_time_required_for_in_progress`
    - `test_actual_end_time_required_for_completed`
    - `test_start_time_before_end_time`
-   - **Action:** These should be API-level tests, not model tests
+   - `test_cannot_skip_in_progress_state`
+   - **Note:** These are architectural - constraints enforced in API, not DB
 
-### Remaining Issues:
-4. **RBAC tests** - DELETE/PATCH on wrong endpoints (405 errors)
-5. **Photo tests** - File model creation needs fixing
-6. **Force-complete validation** - Minor payload/response mismatches
+3. **Photo/Evidence tests (3)** - Need investigation:
+   - `test_max_one_photo_per_type` - File model field mismatch
+   - `test_verification_required_jobs_need_photos`
+   - `test_check_events_created_on_check_in_out`
+
+### ⚙️ Force-complete validation (3 failures):
+4. **Minor validation issues:**
+   - `test_force_complete_requires_minimum_reason_length`
+   - `test_can_force_complete_completed_unverified_job`
+   - `test_force_complete_stores_reason`
+   - **Status:** Likely small payload/response mismatches
 
 ## Decision Point: How to Proceed?
 
