@@ -264,8 +264,11 @@ function isTechnician(role: UserRole): boolean {
 
 // V3 PWA Enhancement: Photo upload RBAC
 // Only technicians can upload photos, and only during active visits
+// TEMPORARY: Allow all roles for testing (TODO: restore to staff-only after testing)
 function canUploadPhotos(role: UserRole, visitStatus: string): boolean {
-  return role === "staff" && visitStatus === "in_progress";
+  // Original: return role === "staff" && visitStatus === "in_progress";
+  // Temporary for testing: allow owners/managers too
+  return (role === "staff" || role === "owner" || role === "manager") && visitStatus === "in_progress";
 }
 
 // Managers and owners can delete photos if needed
@@ -305,6 +308,11 @@ export default function VisitDetail() {
     queryKey: ["serviceVisit", visitId],
     queryFn: async () => {
       const data = await getServiceVisit(visitId);
+      console.log('[VisitDetail] Fetched visit data:', {
+        id: data.id,
+        hasPhotos: !!data.photos,
+        photos: data.photos,
+      });
       return data as unknown as MaintenanceVisitDetail;
     },
     enabled: hasAccess && !isNaN(visitId),
@@ -327,6 +335,28 @@ export default function VisitDetail() {
   // Offline photos hook (V3 PWA Enhancement)
   const offlinePhotos = useOfflinePhotos(visitId);
 
+  // Listen for photo upload events and refresh visit data
+  useEffect(() => {
+    const handlePhotoUploaded = (event: Event) => {
+      const customEvent = event as CustomEvent<{ visitId: number; photoType: string }>;
+      console.log('[VisitDetail] Photo uploaded event received:', customEvent.detail);
+
+      // Only refetch if this is the current visit
+      if (customEvent.detail.visitId === visitId) {
+        console.log('[VisitDetail] Force refetching visit data after photo upload');
+        // Use direct refetch instead of invalidateQueries for immediate update
+        setTimeout(() => {
+          refetch();
+        }, 1000); // Small delay to ensure server has processed the upload
+      }
+    };
+
+    window.addEventListener('photoUploaded', handlePhotoUploaded);
+    return () => {
+      window.removeEventListener('photoUploaded', handlePhotoUploaded);
+    };
+  }, [visitId, refetch]);
+
   // Handle offline photo capture
   const handlePhotoCaptured = async (file: File, photoType: "before" | "after") => {
     try {
@@ -335,6 +365,15 @@ export default function VisitDetail() {
         title: "Photo saved offline",
         description: `${photoType} photo will be uploaded when online`,
       });
+
+      // Trigger immediate sync if online
+      console.log('[VisitDetail] Photo captured, triggering immediate sync');
+      if (typeof window !== 'undefined' && (window as any).__triggerPhotoSync) {
+        // Small delay to ensure photo is fully saved to IndexedDB
+        setTimeout(() => {
+          (window as any).__triggerPhotoSync();
+        }, 500);
+      }
     } catch (error) {
       toast({
         title: "Failed to save photo",

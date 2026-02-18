@@ -213,12 +213,54 @@ class JobPhotoUploadSerializer(serializers.Serializer):
 
 
 class JobPhotoSerializer(serializers.Serializer):
+    """
+    V3 Phase 1.1: Added permission metadata for photo replacement (maintenance context only)
+    """
     photo_type = serializers.CharField()
     file_url = serializers.CharField()
     latitude = serializers.FloatField(allow_null=True)
     longitude = serializers.FloatField(allow_null=True)
     photo_timestamp = serializers.DateTimeField(allow_null=True)
     created_at = serializers.DateTimeField()
+
+    # V3 Phase 1.1: Permission metadata for replacement
+    can_replace = serializers.SerializerMethodField()
+    replacements_remaining = serializers.SerializerMethodField()
+    edit_time_remaining = serializers.SerializerMethodField()
+    requires_reason = serializers.SerializerMethodField()
+
+    def get_can_replace(self, obj):
+        """Check if current user can replace this photo."""
+        request = self.context.get('request')
+        job = self.context.get('job')
+        if not request or not job:
+            return False
+
+        # Quick permission check (without reason)
+        can_replace, _ = obj.can_be_replaced_by(request.user, job, reason=None)
+        return can_replace
+
+    def get_replacements_remaining(self, obj):
+        """Get number of replacements remaining for current user."""
+        request = self.context.get('request')
+        if not request:
+            return 0
+        return obj.get_replacements_remaining(request.user)
+
+    def get_edit_time_remaining(self, obj):
+        """Get time remaining in edit window (minutes for tech, hours for manager)."""
+        request = self.context.get('request')
+        if not request:
+            return 0
+        return obj.get_time_remaining_for_edit(request.user)
+
+    def get_requires_reason(self, obj):
+        """Check if user role requires a reason for replacement (owner only)."""
+        from apps.accounts.models import User
+        request = self.context.get('request')
+        if not request:
+            return False
+        return request.user.role == User.ROLE_OWNER
 
 
 # ==== Manager / Planning serializers ====

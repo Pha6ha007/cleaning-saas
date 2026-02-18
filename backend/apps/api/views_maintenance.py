@@ -44,7 +44,7 @@ from apps.jobs.models import Job, JobPhoto, File
 from apps.jobs.image_utils import normalize_job_photo_to_jpeg
 from apps.jobs.utils import distance_m, extract_exif_data
 from apps.api.views_reports import compute_sla_status_and_reasons_for_job
-from apps.api.serializers import JobPhotoUploadSerializer
+from apps.api.serializers import JobPhotoUploadSerializer, JobPhotoSerializer
 
 
 # =============================================================================
@@ -5094,22 +5094,33 @@ class VisitPhotoUploadView(APIView):
             .order_by("photo_type", "id")
         )
 
+        # V3 Phase 1.1: Include permission metadata for photo replacement
         data = []
         for p in photos:
             file_url = p.file.file_url if p.file else None
             if file_url and file_url.startswith("/"):
                 file_url = request.build_absolute_uri(file_url)
 
-            data.append(
-                {
-                    "photo_type": p.photo_type,
-                    "file_url": file_url,
-                    "latitude": p.latitude,
-                    "longitude": p.longitude,
-                    "photo_timestamp": p.photo_timestamp,
-                    "created_at": p.created_at,
-                }
-            )
+            # Build photo data dict with permission metadata
+            # For GET requests, pass a dummy reason to check if owner CAN replace (actual reason validated on POST)
+            dummy_reason = "Permission check for API response" if user.role == User.ROLE_OWNER else None
+            can_replace, _ = p.can_be_replaced_by(user, visit, reason=dummy_reason)
+
+            photo_data = {
+                "photo_type": p.photo_type,
+                "file_url": file_url,
+                "latitude": p.latitude,
+                "longitude": p.longitude,
+                "photo_timestamp": p.photo_timestamp,
+                "created_at": p.created_at,
+                # V3 Phase 1.1: Permission metadata
+                "can_replace": can_replace,
+                "replacements_remaining": p.get_replacements_remaining(user),
+                "edit_time_remaining": p.get_time_remaining_for_edit(user),
+                "requires_reason": user.role == User.ROLE_OWNER,
+            }
+
+            data.append(photo_data)
 
         return Response(data, status=status.HTTP_200_OK)
 
@@ -5117,10 +5128,10 @@ class VisitPhotoUploadView(APIView):
         """Upload a photo (before or after) for a visit."""
         user = request.user
 
-        # RBAC: only staff (technicians) can upload photos
-        if user.role != User.ROLE_STAFF:
+        # RBAC: owner, manager, staff can upload photos
+        if user.role not in (User.ROLE_OWNER, User.ROLE_MANAGER, User.ROLE_STAFF):
             return Response(
-                {"detail": "Only technicians can upload photos."},
+                {"detail": "Insufficient permissions to upload photos."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -5133,10 +5144,11 @@ class VisitPhotoUploadView(APIView):
                 context=Job.CONTEXT_MAINTENANCE
             )
 
-            # Check visit status: photos can only be uploaded during active visit
-            if visit.status != Job.STATUS_IN_PROGRESS:
+            # Check visit status: staff (technicians) can only upload during in-progress visits
+            # Owner/manager can upload on any visit status (scheduled, in_progress, etc.)
+            if user.role == User.ROLE_STAFF and visit.status != Job.STATUS_IN_PROGRESS:
                 return Response(
-                    {"detail": f"Photos can only be uploaded during in-progress visits. Current status: {visit.status}"},
+                    {"detail": f"Technicians can only upload photos during in-progress visits. Current status: {visit.status}"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
@@ -5146,6 +5158,18 @@ class VisitPhotoUploadView(APIView):
 
             photo_type = serializer.validated_data["photo_type"]
             uploaded = serializer.validated_data["file"]
+
+            # Validate file size (max 10MB)
+            max_size = 10 * 1024 * 1024  # 10MB
+            if uploaded.size > max_size:
+                return Response(
+                    {
+                        "code": "request_too_large",
+                        "detail": "Photo too large. Maximum size is 10MB.",
+                        "fields": {"file": ["File size exceeds 10MB limit."]},
+                    },
+                    status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                )
 
             # AFTER requires BEFORE (optional constraint - can be disabled)
             if photo_type == JobPhoto.TYPE_AFTER:
@@ -5157,12 +5181,57 @@ class VisitPhotoUploadView(APIView):
                         status=status.HTTP_400_BAD_REQUEST,
                     )
 
-            # Max one photo per type
-            if JobPhoto.objects.filter(job=visit, photo_type=photo_type).exists():
-                return Response(
-                    {"detail": f"{photo_type} photo already exists for this visit."},
-                    status=status.HTTP_409_CONFLICT,
+            # V3 Phase 1.1: Check if photo exists - if so, validate replacement permissions
+            replacement_reason = request.data.get('reason', None)
+            existing_photo = JobPhoto.objects.select_related('file').filter(
+                job=visit, photo_type=photo_type
+            ).first()
+
+            # Track replacement metadata
+            original_uploaded_at = None
+            replacement_count = 0
+
+            if existing_photo:
+                # Check if replacement is allowed for this user
+                can_replace, error_msg = existing_photo.can_be_replaced_by(
+                    user, visit, replacement_reason
                 )
+
+                if not can_replace:
+                    return Response(
+                        {
+                            "code": "replacement_not_allowed",
+                            "detail": error_msg,
+                            "replacements_remaining": existing_photo.get_replacements_remaining(user),
+                            "time_remaining": existing_photo.get_time_remaining_for_edit(user),
+                        },
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+
+                # Replacement allowed - preserve metadata and delete old photo
+                original_uploaded_at = existing_photo.original_uploaded_at or existing_photo.created_at
+                replacement_count = existing_photo.replacement_count + 1
+
+                # Delete old file from storage if it exists
+                if existing_photo.file:
+                    try:
+                        old_file_url = existing_photo.file.file_url
+                        if old_file_url:
+                            # Extract path from URL
+                            from urllib.parse import urlparse
+                            parsed = urlparse(old_file_url)
+                            old_path = parsed.path.lstrip('/')
+                            if default_storage.exists(old_path):
+                                default_storage.delete(old_path)
+                    except Exception as e:
+                        # Log but don't fail - continue with replacement
+                        print(f"Warning: Failed to delete old photo file: {e}")
+
+                    # Delete File record
+                    existing_photo.file.delete()
+
+                # Delete old JobPhoto record
+                existing_photo.delete()
 
             # Extract EXIF data
             exif_lat, exif_lon, exif_dt, exif_missing = extract_exif_data(uploaded)
@@ -5221,7 +5290,9 @@ class VisitPhotoUploadView(APIView):
                 or getattr(uploaded, "size", None),
             )
 
-            # Create JobPhoto record
+            # Create JobPhoto record with replacement tracking
+            from django.utils import timezone
+
             job_photo = JobPhoto.objects.create(
                 job=visit,
                 file=db_file,
@@ -5229,6 +5300,12 @@ class VisitPhotoUploadView(APIView):
                 latitude=exif_lat,
                 longitude=exif_lon,
                 photo_timestamp=exif_dt,
+                # V3 Phase 1.1: Replacement tracking
+                replacement_count=replacement_count,
+                original_uploaded_at=original_uploaded_at,
+                last_replaced_at=timezone.now() if replacement_count > 0 else None,
+                last_replaced_by=user if replacement_count > 0 else None,
+                replacement_reason=replacement_reason if replacement_count > 0 else None,
             )
 
         # Build response

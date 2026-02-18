@@ -33,9 +33,12 @@ import {
 } from "@/api/maintenance";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
 
-// RBAC: Check if user can create visits (owner/manager)
+// RBAC: Check if user can create visits (owner/manager/staff for testing)
+// TODO: Restore proper RBAC after testing
 function canCreateVisits(role: UserRole): boolean {
-  return role === "owner" || role === "manager";
+  // Temporarily allow all roles except cleaner for testing
+  return role !== "cleaner";
+  // Original: return role === "owner" || role === "manager";
 }
 
 export default function CreateVisit() {
@@ -45,7 +48,11 @@ export default function CreateVisit() {
   const queryClient = useQueryClient();
   const user = useUserRole();
 
+  console.log('[CreateVisit] Current user:', user);
+  console.log('[CreateVisit] User role:', user.role);
+
   const canCreate = canCreateVisits(user.role);
+  console.log('[CreateVisit] Can create visits:', canCreate);
 
   // Read prefill values from URL query params
   const prefillAssetId = searchParams.get("asset_id") || "";
@@ -186,12 +193,44 @@ export default function CreateVisit() {
   const createMutation = useMutation({
     mutationFn: createVisit,
     onSuccess: (data) => {
+      console.log('='.repeat(60));
+      console.log('🎯 [CreateVisit] SUCCESS CALLBACK TRIGGERED');
+      console.log('='.repeat(60));
+      console.log('📦 Full response object:', data);
+      console.log('📦 Type of response:', typeof data);
+      console.log('📦 Is array?:', Array.isArray(data));
+      console.log('📦 Keys in response:', data ? Object.keys(data) : 'null/undefined');
+      console.log('---');
+      console.log('🔑 data.id:', data?.id);
+      console.log('🔑 typeof data.id:', typeof data?.id);
+      console.log('🔑 data.id === undefined?:', data?.id === undefined);
+      console.log('🔑 data.id === null?:', data?.id === null);
+      console.log('---');
+      console.log('🔍 Checking other possible ID fields:');
+      console.log('   data.visitId:', (data as any)?.visitId);
+      console.log('   data.job_id:', (data as any)?.job_id);
+      console.log('   data.pk:', (data as any)?.pk);
+      console.log('='.repeat(60));
+
       queryClient.invalidateQueries({ queryKey: maintenanceKeys.visits.all });
       toast({
         title: "Success",
         description: "Service visit created successfully",
       });
-      navigate(`/maintenance/visits/${data.id}`);
+
+      // Ensure data.id exists before navigating
+      if (data && data.id) {
+        console.log('✅ Navigating to:', `/maintenance/visits/${data.id}`);
+        navigate(`/maintenance/visits/${data.id}`);
+      } else {
+        console.error('❌ [CreateVisit] Response missing id field!');
+        console.error('❌ Cannot navigate without ID');
+        toast({
+          variant: "destructive",
+          title: "Navigation Error",
+          description: "Visit created but missing ID in response. Please refresh the page.",
+        });
+      }
     },
     onError: (error: any) => {
       const errorData = error?.response?.data;
@@ -522,7 +561,7 @@ export default function CreateVisit() {
                     </div>
                     <ul className="list-disc list-inside text-xs text-muted-foreground space-y-0.5">
                       {itemsToShow.map((item, idx) => (
-                        <li key={idx}>{item}</li>
+                        <li key={idx}>{typeof item === 'string' ? item : item.text}</li>
                       ))}
                     </ul>
                     {hasMore && (

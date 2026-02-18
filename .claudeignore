@@ -1,0 +1,14 @@
+docs/archive/
+docs/design-system/
+docs/execution/
+docs/vision/
+docs/ux/
+docs/sales/
+docs/commercial/
+docs/analytics/
+docs/audit/
+*.lock
+*.lockb
+package-lock.json
+mobile-cleaner/assets/
+dubai-control/dist/

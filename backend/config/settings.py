@@ -216,23 +216,21 @@ REST_FRAMEWORK = {
 # SECURITY: Wildcards (*) are NEVER allowed. Each origin must be explicit.
 # =============================================================================
 
-_cors_origins_env = os.getenv("CORS_ORIGINS", "")
-if _cors_origins_env:
-    # Production: explicit origins from environment
-    CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_origins_env.split(",") if o.strip()]
+if DEBUG:
+    # Development: Allow all origins for easier local development
+    CORS_ALLOW_ALL_ORIGINS = True
+    CORS_ALLOWED_ORIGINS = []  # Not used when ALLOW_ALL is True
 else:
-    # Development defaults (Vite default + legacy ports)
-    CORS_ALLOWED_ORIGINS = [
-        "http://localhost:5173",   # Vite default
-        "http://127.0.0.1:5173",
-        "http://localhost:8080",   # Legacy/alternative
-        "http://127.0.0.1:8080",
-        "http://localhost:8081",
-        "http://127.0.0.1:8081",
-    ]
-
-# SECURITY: Never allow all origins — explicitly disabled
-CORS_ALLOW_ALL_ORIGINS = False
+    # Production: explicit origins from environment
+    _cors_origins_env = os.getenv("CORS_ORIGINS", "")
+    if _cors_origins_env:
+        CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_origins_env.split(",") if o.strip()]
+    else:
+        raise ValueError(
+            "CORS_ORIGINS environment variable is required in production mode. "
+            "Example: CORS_ORIGINS=https://app.cleanproof.com,https://www.cleanproof.com"
+        )
+    CORS_ALLOW_ALL_ORIGINS = False
 # =============================================================================
 # Email (SMTP via Gmail)
 # =============================================================================

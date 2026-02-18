@@ -15,6 +15,7 @@ import {
   type SyncQueueItem,
 } from "../lib/indexedDB";
 import { useOnlineStatus } from "./useOnlineStatus";
+import { compressImage, getFileSizeMB, isImageFile } from "../lib/imageCompression";
 
 // Generate UUID using crypto API
 function generateUUID(): string {
@@ -29,6 +30,15 @@ export function useOfflinePhotos(visitId: number) {
 
   // Load photos from IndexedDB
   const loadPhotos = useCallback(async () => {
+    // Validate visitId before querying IndexedDB
+    if (!visitId || typeof visitId !== 'number' || isNaN(visitId)) {
+      console.warn('[useOfflinePhotos] Invalid visitId, skipping load:', visitId);
+      setPhotos([]);
+      setError(null); // Not an error, just no valid visit yet
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       const storedPhotos = await getPhotosByVisitId(visitId);
@@ -48,6 +58,7 @@ export function useOfflinePhotos(visitId: number) {
 
   /**
    * Capture a photo and save it offline
+   * V3 Phase 1.5: Now includes automatic image compression
    */
   const capturePhoto = useCallback(
     async (
@@ -55,14 +66,46 @@ export function useOfflinePhotos(visitId: number) {
       photoType: "before" | "after"
     ): Promise<OfflinePhoto> => {
       try {
+        // Validate visitId
+        if (!visitId || typeof visitId !== 'number' || isNaN(visitId)) {
+          throw new Error("Invalid visit ID - cannot save photo");
+        }
+
+        // Validate that it's an image file
+        if (!isImageFile(file)) {
+          throw new Error("File must be an image");
+        }
+
+        const originalSizeMB = getFileSizeMB(file);
+        console.log(`Original photo size: ${originalSizeMB.toFixed(2)}MB`);
+
+        // Compress image if needed (target: < 8MB)
+        let processedFile = file;
+        if (originalSizeMB > 8) {
+          console.log("Compressing image...");
+          try {
+            processedFile = await compressImage(file, {
+              maxSizeMB: 8,
+              maxWidthOrHeight: 1920,
+              quality: 0.85,
+            });
+            const compressedSizeMB = getFileSizeMB(processedFile);
+            console.log(`Compressed photo size: ${compressedSizeMB.toFixed(2)}MB`);
+          } catch (compressionError) {
+            console.error("Failed to compress image:", compressionError);
+            // Continue with original file if compression fails
+            console.warn("Using original file (compression failed)");
+          }
+        }
+
         const photo: OfflinePhoto = {
           id: generateUUID(),
           visitId,
           photoType,
-          blob: file,
-          fileName: file.name,
-          mimeType: file.type,
-          size: file.size,
+          blob: processedFile,
+          fileName: processedFile.name,
+          mimeType: processedFile.type,
+          size: processedFile.size,
           capturedAt: new Date().toISOString(),
           status: isOnline ? "pending" : "pending",
           uploadAttempts: 0,
@@ -88,7 +131,7 @@ export function useOfflinePhotos(visitId: number) {
         return photo;
       } catch (err) {
         console.error("Failed to capture photo:", err);
-        throw new Error("Failed to save photo offline");
+        throw new Error(err instanceof Error ? err.message : "Failed to save photo offline");
       }
     },
     [visitId, isOnline, loadPhotos]

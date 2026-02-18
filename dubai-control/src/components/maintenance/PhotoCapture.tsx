@@ -9,6 +9,7 @@ import { Camera, Upload, X, Loader2, CheckCircle2, AlertCircle, WifiOff } from "
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { useOfflinePhotos } from "@/hooks/useOfflinePhotos";
 import type { OfflinePhoto } from "@/lib/indexedDB";
 
 interface PhotoCaptureProps {
@@ -24,7 +25,7 @@ export function PhotoCapture({
   visitId,
   photoType,
   existingPhoto,
-  offlinePhoto,
+  offlinePhoto: offlinePhotoProp,
   onPhotoCaptured,
   disabled = false,
 }: PhotoCaptureProps) {
@@ -33,8 +34,27 @@ export function PhotoCapture({
   const { toast } = useToast();
   const isOnline = useOnlineStatus();
 
-  // Determine current photo URL
-  const currentPhotoUrl = existingPhoto?.url || (offlinePhoto ? URL.createObjectURL(offlinePhoto.blob) : null);
+  // Use offline hooks directly
+  const { capturePhoto: capturePhotoOffline, getPhotoByType } = useOfflinePhotos(visitId);
+
+  // Use local hook data, fallback to prop for backwards compatibility
+  const offlinePhoto = getPhotoByType(photoType) || offlinePhotoProp;
+
+  // Determine current photo URL - PRIORITY: offline first, then server
+  const offlinePhotoUrl = offlinePhoto ? URL.createObjectURL(offlinePhoto.blob) : null;
+  const serverPhotoUrl = existingPhoto?.url || null;
+  const currentPhotoUrl = offlinePhotoUrl || serverPhotoUrl;
+
+  // Debug logging
+  console.log(`[PhotoCapture ${photoType}] Display priority:`, {
+    visitId,
+    hasOffline: !!offlinePhoto,
+    hasServer: !!existingPhoto,
+    showing: currentPhotoUrl ? (offlinePhotoUrl ? 'OFFLINE' : 'SERVER') : 'NONE',
+    offlineStatus: offlinePhoto?.status,
+    useHook: !!getPhotoByType(photoType),
+    useProp: !!offlinePhotoProp,
+  });
 
   // Handle file selection
   const handleFileChange = useCallback(
@@ -72,15 +92,35 @@ export function PhotoCapture({
 
       // ALWAYS save to IndexedDB (online or offline)
       // Background sync will handle upload automatically
-      if (onPhotoCaptured) {
-        onPhotoCaptured(file);
-        toast({
-          title: "Photo saved",
-          description: isOnline ? "Photo will be uploaded automatically" : "Photo saved offline, will upload when online",
-        });
-      }
+      (async () => {
+        try {
+          console.log(`[PhotoCapture ${photoType}] Saving to IndexedDB...`);
+
+          // Use offline hook directly
+          await capturePhotoOffline(file, photoType);
+
+          console.log(`[PhotoCapture ${photoType}] Saved to IndexedDB successfully`);
+
+          toast({
+            title: "Photo saved",
+            description: isOnline ? "Photo will be uploaded automatically" : "Photo saved offline, will upload when online",
+          });
+
+          // Call legacy callback if provided (backwards compatibility)
+          if (onPhotoCaptured) {
+            onPhotoCaptured(file);
+          }
+        } catch (error) {
+          console.error(`[PhotoCapture ${photoType}] Failed to save:`, error);
+          toast({
+            title: "Error saving photo",
+            description: error instanceof Error ? error.message : "Unknown error",
+            variant: "destructive",
+          });
+        }
+      })();
     },
-    [toast, isOnline, onPhotoCaptured]
+    [toast, isOnline, onPhotoCaptured, capturePhotoOffline, photoType]
   );
 
   // No manual upload - background sync handles it automatically

@@ -9,6 +9,8 @@
 | **RBAC Smoke Test** | `backend/verify_roles.sh` | Automated RBAC regression guard (20 tests) |
 | **Test Users Setup** | `backend/setup_test_users.py` | Create test fixtures for all roles |
 | **Verification Checklist** | [docs/settings/VERIFICATION_CHECKLIST.md](settings/VERIFICATION_CHECKLIST.md) | Pre-deployment checklist |
+| **Offline Photos Testing** | [docs/testing/OFFLINE_PHOTOS_TESTING_GUIDE.md](testing/OFFLINE_PHOTOS_TESTING_GUIDE.md) | Manual testing guide for V3 offline photo capture |
+| **API Test Guide** | [docs/testing/TEST_API.md](testing/TEST_API.md) | Photo upload API testing procedures |
 
 ### API Documentation
 
@@ -31,6 +33,8 @@
 |----------|------|---------|
 | **Paid Activation Flow** | [docs/product/PAID_ACTIVATION_FLOW_v1.md](product/PAID_ACTIVATION_FLOW_v1.md) | Manual paid plan activation (pre-Paddle) |
 | **PDF Reports** | [docs/reports/PDF_REPORTS.md](reports/PDF_REPORTS.md) | Job Report, Company SLA Report, XLSX Export |
+| **V3 PWA Offline Photos** | [docs/product/MAINTENANCE_V3_PWA_OFFLINE_PHOTOS.md](product/MAINTENANCE_V3_PWA_OFFLINE_PHOTOS.md) | Phase 1: Offline photo capture specification |
+| **Photo Capture Integration** | [docs/product/PHOTO_CAPTURE_OFFLINE_INTEGRATION.md](product/PHOTO_CAPTURE_OFFLINE_INTEGRATION.md) | PhotoCapture component integration guide |
 
 ### Product Contexts
 
@@ -41,6 +45,12 @@
 | **Maintenance V2 Strategy** | [docs/product/MAINTENANCE_V2_STRATEGY.md](product/MAINTENANCE_V2_STRATEGY.md) | Stage-based evolution roadmap (Stages 2-5) |
 | **Fit-out Context** | [docs/product/context_fitout.md](product/context_fitout.md) | Fit-out/construction operational context |
 | **Property Context** | [docs/product/context_property.md](product/context_property.md) | Property management operational context |
+
+### Technical Fixes & Guides
+
+| Document | Path | Content |
+|----------|------|---------|
+| **Photo Display Priority Fix** | [docs/execution/fixes/PHOTO_DISPLAY_PRIORITY_FIX.md](execution/fixes/PHOTO_DISPLAY_PRIORITY_FIX.md) | Offline-first photo display implementation |
 
 ### Deployment
 
@@ -98,15 +108,23 @@ docs/
 │   └── PRODUCTION_DEPLOYMENT_V1.md # VPS deployment guide
 ├── execution/
 │   ├── PROJECT_STATE.md    # Implementation status
-│   └── WORKING_MODE_PROTOCOL.md # Parallel agent rules
+│   ├── WORKING_MODE_PROTOCOL.md # Parallel agent rules
+│   └── fixes/
+│       └── PHOTO_DISPLAY_PRIORITY_FIX.md # Offline-first photo display
 ├── product/
 │   ├── PAID_ACTIVATION_FLOW_v1.md # Manual paid activation spec
 │   ├── MAINTENANCE_CONTEXT_V1_SCOPE.md # Maintenance V1 strict scope
 │   ├── MAINTENANCE_V2_STRATEGY.md # Maintenance V2 evolution roadmap
+│   ├── MAINTENANCE_V3_PLANNING.md # Maintenance V3 roadmap
+│   ├── MAINTENANCE_V3_PWA_OFFLINE_PHOTOS.md # V3 Phase 1 specification
+│   ├── PHOTO_CAPTURE_OFFLINE_INTEGRATION.md # PhotoCapture integration
 │   ├── context_cleaning.md     # Cleaning operational context
 │   ├── context_maintenance.md  # Maintenance operational context
 │   ├── context_fitout.md       # Fit-out operational context
 │   └── context_property.md     # Property operational context
+├── testing/
+│   ├── OFFLINE_PHOTOS_TESTING_GUIDE.md # Manual offline photo testing
+│   └── TEST_API.md             # API testing procedures
 ├── settings/
 │   └── VERIFICATION_CHECKLIST.md # Testing checklist
 ├── reports/

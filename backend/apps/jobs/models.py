@@ -474,6 +474,8 @@ class JobPhoto(models.Model):
     """
     Фото до/после уборки, привязано к Job.
     EXIF поля — если есть, сохраняем.
+
+    V3 Phase 1.1: Photo replacement tracking for maintenance context
     """
     TYPE_BEFORE = "before"
     TYPE_AFTER = "after"
@@ -482,6 +484,12 @@ class JobPhoto(models.Model):
         (TYPE_BEFORE, "Before"),
         (TYPE_AFTER, "After"),
     )
+
+    # Role-based replacement limits (maintenance context only)
+    MAX_REPLACEMENTS_TECH = 2
+    MAX_REPLACEMENTS_MANAGER = 3
+    EDIT_WINDOW_TECH_MINUTES = 30
+    EDIT_WINDOW_MANAGER_HOURS = 24
 
     job = models.ForeignKey(
         Job,
@@ -504,6 +512,20 @@ class JobPhoto(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # V3 Phase 1.1: Replacement tracking (maintenance context only)
+    # All fields nullable for backwards compatibility with cleaning context
+    replacement_count = models.IntegerField(default=0)
+    original_uploaded_at = models.DateTimeField(null=True, blank=True)
+    last_replaced_at = models.DateTimeField(null=True, blank=True)
+    last_replaced_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="replaced_photos",
+    )
+    replacement_reason = models.TextField(null=True, blank=True)
+
     class Meta:
         db_table = "job_photos"
         constraints = [
@@ -516,3 +538,117 @@ class JobPhoto(models.Model):
 
     def __str__(self) -> str:
         return f"Job {self.job_id} {self.photo_type}"
+
+    def can_be_replaced_by(self, user, job, reason=None):
+        """
+        Check if photo can be replaced by this user.
+        Returns (can_replace: bool, error_message: str | None)
+
+        V3 Phase 1.1: Maintenance context only - role-based replacement limits
+        """
+        from django.utils import timezone
+
+        # TECHNICIAN - Strict rules
+        if user.role == User.ROLE_STAFF:
+            # For first upload (replacement_count=0): anyone assigned to visit can upload
+            # For replacements (replacement_count>0): only the person who last uploaded can replace
+            if self.replacement_count > 0 and self.last_replaced_by and self.last_replaced_by != user:
+                return False, "Can only replace photos you uploaded"
+
+            # If first upload, must be assigned to the visit
+            if self.replacement_count == 0 and job.cleaner != user:
+                return False, "Can only upload photos on visits assigned to you"
+
+            # Max 2 replacements
+            if self.replacement_count >= self.MAX_REPLACEMENTS_TECH:
+                return False, f"Maximum {self.MAX_REPLACEMENTS_TECH} replacements reached"
+
+            # 30 minute window - ONLY for actual replacements, not first upload
+            # If replacement_count=0, this is first upload (offline sync allowed anytime)
+            if self.replacement_count > 0 and self.original_uploaded_at:
+                elapsed_minutes = (
+                    timezone.now() - self.original_uploaded_at
+                ).total_seconds() / 60
+                if elapsed_minutes > self.EDIT_WINDOW_TECH_MINUTES:
+                    return (
+                        False,
+                        f"Edit window ({self.EDIT_WINDOW_TECH_MINUTES} minutes) expired",
+                    )
+
+            return True, None
+
+        # MANAGER - Extended rights
+        if user.role == User.ROLE_MANAGER:
+            # Cannot replace on completed visits
+            if job.status == Job.STATUS_COMPLETED:
+                return False, "Cannot replace photos on completed visits"
+
+            # Max 3 replacements
+            if self.replacement_count >= self.MAX_REPLACEMENTS_MANAGER:
+                return False, f"Maximum {self.MAX_REPLACEMENTS_MANAGER} replacements reached"
+
+            # 24 hour window - ONLY for actual replacements, not first upload
+            # If replacement_count=0, this is first upload (offline sync allowed anytime)
+            if self.replacement_count > 0 and self.original_uploaded_at:
+                elapsed_hours = (
+                    timezone.now() - self.original_uploaded_at
+                ).total_seconds() / 3600
+                if elapsed_hours > self.EDIT_WINDOW_MANAGER_HOURS:
+                    return (
+                        False,
+                        f"Edit window ({self.EDIT_WINDOW_MANAGER_HOURS} hours) expired",
+                    )
+
+            return True, None
+
+        # OWNER - Unlimited with reason
+        if user.role == User.ROLE_OWNER:
+            # Must provide reason (min 10 characters)
+            if not reason or len(reason.strip()) < 10:
+                return False, "Reason required (minimum 10 characters)"
+
+            return True, None
+
+        return False, "Insufficient permissions"
+
+    def get_time_remaining_for_edit(self, user):
+        """
+        Get time remaining in edit window (minutes for tech, hours for manager).
+        Returns 0 if expired, 999 for owners (unlimited).
+        """
+        from django.utils import timezone
+
+        if not self.original_uploaded_at:
+            return 0
+
+        elapsed_seconds = (
+            timezone.now() - self.original_uploaded_at
+        ).total_seconds()
+
+        if user.role == User.ROLE_STAFF:
+            elapsed_minutes = elapsed_seconds / 60
+            remaining = self.EDIT_WINDOW_TECH_MINUTES - elapsed_minutes
+            return max(0, int(remaining))
+
+        if user.role == User.ROLE_MANAGER:
+            elapsed_hours = elapsed_seconds / 3600
+            remaining = self.EDIT_WINDOW_MANAGER_HOURS - elapsed_hours
+            return max(0, int(remaining))
+
+        # Owner has unlimited time
+        return 999
+
+    def get_replacements_remaining(self, user):
+        """
+        Get number of replacements remaining for this user.
+        Returns 999 for owners (unlimited).
+        """
+
+        if user.role == User.ROLE_STAFF:
+            return max(0, self.MAX_REPLACEMENTS_TECH - self.replacement_count)
+
+        if user.role == User.ROLE_MANAGER:
+            return max(0, self.MAX_REPLACEMENTS_MANAGER - self.replacement_count)
+
+        # Owner has unlimited replacements
+        return 999

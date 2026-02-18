@@ -9,6 +9,7 @@
 
 import { ReactNode } from "react";
 import { usePhotoSync } from "@/hooks/usePhotoSync";
+import { OfflineIndicator } from "@/components/maintenance/OfflineIndicator";
 import "./maintenance.css";
 
 interface MaintenanceLayoutProps {
@@ -29,11 +30,27 @@ interface MaintenanceLayoutProps {
  */
 export function MaintenanceLayout({ children }: MaintenanceLayoutProps) {
   // Enable background photo sync across all maintenance pages
-  usePhotoSync();
+  const { triggerSync } = usePhotoSync({
+    onPhotoUploaded: (visitId, photoType) => {
+      console.log(`[MaintenanceLayout] Photo uploaded for visit ${visitId}, type: ${photoType}`);
+      // Dispatch custom event to notify VisitDetail page to refresh
+      const event = new CustomEvent('photoUploaded', {
+        detail: { visitId, photoType },
+      });
+      window.dispatchEvent(event);
+    },
+  });
+
+  // Expose sync trigger to child components via window
+  // This allows immediate sync after photo capture
+  if (typeof window !== 'undefined') {
+    (window as any).__triggerPhotoSync = triggerSync;
+  }
 
   return (
     <div className="maintenance-root">
       {children}
+      <OfflineIndicator />
     </div>
   );
 }

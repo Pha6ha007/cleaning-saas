@@ -1969,8 +1969,9 @@ export async function getServiceVisits(filters?: {
 }
 
 export async function getServiceVisit(id: number): Promise<ManagerJobDetail> {
-  await loginManager();
-  return apiFetch<ManagerJobDetail>(`/api/manager/jobs/${id}/`);
+  // Use fetchManagerJobDetail - works for both cleaning and maintenance contexts
+  // API endpoint: /api/manager/jobs/{id}/ returns correct photos array for maintenance
+  return fetchManagerJobDetail(id);
 }
 
 export async function createServiceVisit(
