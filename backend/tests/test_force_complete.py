@@ -19,26 +19,26 @@ class TestForceCompletePermissions:
         """Manager can force-complete jobs"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {manager_user.token}')
 
-        response = api_client.post(f'/api/jobs/{in_progress_job.id}/force-complete/', {
+        response = api_client.post(f'/api/manager/jobs/{in_progress_job.id}/force-complete/', {
             'reason': 'Client confirmed completion by phone'
         })
 
         assert response.status_code == 200
         in_progress_job.refresh_from_db()
-        assert in_progress_job.status == Job.STATUS_COMPLETED
+        assert in_progress_job.status == Job.STATUS_COMPLETED_UNVERIFIED
         assert in_progress_job.verification_override is True
 
     def test_owner_can_force_complete(self, api_client, owner_user, in_progress_job):
         """Owner can force-complete jobs"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {owner_user.token}')
 
-        response = api_client.post(f'/api/jobs/{in_progress_job.id}/force-complete/', {
+        response = api_client.post(f'/api/manager/jobs/{in_progress_job.id}/force-complete/', {
             'reason': 'Emergency completion needed'
         })
 
         assert response.status_code == 200
         in_progress_job.refresh_from_db()
-        assert in_progress_job.status == Job.STATUS_COMPLETED
+        assert in_progress_job.status == Job.STATUS_COMPLETED_UNVERIFIED
 
     def test_staff_cannot_force_complete(self, api_client, staff_user, in_progress_job):
         """Staff (cleaner) cannot force-complete jobs"""
@@ -53,20 +53,22 @@ class TestForceCompletePermissions:
             address="Test"
         )
 
+        from datetime import time
         job = Job.objects.create(
             company=staff_user.company,
             location=other_location,
             cleaner=staff_user,
             status=Job.STATUS_IN_PROGRESS,
             context=Job.CONTEXT_CLEANING,
-            scheduled_start_time=timezone.now() - timedelta(hours=1),
-            scheduled_duration=timedelta(hours=2),
+            scheduled_date=(timezone.now() - timedelta(hours=1)).date(),
+            scheduled_start_time=time(9, 0),
+            scheduled_end_time=time(11, 0),
             actual_start_time=timezone.now() - timedelta(hours=1)
         )
 
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {staff_user.token}')
 
-        response = api_client.post(f'/api/jobs/{job.id}/force-complete/', {
+        response = api_client.post(f'/api/manager/jobs/{job.id}/force-complete/', {
             'reason': 'Trying to force complete'
         })
 
@@ -81,7 +83,7 @@ class TestForceCompleteValidation:
         """Force-complete requires reason"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {manager_user.token}')
 
-        response = api_client.post(f'/api/jobs/{in_progress_job.id}/force-complete/', {})
+        response = api_client.post(f'/api/manager/jobs/{in_progress_job.id}/force-complete/', {})
 
         assert response.status_code == 400
         assert 'reason' in str(response.data).lower()
@@ -90,7 +92,7 @@ class TestForceCompleteValidation:
         """Force-complete reason must be at least 10 characters"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {manager_user.token}')
 
-        response = api_client.post(f'/api/jobs/{in_progress_job.id}/force-complete/', {
+        response = api_client.post(f'/api/manager/jobs/{in_progress_job.id}/force-complete/', {
             'reason': 'short'  # Too short (5 chars)
         })
 
@@ -100,7 +102,7 @@ class TestForceCompleteValidation:
         """Force-complete accepts reason >= 10 characters"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {manager_user.token}')
 
-        response = api_client.post(f'/api/jobs/{in_progress_job.id}/force-complete/', {
+        response = api_client.post(f'/api/manager/jobs/{in_progress_job.id}/force-complete/', {
             'reason': 'Valid reason with more than 10 characters'
         })
 
@@ -110,7 +112,7 @@ class TestForceCompleteValidation:
         """Cannot force-complete job that hasn't started"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {manager_user.token}')
 
-        response = api_client.post(f'/api/jobs/{scheduled_job.id}/force-complete/', {
+        response = api_client.post(f'/api/manager/jobs/{scheduled_job.id}/force-complete/', {
             'reason': 'Trying to force complete scheduled job'
         })
 
@@ -120,7 +122,7 @@ class TestForceCompleteValidation:
         """Can force-complete job in completed_unverified status"""
         from apps.jobs.models import Job
         from django.utils import timezone
-        from datetime import timedelta
+        from datetime import timedelta, time
 
         job = Job.objects.create(
             company=company,
@@ -128,15 +130,16 @@ class TestForceCompleteValidation:
             cleaner=staff_user,
             status=Job.STATUS_COMPLETED_UNVERIFIED,
             context=Job.CONTEXT_CLEANING,
-            scheduled_start_time=timezone.now() - timedelta(hours=2),
-            scheduled_duration=timedelta(hours=2),
+            scheduled_date=(timezone.now() - timedelta(hours=2)).date(),
+            scheduled_start_time=time(9, 0),
+            scheduled_end_time=time(11, 0),
             actual_start_time=timezone.now() - timedelta(hours=2),
             actual_end_time=timezone.now() - timedelta(hours=1)
         )
 
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {manager_user.token}')
 
-        response = api_client.post(f'/api/jobs/{job.id}/force-complete/', {
+        response = api_client.post(f'/api/manager/jobs/{job.id}/force-complete/', {
             'reason': 'Override verification requirements'
         })
 
@@ -146,7 +149,7 @@ class TestForceCompleteValidation:
         """Cannot force-complete already completed job"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {manager_user.token}')
 
-        response = api_client.post(f'/api/jobs/{completed_job.id}/force-complete/', {
+        response = api_client.post(f'/api/manager/jobs/{completed_job.id}/force-complete/', {
             'reason': 'Already completed'
         })
 
@@ -164,7 +167,7 @@ class TestForceCompleteAudit:
 
         reason = 'Emergency completion due to client request'
 
-        response = api_client.post(f'/api/jobs/{in_progress_job.id}/force-complete/', {
+        response = api_client.post(f'/api/manager/jobs/{in_progress_job.id}/force-complete/', {
             'reason': reason
         })
 
@@ -178,7 +181,7 @@ class TestForceCompleteAudit:
         """Force-complete sets verification_override flag"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {manager_user.token}')
 
-        response = api_client.post(f'/api/jobs/{in_progress_job.id}/force-complete/', {
+        response = api_client.post(f'/api/manager/jobs/{in_progress_job.id}/force-complete/', {
             'reason': 'Override verification for testing'
         })
 
@@ -194,7 +197,7 @@ class TestForceCompleteAudit:
         in_progress_job.actual_end_time = None
         in_progress_job.save()
 
-        response = api_client.post(f'/api/jobs/{in_progress_job.id}/force-complete/', {
+        response = api_client.post(f'/api/manager/jobs/{in_progress_job.id}/force-complete/', {
             'reason': 'Force completion test'
         })
 
@@ -213,7 +216,7 @@ class TestForceCompleteAudit:
 
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {manager_user.token}')
 
-        response = api_client.post(f'/api/jobs/{in_progress_job.id}/force-complete/', {
+        response = api_client.post(f'/api/manager/jobs/{in_progress_job.id}/force-complete/', {
             'reason': 'Force complete with existing times'
         })
 
@@ -227,10 +230,10 @@ class TestForceCompleteAudit:
         """Force-complete changes status to COMPLETED"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {manager_user.token}')
 
-        response = api_client.post(f'/api/jobs/{in_progress_job.id}/force-complete/', {
+        response = api_client.post(f'/api/manager/jobs/{in_progress_job.id}/force-complete/', {
             'reason': 'Status change test'
         })
 
         assert response.status_code == 200
         in_progress_job.refresh_from_db()
-        assert in_progress_job.status == Job.STATUS_COMPLETED
+        assert in_progress_job.status == Job.STATUS_COMPLETED_UNVERIFIED

@@ -8,6 +8,7 @@ Tests that roles have appropriate permissions:
 - Cross-company isolation
 """
 import pytest
+from django.utils import timezone
 from apps.jobs.models import Job, Location
 from apps.accounts.models import User
 from rest_framework.authtoken.models import Token
@@ -21,7 +22,7 @@ class TestOwnerPermissions:
         """Owner can list all company jobs"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {owner_user.token}')
 
-        response = api_client.get('/api/jobs/')
+        response = api_client.get('/api/manager/jobs/today/')
 
         assert response.status_code == 200
         assert len(response.data) >= 1
@@ -30,7 +31,7 @@ class TestOwnerPermissions:
         """Owner can create new jobs"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {owner_user.token}')
 
-        response = api_client.post('/api/jobs/', {
+        response = api_client.post('/api/manager/jobs/', {
             'location': location.id,
             'cleaner': staff_user.id,
             'scheduled_start_time': '2026-02-20T09:00:00Z',
@@ -44,7 +45,7 @@ class TestOwnerPermissions:
         """Owner can delete jobs"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {owner_user.token}')
 
-        response = api_client.delete(f'/api/jobs/{scheduled_job.id}/')
+        response = api_client.delete(f'/api/manager/jobs/{scheduled_job.id}/')
 
         assert response.status_code == 204
 
@@ -52,7 +53,7 @@ class TestOwnerPermissions:
         """Owner can create locations"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {owner_user.token}')
 
-        response = api_client.post('/api/locations/', {
+        response = api_client.post('/api/manager/locations/', {
             'name': 'New Location',
             'company': company.id,
             'address': 'Test Address'
@@ -64,7 +65,7 @@ class TestOwnerPermissions:
         """Owner can invite new users (managers/staff)"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {owner_user.token}')
 
-        response = api_client.post('/api/users/', {
+        response = api_client.post('/api/company/users/', {
             'email': 'newmanager@test.com',
             'role': User.ROLE_MANAGER,
             'full_name': 'New Manager'
@@ -82,7 +83,7 @@ class TestManagerPermissions:
         """Manager can list company jobs"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {manager_user.token}')
 
-        response = api_client.get('/api/jobs/')
+        response = api_client.get('/api/manager/jobs/today/')
 
         assert response.status_code == 200
 
@@ -90,7 +91,7 @@ class TestManagerPermissions:
         """Manager can create jobs"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {manager_user.token}')
 
-        response = api_client.post('/api/jobs/', {
+        response = api_client.post('/api/manager/jobs/', {
             'location': location.id,
             'cleaner': staff_user.id,
             'scheduled_start_time': '2026-02-20T09:00:00Z',
@@ -104,7 +105,7 @@ class TestManagerPermissions:
         """Manager can update jobs"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {manager_user.token}')
 
-        response = api_client.patch(f'/api/jobs/{scheduled_job.id}/', {
+        response = api_client.patch(f'/api/manager/jobs/{scheduled_job.id}/', {
             'scheduled_start_time': '2026-02-20T10:00:00Z'
         })
 
@@ -114,7 +115,7 @@ class TestManagerPermissions:
         """Manager cannot delete company (owner-only)"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {manager_user.token}')
 
-        response = api_client.delete(f'/api/companies/{company.id}/')
+        response = api_client.delete('/api/company/')
 
         assert response.status_code == 403
 
@@ -127,7 +128,7 @@ class TestStaffPermissions:
         """Staff can list jobs assigned to them"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {staff_user.token}')
 
-        response = api_client.get('/api/cleaner/jobs/')
+        response = api_client.get('/api/jobs/today/')
 
         assert response.status_code == 200
         # Should only see jobs assigned to this cleaner
@@ -138,7 +139,7 @@ class TestStaffPermissions:
         """Staff cannot create jobs (manager/owner only)"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {staff_user.token}')
 
-        response = api_client.post('/api/jobs/', {
+        response = api_client.post('/api/manager/jobs/', {
             'location': location.id,
             'cleaner': staff_user.id,
             'scheduled_start_time': '2026-02-20T09:00:00Z',
@@ -151,7 +152,7 @@ class TestStaffPermissions:
         """Staff cannot delete jobs"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {staff_user.token}')
 
-        response = api_client.delete(f'/api/jobs/{scheduled_job.id}/')
+        response = api_client.delete(f'/api/manager/jobs/{scheduled_job.id}/')
 
         assert response.status_code == 403
 
@@ -159,7 +160,7 @@ class TestStaffPermissions:
         """Staff cannot access full jobs list (cleaner endpoint only)"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {staff_user.token}')
 
-        response = api_client.get('/api/jobs/')
+        response = api_client.get('/api/manager/jobs/today/')
 
         assert response.status_code == 403
 
@@ -167,7 +168,7 @@ class TestStaffPermissions:
         """Staff cannot create locations"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {staff_user.token}')
 
-        response = api_client.post('/api/locations/', {
+        response = api_client.post('/api/manager/locations/', {
             'name': 'Unauthorized Location',
             'company': company.id,
             'address': 'Test'
@@ -199,26 +200,29 @@ class TestCrossCompanyIsolation:
         )
 
         other_cleaner = User.objects.create_user(
-            username="+971504444444",
             phone="+971504444444",
             password="testpass123!",
-            role=User.ROLE_STAFF,
+            role=User.ROLE_CLEANER,
             company=other_company,
             full_name="Other Cleaner"
         )
 
+        from datetime import time
         other_job = Job.objects.create(
             company=other_company,
             location=other_location,
             cleaner=other_cleaner,
             status=Job.STATUS_SCHEDULED,
-            context=Job.CONTEXT_CLEANING
+            context=Job.CONTEXT_CLEANING,
+            scheduled_date=timezone.now().date(),
+            scheduled_start_time=time(9, 0),
+            scheduled_end_time=time(11, 0)
         )
 
         # Try to access other company's job
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {manager_user.token}')
 
-        response = api_client.get(f'/api/jobs/{other_job.id}/')
+        response = api_client.get(f'/api/manager/jobs/{other_job.id}/')
 
         assert response.status_code == 404  # Should not exist from this company's perspective
 
@@ -241,7 +245,7 @@ class TestCrossCompanyIsolation:
 
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {owner_user.token}')
 
-        response = api_client.patch(f'/api/locations/{other_location.id}/', {
+        response = api_client.patch(f'/api/manager/locations/{other_location.id}/', {
             'name': 'Hacked Name'
         })
 

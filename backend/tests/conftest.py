@@ -65,7 +65,7 @@ def staff_user(company):
     user = User.objects.create_user(
         phone="+971501111111",
         password="testpass123!",
-        role=User.ROLE_STAFF,
+        role=User.ROLE_CLEANER,  # Fixed: CLEANER role required for check-in/check-out
         company=company,
         full_name="Test Cleaner"
     )
@@ -89,28 +89,32 @@ def location(company):
 @pytest.fixture
 def scheduled_job(company, location, staff_user):
     """Scheduled cleaning job"""
+    from datetime import time
     return Job.objects.create(
         company=company,
         location=location,
         cleaner=staff_user,
         status=Job.STATUS_SCHEDULED,
         context=Job.CONTEXT_CLEANING,
-        scheduled_start_time=timezone.now() + timedelta(hours=1),
-        scheduled_duration=timedelta(hours=2)
+        scheduled_date=(timezone.now() + timedelta(hours=1)).date(),
+        scheduled_start_time=time(9, 0),  # 9:00 AM
+        scheduled_end_time=time(11, 0)    # 11:00 AM (2 hours)
     )
 
 
 @pytest.fixture
 def in_progress_job(company, location, staff_user):
     """Job in progress"""
+    from datetime import time
     job = Job.objects.create(
         company=company,
         location=location,
         cleaner=staff_user,
         status=Job.STATUS_IN_PROGRESS,
         context=Job.CONTEXT_CLEANING,
-        scheduled_start_time=timezone.now() - timedelta(minutes=30),
-        scheduled_duration=timedelta(hours=2),
+        scheduled_date=timezone.now().date(),
+        scheduled_start_time=time(9, 0),   # 9:00 AM
+        scheduled_end_time=time(11, 0),    # 11:00 AM
         actual_start_time=timezone.now() - timedelta(minutes=30)
     )
     return job
@@ -119,6 +123,7 @@ def in_progress_job(company, location, staff_user):
 @pytest.fixture
 def completed_job(company, location, staff_user):
     """Completed job"""
+    from datetime import time
     start = timezone.now() - timedelta(hours=3)
     end = timezone.now() - timedelta(hours=1)
 
@@ -128,8 +133,9 @@ def completed_job(company, location, staff_user):
         cleaner=staff_user,
         status=Job.STATUS_COMPLETED,
         context=Job.CONTEXT_CLEANING,
-        scheduled_start_time=start,
-        scheduled_duration=timedelta(hours=2),
+        scheduled_date=start.date(),
+        scheduled_start_time=time(9, 0),   # 9:00 AM
+        scheduled_end_time=time(11, 0),    # 11:00 AM
         actual_start_time=start,
         actual_end_time=end
     )

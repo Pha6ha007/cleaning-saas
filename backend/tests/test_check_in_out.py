@@ -21,7 +21,7 @@ class TestCheckIn:
         """Cleaner can check in to their assigned scheduled job"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {staff_user.token}')
 
-        response = api_client.post(f'/api/cleaner/jobs/{scheduled_job.id}/check-in/', {
+        response = api_client.post(f'/api/jobs/{scheduled_job.id}/check-in/', {
             'latitude': 25.0808,
             'longitude': 55.1408
         })
@@ -35,7 +35,7 @@ class TestCheckIn:
         """Check-in creates JobCheckEvent record"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {staff_user.token}')
 
-        response = api_client.post(f'/api/cleaner/jobs/{scheduled_job.id}/check-in/', {
+        response = api_client.post(f'/api/jobs/{scheduled_job.id}/check-in/', {
             'latitude': 25.0808,
             'longitude': 55.1408
         })
@@ -43,7 +43,7 @@ class TestCheckIn:
         assert response.status_code == 200
         assert JobCheckEvent.objects.filter(
             job=scheduled_job,
-            event_type=JobCheckEvent.EVENT_CHECK_IN
+            event_type=JobCheckEvent.TYPE_CHECK_IN
         ).exists()
 
     def test_cannot_check_in_to_non_assigned_job(self, api_client, scheduled_job, company):
@@ -52,10 +52,9 @@ class TestCheckIn:
         from rest_framework.authtoken.models import Token
 
         other_cleaner = User.objects.create_user(
-            username="+971502222222",
             phone="+971502222222",
             password="testpass123!",
-            role=User.ROLE_STAFF,
+            role=User.ROLE_CLEANER,
             company=company,
             full_name="Other Cleaner"
         )
@@ -63,7 +62,7 @@ class TestCheckIn:
 
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
 
-        response = api_client.post(f'/api/cleaner/jobs/{scheduled_job.id}/check-in/', {
+        response = api_client.post(f'/api/jobs/{scheduled_job.id}/check-in/', {
             'latitude': 25.0808,
             'longitude': 55.1408
         })
@@ -74,7 +73,7 @@ class TestCheckIn:
         """Cannot check in to job already in progress"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {staff_user.token}')
 
-        response = api_client.post(f'/api/cleaner/jobs/{in_progress_job.id}/check-in/', {
+        response = api_client.post(f'/api/jobs/{in_progress_job.id}/check-in/', {
             'latitude': 25.0808,
             'longitude': 55.1408
         })
@@ -85,7 +84,7 @@ class TestCheckIn:
         """Cannot check in to completed job"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {staff_user.token}')
 
-        response = api_client.post(f'/api/cleaner/jobs/{completed_job.id}/check-in/', {
+        response = api_client.post(f'/api/jobs/{completed_job.id}/check-in/', {
             'latitude': 25.0808,
             'longitude': 55.1408
         })
@@ -97,7 +96,7 @@ class TestCheckIn:
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {staff_user.token}')
 
         # Coordinates far from Dubai Marina (Downtown Dubai)
-        response = api_client.post(f'/api/cleaner/jobs/{scheduled_job.id}/check-in/', {
+        response = api_client.post(f'/api/jobs/{scheduled_job.id}/check-in/', {
             'latitude': 25.1972,
             'longitude': 55.2744
         })
@@ -109,7 +108,7 @@ class TestCheckIn:
         """Manager cannot check in to jobs (cleaner-only endpoint)"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {manager_user.token}')
 
-        response = api_client.post(f'/api/cleaner/jobs/{scheduled_job.id}/check-in/', {
+        response = api_client.post(f'/api/jobs/{scheduled_job.id}/check-in/', {
             'latitude': 25.0808,
             'longitude': 55.1408
         })
@@ -120,7 +119,7 @@ class TestCheckIn:
         """Owner cannot check in to jobs (cleaner-only endpoint)"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {owner_user.token}')
 
-        response = api_client.post(f'/api/cleaner/jobs/{scheduled_job.id}/check-in/', {
+        response = api_client.post(f'/api/jobs/{scheduled_job.id}/check-in/', {
             'latitude': 25.0808,
             'longitude': 55.1408
         })
@@ -136,7 +135,7 @@ class TestCheckOut:
         """Cleaner can check out of their in-progress job"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {staff_user.token}')
 
-        response = api_client.post(f'/api/cleaner/jobs/{in_progress_job.id}/check-out/', {
+        response = api_client.post(f'/api/jobs/{in_progress_job.id}/check-out/', {
             'latitude': 25.0808,
             'longitude': 55.1408
         })
@@ -150,7 +149,7 @@ class TestCheckOut:
         """Check-out creates JobCheckEvent record"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {staff_user.token}')
 
-        response = api_client.post(f'/api/cleaner/jobs/{in_progress_job.id}/check-out/', {
+        response = api_client.post(f'/api/jobs/{in_progress_job.id}/check-out/', {
             'latitude': 25.0808,
             'longitude': 55.1408
         })
@@ -158,14 +157,14 @@ class TestCheckOut:
         assert response.status_code == 200
         assert JobCheckEvent.objects.filter(
             job=in_progress_job,
-            event_type=JobCheckEvent.EVENT_CHECK_OUT
+            event_type=JobCheckEvent.TYPE_CHECK_OUT
         ).exists()
 
     def test_cannot_check_out_of_scheduled_job(self, api_client, scheduled_job, staff_user):
         """Cannot check out of job that hasn't been checked in"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {staff_user.token}')
 
-        response = api_client.post(f'/api/cleaner/jobs/{scheduled_job.id}/check-out/', {
+        response = api_client.post(f'/api/jobs/{scheduled_job.id}/check-out/', {
             'latitude': 25.0808,
             'longitude': 55.1408
         })
@@ -176,7 +175,7 @@ class TestCheckOut:
         """Cannot check out of already completed job"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {staff_user.token}')
 
-        response = api_client.post(f'/api/cleaner/jobs/{completed_job.id}/check-out/', {
+        response = api_client.post(f'/api/jobs/{completed_job.id}/check-out/', {
             'latitude': 25.0808,
             'longitude': 55.1408
         })
@@ -188,7 +187,7 @@ class TestCheckOut:
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {staff_user.token}')
 
         # Coordinates far from location
-        response = api_client.post(f'/api/cleaner/jobs/{in_progress_job.id}/check-out/', {
+        response = api_client.post(f'/api/jobs/{in_progress_job.id}/check-out/', {
             'latitude': 25.1972,
             'longitude': 55.2744
         })
@@ -200,7 +199,7 @@ class TestCheckOut:
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {staff_user.token}')
 
         # Check in
-        response = api_client.post(f'/api/cleaner/jobs/{scheduled_job.id}/check-in/', {
+        response = api_client.post(f'/api/jobs/{scheduled_job.id}/check-in/', {
             'latitude': 25.0808,
             'longitude': 55.1408
         })
@@ -209,7 +208,7 @@ class TestCheckOut:
         assert scheduled_job.status == Job.STATUS_IN_PROGRESS
 
         # Check out
-        response = api_client.post(f'/api/cleaner/jobs/{scheduled_job.id}/check-out/', {
+        response = api_client.post(f'/api/jobs/{scheduled_job.id}/check-out/', {
             'latitude': 25.0808,
             'longitude': 55.1408
         })
@@ -224,21 +223,21 @@ class TestCheckOut:
         lat, lng = 25.0808, 55.1408
 
         # Check in
-        api_client.post(f'/api/cleaner/jobs/{scheduled_job.id}/check-in/', {
+        api_client.post(f'/api/jobs/{scheduled_job.id}/check-in/', {
             'latitude': lat,
             'longitude': lng
         })
 
         # Check out
         scheduled_job.refresh_from_db()
-        api_client.post(f'/api/cleaner/jobs/{scheduled_job.id}/check-out/', {
+        api_client.post(f'/api/jobs/{scheduled_job.id}/check-out/', {
             'latitude': lat,
             'longitude': lng
         })
 
         check_in_event = JobCheckEvent.objects.filter(
             job=scheduled_job,
-            event_type=JobCheckEvent.EVENT_CHECK_IN
+            event_type=JobCheckEvent.TYPE_CHECK_IN
         ).first()
 
         assert check_in_event is not None
@@ -251,10 +250,9 @@ class TestCheckOut:
         from rest_framework.authtoken.models import Token
 
         other_cleaner = User.objects.create_user(
-            username="+971503333333",
             phone="+971503333333",
             password="testpass123!",
-            role=User.ROLE_STAFF,
+            role=User.ROLE_CLEANER,
             company=company,
             full_name="Other Cleaner"
         )
@@ -262,7 +260,7 @@ class TestCheckOut:
 
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
 
-        response = api_client.post(f'/api/cleaner/jobs/{in_progress_job.id}/check-out/', {
+        response = api_client.post(f'/api/jobs/{in_progress_job.id}/check-out/', {
             'latitude': 25.0808,
             'longitude': 55.1408
         })
@@ -273,7 +271,7 @@ class TestCheckOut:
         """Manager cannot check out (cleaner-only endpoint)"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {manager_user.token}')
 
-        response = api_client.post(f'/api/cleaner/jobs/{in_progress_job.id}/check-out/', {
+        response = api_client.post(f'/api/jobs/{in_progress_job.id}/check-out/', {
             'latitude': 25.0808,
             'longitude': 55.1408
         })

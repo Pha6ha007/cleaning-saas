@@ -41,7 +41,7 @@ class TestPhotoInvariants:
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {staff_user.token}')
 
         response = api_client.post(
-            f'/api/cleaner/jobs/{in_progress_job.id}/upload-photo/',
+            f'/api/jobs/{in_progress_job.id}/photos/',
             {'photo_type': 'after', 'file': test_file},
             format='multipart'
         )
@@ -51,7 +51,7 @@ class TestPhotoInvariants:
 
     def test_max_one_photo_per_type(self, in_progress_job):
         """Cannot have multiple photos of same type for one job"""
-        from apps.files.models import File
+        from apps.jobs.models import File
 
         # Create first before photo
         file1 = File.objects.create(
@@ -94,7 +94,7 @@ class TestPhotoInvariants:
 
         # Upload first before photo
         response1 = api_client.post(
-            f'/api/cleaner/jobs/{in_progress_job.id}/upload-photo/',
+            f'/api/jobs/{in_progress_job.id}/photos/',
             {'photo_type': 'before', 'file': create_test_image()},
             format='multipart'
         )
@@ -103,7 +103,7 @@ class TestPhotoInvariants:
 
         # Upload replacement before photo (should work via replacement logic)
         response2 = api_client.post(
-            f'/api/cleaner/jobs/{in_progress_job.id}/upload-photo/',
+            f'/api/jobs/{in_progress_job.id}/photos/',
             {'photo_type': 'before', 'file': create_test_image()},
             format='multipart'
         )
@@ -120,7 +120,7 @@ class TestJobLifecycleInvariants:
         """Cannot directly change scheduled job to completed (must go through in_progress)"""
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {manager_user.token}')
 
-        response = api_client.patch(f'/api/jobs/{scheduled_job.id}/', {
+        response = api_client.patch(f'/api/manager/jobs/{scheduled_job.id}/', {
             'status': Job.STATUS_COMPLETED
         })
 
@@ -129,6 +129,7 @@ class TestJobLifecycleInvariants:
 
     def test_actual_start_time_required_for_in_progress(self, company, location, staff_user):
         """Job in STATUS_IN_PROGRESS must have actual_start_time"""
+        from datetime import time
         with pytest.raises((IntegrityError, ValueError)):
             Job.objects.create(
                 company=company,
@@ -136,13 +137,15 @@ class TestJobLifecycleInvariants:
                 cleaner=staff_user,
                 status=Job.STATUS_IN_PROGRESS,  # in_progress...
                 context=Job.CONTEXT_CLEANING,
-                scheduled_start_time=timezone.now(),
-                scheduled_duration=timedelta(hours=2),
+                scheduled_date=timezone.now().date(),
+                scheduled_start_time=time(9, 0),
+                scheduled_end_time=time(11, 0),
                 actual_start_time=None  # ...but no actual_start_time (invalid)
             )
 
     def test_actual_end_time_required_for_completed(self, company, location, staff_user):
         """Completed job must have actual_end_time"""
+        from datetime import time
         with pytest.raises((IntegrityError, ValueError)):
             Job.objects.create(
                 company=company,
@@ -150,14 +153,16 @@ class TestJobLifecycleInvariants:
                 cleaner=staff_user,
                 status=Job.STATUS_COMPLETED,  # completed...
                 context=Job.CONTEXT_CLEANING,
-                scheduled_start_time=timezone.now() - timedelta(hours=2),
-                scheduled_duration=timedelta(hours=2),
+                scheduled_date=(timezone.now() - timedelta(hours=2)).date(),
+                scheduled_start_time=time(9, 0),
+                scheduled_end_time=time(11, 0),
                 actual_start_time=timezone.now() - timedelta(hours=2),
                 actual_end_time=None  # ...but no end time (invalid)
             )
 
     def test_start_time_before_end_time(self, company, location, staff_user):
         """actual_start_time must be before actual_end_time"""
+        from datetime import time
         start = timezone.now()
         end = start - timedelta(hours=1)  # end BEFORE start (invalid)
 
@@ -168,8 +173,9 @@ class TestJobLifecycleInvariants:
                 cleaner=staff_user,
                 status=Job.STATUS_COMPLETED,
                 context=Job.CONTEXT_CLEANING,
-                scheduled_start_time=start,
-                scheduled_duration=timedelta(hours=2),
+                scheduled_date=start.date(),
+                scheduled_start_time=time(9, 0),
+                scheduled_end_time=time(11, 0),
                 actual_start_time=start,
                 actual_end_time=end  # Invalid: end < start
             )
@@ -188,7 +194,7 @@ class TestEvidenceInvariants:
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {staff_user.token}')
 
         # Try to check out without uploading photos
-        response = api_client.post(f'/api/cleaner/jobs/{in_progress_job.id}/check-out/', {
+        response = api_client.post(f'/api/jobs/{in_progress_job.id}/check-out/', {
             'latitude': 25.0808,
             'longitude': 55.1408
         })
@@ -207,25 +213,25 @@ class TestEvidenceInvariants:
         api_client.credentials(HTTP_AUTHORIZATION=f'Token {staff_user.token}')
 
         # Check in
-        api_client.post(f'/api/cleaner/jobs/{scheduled_job.id}/check-in/', {
+        api_client.post(f'/api/jobs/{scheduled_job.id}/check-in/', {
             'latitude': 25.0808,
             'longitude': 55.1408
         })
 
         assert JobCheckEvent.objects.filter(
             job=scheduled_job,
-            event_type=JobCheckEvent.EVENT_CHECK_IN
+            event_type=JobCheckEvent.TYPE_CHECK_IN
         ).exists()
 
         # Check out
-        api_client.post(f'/api/cleaner/jobs/{scheduled_job.id}/check-out/', {
+        api_client.post(f'/api/jobs/{scheduled_job.id}/check-out/', {
             'latitude': 25.0808,
             'longitude': 55.1408
         })
 
         assert JobCheckEvent.objects.filter(
             job=scheduled_job,
-            event_type=JobCheckEvent.EVENT_CHECK_OUT
+            event_type=JobCheckEvent.TYPE_CHECK_OUT
         ).exists()
 
 
@@ -235,14 +241,16 @@ class TestDataIntegrityInvariants:
 
     def test_all_jobs_belong_to_company(self, company, location, staff_user):
         """Every job must have a company"""
+        from datetime import time
         job = Job.objects.create(
             company=company,
             location=location,
             cleaner=staff_user,
             status=Job.STATUS_SCHEDULED,
             context=Job.CONTEXT_CLEANING,
-            scheduled_start_time=timezone.now(),
-            scheduled_duration=timedelta(hours=2)
+            scheduled_date=timezone.now().date(),
+            scheduled_start_time=time(9, 0),
+            scheduled_end_time=time(11, 0)
         )
 
         assert job.company is not None
@@ -253,7 +261,6 @@ class TestDataIntegrityInvariants:
         from apps.accounts.models import User
 
         user = User.objects.create_user(
-            username="test@test.com",
             email="test@test.com",
             password="testpass123!",
             role=User.ROLE_MANAGER,
@@ -283,14 +290,16 @@ class TestDataIntegrityInvariants:
 
     def test_job_context_field_required(self, company, location, staff_user):
         """All jobs must have a context (cleaning/maintenance/etc)"""
+        from datetime import time
         job = Job.objects.create(
             company=company,
             location=location,
             cleaner=staff_user,
             status=Job.STATUS_SCHEDULED,
             context=Job.CONTEXT_CLEANING,  # Must be set
-            scheduled_start_time=timezone.now(),
-            scheduled_duration=timedelta(hours=2)
+            scheduled_date=timezone.now().date(),
+            scheduled_start_time=time(9, 0),
+            scheduled_end_time=time(11, 0)
         )
 
         assert job.context is not None
