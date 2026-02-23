@@ -412,6 +412,10 @@ def job_check_out(request, job_id: int):
     except KeyError as e:
         return _json_error(f"Missing field: {str(e)}", 400)
     except ValidationError as e:
+        # ValidationError from model may contain structured field errors
+        if hasattr(e, 'message_dict'):
+            error_msg = "; ".join([f"{k}: {v[0] if isinstance(v, list) else v}" for k, v in e.message_dict.items()])
+            return _json_error(error_msg, 400)
         return _json_error(str(e), 400)
     except Exception as e:
         return _json_error(f"Unexpected error: {e}", 500)

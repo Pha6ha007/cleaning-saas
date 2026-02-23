@@ -311,19 +311,15 @@ class Job(models.Model):
         """
         Complete the job (check-out).
 
-        Raises ValidationError with structured format:
-        {
-            "code": "JOB_COMPLETION_BLOCKED",
-            "message": "Cannot check out: missing required items",
-            "fields": {"photos.before": "required", ...}
-        }
+        Raises ValidationError if job cannot be completed due to:
+        - Job not in 'in_progress' status
+        - Missing required photos (before/after)
+        - Incomplete required checklist items
+
+        ValidationError will contain a dict mapping field names to error messages.
         """
         if self.status != self.STATUS_IN_PROGRESS:
-            raise ValidationError({
-                "code": "JOB_COMPLETION_BLOCKED",
-                "message": "Cannot complete job",
-                "fields": {"status": "must_be_in_progress"}
-            })
+            raise ValidationError({"status": "Job must be in 'in_progress' status to check out"})
 
         # Collect all blockers
         blockers = {}
@@ -332,21 +328,18 @@ class Job(models.Model):
         has_before = self.photos.filter(photo_type=JobPhoto.TYPE_BEFORE).exists()
         has_after = self.photos.filter(photo_type=JobPhoto.TYPE_AFTER).exists()
         if not has_before:
-            blockers["photos.before"] = "required"
+            blockers["photos_before"] = "Before photo is required"
         if not has_after:
-            blockers["photos.after"] = "required"
+            blockers["photos_after"] = "After photo is required"
 
         # 2) Обязательные пункты чек-листа должны быть выполнены
         required_incomplete = self.checklist_items.filter(is_required=True, is_completed=False)
         if required_incomplete.exists():
-            blockers["checklist.required"] = list(required_incomplete.values_list("id", flat=True))
+            incomplete_ids = list(required_incomplete.values_list("id", flat=True))
+            blockers["checklist"] = f"Required checklist items not completed: {incomplete_ids}"
 
         if blockers:
-            raise ValidationError({
-                "code": "JOB_COMPLETION_BLOCKED",
-                "message": "Cannot complete job",
-                "fields": blockers
-            })
+            raise ValidationError(blockers)
 
         self.status = self.STATUS_COMPLETED
         self.actual_end_time = timezone.now()
