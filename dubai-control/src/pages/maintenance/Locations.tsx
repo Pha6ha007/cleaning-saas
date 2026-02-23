@@ -307,10 +307,9 @@ export default function MaintenanceLocations() {
               Import Excel/CSV
             </Button>
             <Button
-              variant="outline"
               onClick={handleExport}
               disabled={locations.length === 0}
-              className="border-teal-200 text-teal-700 hover:bg-teal-50 hover:text-teal-800"
+              className="bg-teal-600 hover:bg-teal-700 text-white"
             >
               <Download className="mr-2 h-4 w-4" />
               Export Excel
