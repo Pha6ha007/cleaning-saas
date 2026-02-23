@@ -236,7 +236,6 @@ export function LocationImportModal({
           <Button
             onClick={handleConfirm}
             disabled={!canImport || isImporting}
-            className="bg-teal-600 hover:bg-teal-700"
           >
             {isImporting ? (
               <>

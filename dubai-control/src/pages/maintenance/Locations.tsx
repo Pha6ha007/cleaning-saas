@@ -309,12 +309,11 @@ export default function MaintenanceLocations() {
             <Button
               onClick={handleExport}
               disabled={locations.length === 0}
-              className="bg-teal-600 hover:bg-teal-700 text-white"
             >
               <Download className="mr-2 h-4 w-4" />
               Export Excel
             </Button>
-            <Button onClick={handleAddNew} className="bg-teal-600 hover:bg-teal-700 text-white">
+            <Button onClick={handleAddNew}>
               <Plus className="mr-2 h-4 w-4" />
               Add location
             </Button>
@@ -381,7 +380,7 @@ export default function MaintenanceLocations() {
                   : "Get started by adding your first location"}
               </p>
               {!searchTerm && statusFilter === "all" && (
-                <Button onClick={handleAddNew} className="mt-4 bg-teal-600 hover:bg-teal-700">
+                <Button onClick={handleAddNew} className="mt-4">
                   <Plus className="mr-2 h-4 w-4" />
                   Add location
                 </Button>
