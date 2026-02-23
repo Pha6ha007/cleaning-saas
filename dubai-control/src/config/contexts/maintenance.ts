@@ -15,6 +15,7 @@ import {
   Package,
   ListChecks,
   MapPin,
+  Building2,
 } from "lucide-react";
 import type { ContextConfig, NavItem } from "./types";
 
@@ -27,6 +28,7 @@ export const maintenanceNavItems: NavItem[] = [
   { name: "Service Visits", href: "/maintenance/visits", icon: ClipboardList },
   { name: "Calendar", href: "/maintenance/calendar", icon: CalendarDays },
   { name: "Map", href: "/maintenance/map", icon: MapPin },
+  { name: "Locations", href: "/maintenance/locations", icon: Building2 },
   { name: "Schedules", href: "/maintenance/schedules", icon: CalendarRange },
   { name: "Contracts", href: "/maintenance/contracts", icon: ScrollText },
   { name: "Assets", href: "/maintenance/assets", icon: Wrench },

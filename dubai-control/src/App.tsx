@@ -50,6 +50,7 @@ import AssetQRPrint from "./pages/maintenance/AssetQRPrint";
 import AssetQuickAccess from "./pages/maintenance/AssetQuickAccess";
 import MaintenanceCalendar from "./pages/maintenance/Calendar";
 import MaintenanceMap from "./pages/maintenance/Map";
+import MaintenanceLocations from "./pages/maintenance/Locations";
 
 /* Customer Portal Pages (Stage 16) */
 import CustomerLayout from "./pages/customer/CustomerLayout";
@@ -160,6 +161,8 @@ const App = () => (
               <Route path="/maintenance/calendar" element={<MaintenanceCalendar />} />
               {/* Map View (Stage 13) */}
               <Route path="/maintenance/map" element={<MaintenanceMap />} />
+              {/* Locations Management */}
+              <Route path="/maintenance/locations" element={<MaintenanceLocations />} />
               <Route path="/maintenance/assets" element={<Assets />} />
               <Route path="/maintenance/assets/new" element={<Assets />} />
               <Route path="/maintenance/assets/:id" element={<AssetDetail />} />
