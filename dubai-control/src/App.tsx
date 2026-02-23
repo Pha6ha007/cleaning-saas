@@ -51,6 +51,7 @@ import AssetQuickAccess from "./pages/maintenance/AssetQuickAccess";
 import MaintenanceCalendar from "./pages/maintenance/Calendar";
 import MaintenanceMap from "./pages/maintenance/Map";
 import MaintenanceLocations from "./pages/maintenance/Locations";
+import MaintenanceCompany from "./pages/maintenance/Company";
 
 /* Customer Portal Pages (Stage 16) */
 import CustomerLayout from "./pages/customer/CustomerLayout";
@@ -169,6 +170,8 @@ const App = () => (
               <Route path="/maintenance/asset-types" element={<AssetTypes />} />
               {/* Maintenance Technicians (S2-P1) */}
               <Route path="/maintenance/technicians" element={<TechniciansPage />} />
+              {/* Maintenance Company (Team + Technicians) */}
+              <Route path="/maintenance/company" element={<MaintenanceCompany />} />
               {/* Maintenance Analytics (S2-P2) */}
               <Route path="/maintenance/analytics" element={<MaintenanceAnalytics />} />
               {/* Maintenance Reports (S2-P3) */}

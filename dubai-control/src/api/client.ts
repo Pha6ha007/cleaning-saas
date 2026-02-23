@@ -3,7 +3,7 @@
 import type { OwnerOverview } from "@/types/reports";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8001";
 
 const DEV_MANAGER_EMAIL =
   import.meta.env.VITE_DEV_MANAGER_EMAIL || "manager@test.com";

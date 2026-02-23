@@ -31,6 +31,7 @@ import {
   KeyRound,
   Copy,
   Check,
+  ArrowLeft,
 } from "lucide-react";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
 import {
@@ -44,6 +45,12 @@ import {
   type CreateTechnicianInput,
 } from "../adapters/useTechnicians";
 import { exportTechniciansToExcel } from "@/lib/excel-export";
+
+// Props interface
+interface TechniciansPageProps {
+  showBackButton?: boolean;
+  onBack?: () => void;
+}
 
 // RBAC
 function canWriteTechnicians(role: UserRole): boolean {
@@ -94,7 +101,7 @@ function TechnicianAvatar({ name }: { name: string }) {
   );
 }
 
-export function TechniciansPage() {
+export function TechniciansPage({ showBackButton = false, onBack }: TechniciansPageProps = {}) {
   const { toast } = useToast();
   const user = useUserRole();
   const [searchTerm, setSearchTerm] = useState("");
@@ -429,13 +436,25 @@ export function TechniciansPage() {
     <div className="mx-auto max-w-6xl p-8">
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-            Technicians
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Manage maintenance technicians and their assignments
-          </p>
+        <div className="flex items-center gap-4">
+          {showBackButton && onBack && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onBack}
+              className="h-10 w-10 rounded-full"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          )}
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+              Technicians
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Manage maintenance technicians and their assignments
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button

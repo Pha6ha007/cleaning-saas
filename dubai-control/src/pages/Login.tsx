@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, AlertCircle } from "lucide-react";
 
 // Базовый URL для API — тот же, что и для всего проекта
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8001";
 
 export default function Login() {
   const navigate = useNavigate();
