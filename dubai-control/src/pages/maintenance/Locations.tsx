@@ -21,6 +21,9 @@ import {
   Loader2,
   Edit,
   X,
+  Download,
+  Upload,
+  FileDown,
 } from "lucide-react";
 import {
   getLocations,
@@ -30,6 +33,15 @@ import {
 } from "@/api/client";
 import { LocationForm } from "@/components/locations/LocationForm";
 import { MaintenanceLayout } from "@/contexts/maintenance/ui/MaintenanceLayout";
+import { LocationImportModal } from "./components/LocationImportModal";
+import {
+  parseAndValidateCSV,
+  locationsToCSV,
+  downloadCSV,
+  generateCSVTemplate,
+  readCSVFile,
+  type ParsedLocation,
+} from "@/lib/csv";
 
 type StatusFilter = "all" | "active" | "inactive";
 
@@ -41,6 +53,14 @@ export default function MaintenanceLocations() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [showModal, setShowModal] = useState(false);
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
+
+  // CSV Import state
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importData, setImportData] = useState<{
+    valid: ParsedLocation[];
+    invalid: ParsedLocation[];
+    duplicates: ParsedLocation[];
+  } | null>(null);
 
   // Fetch locations
   const { data: locations = [], isLoading } = useQuery({
@@ -153,6 +173,87 @@ export default function MaintenanceLocations() {
     setEditingLocation(null);
   };
 
+  // CSV Export
+  const handleExport = () => {
+    const csvContent = locationsToCSV(locations);
+    const date = new Date().toISOString().split("T")[0].replace(/-/g, "");
+    downloadCSV(csvContent, `locations_${date}.csv`);
+
+    toast({
+      title: "Success",
+      description: `Exported ${locations.length} locations to CSV`,
+    });
+  };
+
+  // CSV Template Download
+  const handleDownloadTemplate = () => {
+    const template = generateCSVTemplate();
+    downloadCSV(template, "locations_template.csv");
+
+    toast({
+      title: "Template Downloaded",
+      description: "Use this template to import locations",
+    });
+  };
+
+  // CSV Import - File Selection
+  const handleImportClick = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".csv";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      try {
+        const csvContent = await readCSVFile(file);
+        const result = parseAndValidateCSV(csvContent, locations);
+
+        setImportData(result);
+        setShowImportModal(true);
+      } catch (error: any) {
+        toast({
+          variant: "destructive",
+          title: "Import Error",
+          description: error.message || "Failed to parse CSV file",
+        });
+      }
+    };
+    input.click();
+  };
+
+  // CSV Import - Confirm
+  const handleImportConfirm = async (locationsToImport: Partial<Location>[]) => {
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const location of locationsToImport) {
+      try {
+        await createLocation(location as { name: string; address?: string });
+        successCount++;
+      } catch (error) {
+        errorCount++;
+      }
+    }
+
+    // Refresh locations list
+    await queryClient.invalidateQueries({ queryKey: ["locations"] });
+
+    // Close modal
+    setShowImportModal(false);
+    setImportData(null);
+
+    // Show result
+    toast({
+      title: successCount > 0 ? "Import Completed" : "Import Failed",
+      description:
+        successCount > 0
+          ? `Successfully imported ${successCount} location${successCount !== 1 ? "s" : ""}${errorCount > 0 ? ` (${errorCount} failed)` : ""}`
+          : `Failed to import locations`,
+      variant: errorCount > 0 && successCount === 0 ? "destructive" : "default",
+    });
+  };
+
   // Filter locations
   const filteredLocations = locations.filter((location) => {
     // Status filter
@@ -191,10 +292,37 @@ export default function MaintenanceLocations() {
               Manage service locations for maintenance assets
             </p>
           </div>
-          <Button onClick={handleAddNew} className="bg-teal-600 hover:bg-teal-700">
-            <Plus className="mr-2 h-4 w-4" />
-            Add location
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleDownloadTemplate}
+              className="border-teal-200 text-teal-700 hover:bg-teal-50"
+            >
+              <FileDown className="mr-2 h-4 w-4" />
+              Template
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleImportClick}
+              className="border-teal-200 text-teal-700 hover:bg-teal-50"
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              Import CSV
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleExport}
+              disabled={locations.length === 0}
+              className="border-teal-200 text-teal-700 hover:bg-teal-50"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Export CSV
+            </Button>
+            <Button onClick={handleAddNew} className="bg-teal-600 hover:bg-teal-700">
+              <Plus className="mr-2 h-4 w-4" />
+              Add location
+            </Button>
+          </div>
         </div>
 
         {/* Info Banner - Teal Theme */}
@@ -364,6 +492,20 @@ export default function MaintenanceLocations() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* CSV Import Preview Modal */}
+        {showImportModal && importData && (
+          <LocationImportModal
+            validLocations={importData.valid}
+            invalidLocations={importData.invalid}
+            duplicateLocations={importData.duplicates}
+            onConfirm={handleImportConfirm}
+            onCancel={() => {
+              setShowImportModal(false);
+              setImportData(null);
+            }}
+          />
         )}
       </div>
     </MaintenanceLayout>
