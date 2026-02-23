@@ -30,6 +30,7 @@ import {
   MapPin,
   User,
   Repeat,
+  Download,
 } from "lucide-react";
 import { format, addDays } from "date-fns";
 import {
@@ -55,6 +56,7 @@ import {
 } from "@/api/maintenance";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
 import { MaintenanceLayout } from "@/contexts/maintenance/ui/MaintenanceLayout";
+import { exportSchedulesToExcel } from "@/lib/excel-export";
 
 // RBAC
 function canWriteTemplates(role: UserRole): boolean {
@@ -345,6 +347,16 @@ export default function RecurringTemplates() {
     generateMutation.mutate({ templateId: generateTemplateId, dateTo: generateDateTo });
   };
 
+  const handleExport = () => {
+    const date = new Date().toISOString().split("T")[0].replace(/-/g, "");
+    exportSchedulesToExcel(templates, `schedules_${date}.xlsx`);
+
+    toast({
+      title: "Success",
+      description: `Exported ${templates.length} schedule${templates.length !== 1 ? "s" : ""} to Excel`,
+    });
+  };
+
   // Filter assets by selected location
   const filteredAssets = formData.location_id
     ? assets.filter((a) => a.location.id === Number(formData.location_id) && a.is_active)
@@ -420,6 +432,16 @@ export default function RecurringTemplates() {
               {showInactive && <span className="flex h-1.5 w-1.5 rounded-full bg-primary" />}
               Include inactive
             </button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              disabled={templates.length === 0}
+              className="h-8 px-3 text-xs font-medium border-teal-200 text-teal-700 hover:bg-teal-50 hover:text-teal-800"
+            >
+              <Download className="mr-1.5 h-3.5 w-3.5" />
+              Export
+            </Button>
             {hasWriteAccess && (
               <Button size="sm" className="h-8 px-3 text-xs font-medium" onClick={handleAddNew}>
                 <Plus className="w-3.5 h-3.5 mr-1.5" />

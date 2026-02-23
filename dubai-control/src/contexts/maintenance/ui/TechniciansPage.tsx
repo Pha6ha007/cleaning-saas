@@ -43,6 +43,7 @@ import {
   type Technician,
   type CreateTechnicianInput,
 } from "../adapters/useTechnicians";
+import { exportTechniciansToExcel } from "@/lib/excel-export";
 
 // RBAC
 function canWriteTechnicians(role: UserRole): boolean {
@@ -369,6 +370,16 @@ export function TechniciansPage() {
     }
   };
 
+  const handleExport = () => {
+    const date = new Date().toISOString().split("T")[0].replace(/-/g, "");
+    exportTechniciansToExcel(technicians, `technicians_${date}.xlsx`);
+
+    toast({
+      title: "Success",
+      description: `Exported ${technicians.length} technician${technicians.length !== 1 ? "s" : ""} to Excel`,
+    });
+  };
+
   // Access restricted
   if (!hasReadAccess) {
     return (
@@ -427,7 +438,13 @@ export function TechniciansPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" disabled>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            disabled={technicians.length === 0}
+            className="border-teal-200 text-teal-700 hover:bg-teal-50 hover:text-teal-800"
+          >
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>

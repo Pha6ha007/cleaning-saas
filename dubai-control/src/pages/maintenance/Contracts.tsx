@@ -25,6 +25,7 @@ import {
   Calendar,
   AlertTriangle,
   CheckCircle,
+  Download,
 } from "lucide-react";
 import {
   listContracts,
@@ -39,6 +40,7 @@ import {
 } from "@/api/maintenance";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
 import { MaintenanceLayout } from "@/contexts/maintenance/ui/MaintenanceLayout";
+import { exportContractsToExcel } from "@/lib/excel-export";
 
 // Format date for display
 function formatDate(dateStr: string | null): string {
@@ -266,6 +268,16 @@ export default function Contracts() {
     }
   };
 
+  const handleExport = () => {
+    const date = new Date().toISOString().split("T")[0].replace(/-/g, "");
+    exportContractsToExcel(contracts, `contracts_${date}.xlsx`);
+
+    toast({
+      title: "Success",
+      description: `Exported ${contracts.length} contract${contracts.length !== 1 ? "s" : ""} to Excel`,
+    });
+  };
+
   // Access restricted view
   if (!hasReadAccess) {
     return (
@@ -287,12 +299,24 @@ export default function Contracts() {
         {/* Header */}
         <div className="page-header">
           <h1 className="page-title">Service Contracts</h1>
-          {hasWriteAccess && (
-            <Button size="sm" className="h-8 px-3 text-xs font-medium" onClick={handleOpenCreateModal}>
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-              Add Contract
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              disabled={contracts.length === 0}
+              className="h-8 px-3 text-xs font-medium border-teal-200 text-teal-700 hover:bg-teal-50 hover:text-teal-800"
+            >
+              <Download className="mr-1.5 h-3.5 w-3.5" />
+              Export
             </Button>
-          )}
+            {hasWriteAccess && (
+              <Button size="sm" className="h-8 px-3 text-xs font-medium" onClick={handleOpenCreateModal}>
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                Add Contract
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Filters */}
