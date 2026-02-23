@@ -1,7 +1,8 @@
 // dubai-control/src/lib/csv.ts
-// CSV utilities for importing/exporting locations
+// CSV/Excel utilities for importing/exporting locations
 
 import type { Location } from "@/api/client";
+import * as XLSX from "xlsx";
 
 // ============================================================================
 // Types
@@ -306,4 +307,130 @@ export function readCSVFile(file: File): Promise<string> {
 
     reader.readAsText(file);
   });
+}
+
+// ============================================================================
+// Excel (XLSX) Import/Export
+// ============================================================================
+
+/**
+ * Convert locations to Excel file and download
+ */
+export function locationsToExcel(locations: Location[], filename: string): void {
+  const data = [
+    // Header row
+    ["name", "address", "latitude", "longitude", "is_active"],
+    // Data rows
+    ...locations.map((loc) => [
+      loc.name,
+      loc.address || "",
+      loc.latitude?.toString() || "",
+      loc.longitude?.toString() || "",
+      loc.is_active ? "true" : "false",
+    ]),
+  ];
+
+  const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+  // Set column widths
+  worksheet["!cols"] = [
+    { wch: 25 }, // name
+    { wch: 40 }, // address
+    { wch: 12 }, // latitude
+    { wch: 12 }, // longitude
+    { wch: 10 }, // is_active
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Locations");
+
+  XLSX.writeFile(workbook, filename);
+}
+
+/**
+ * Generate Excel template
+ */
+export function generateExcelTemplate(filename: string): void {
+  const data = [
+    // Header row
+    ["name", "address", "latitude", "longitude", "is_active"],
+    // Example rows
+    [
+      "Example Office",
+      "123 Sheikh Zayed Rd, Dubai",
+      "25.2048",
+      "55.2708",
+      "true",
+    ],
+    [
+      "Example Warehouse",
+      "Industrial Area 5",
+      "25.1234",
+      "55.3456",
+      "true",
+    ],
+  ];
+
+  const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+  // Set column widths
+  worksheet["!cols"] = [
+    { wch: 25 }, // name
+    { wch: 40 }, // address
+    { wch: 12 }, // latitude
+    { wch: 12 }, // longitude
+    { wch: 10 }, // is_active
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Locations");
+
+  XLSX.writeFile(workbook, filename);
+}
+
+/**
+ * Read Excel file and convert to CSV string
+ */
+export function readExcelFile(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: "array" });
+
+        // Get first sheet
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+
+        // Convert to CSV
+        const csvContent = XLSX.utils.sheet_to_csv(worksheet);
+        resolve(csvContent);
+      } catch (error) {
+        reject(new Error("Failed to parse Excel file"));
+      }
+    };
+
+    reader.onerror = () => {
+      reject(new Error("Failed to read file"));
+    };
+
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+/**
+ * Read file (supports both CSV and Excel)
+ */
+export async function readLocationFile(file: File): Promise<string> {
+  const extension = file.name.split(".").pop()?.toLowerCase();
+
+  if (extension === "xlsx" || extension === "xls") {
+    return readExcelFile(file);
+  } else if (extension === "csv") {
+    return readCSVFile(file);
+  } else {
+    throw new Error("Unsupported file format. Please use CSV or Excel (.xlsx, .xls)");
+  }
 }

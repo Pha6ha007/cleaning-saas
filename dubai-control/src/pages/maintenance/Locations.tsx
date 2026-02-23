@@ -36,10 +36,9 @@ import { MaintenanceLayout } from "@/contexts/maintenance/ui/MaintenanceLayout";
 import { LocationImportModal } from "./components/LocationImportModal";
 import {
   parseAndValidateCSV,
-  locationsToCSV,
-  downloadCSV,
-  generateCSVTemplate,
-  readCSVFile,
+  locationsToExcel,
+  generateExcelTemplate,
+  readLocationFile,
   type ParsedLocation,
 } from "@/lib/csv";
 
@@ -173,22 +172,20 @@ export default function MaintenanceLocations() {
     setEditingLocation(null);
   };
 
-  // CSV Export
+  // Excel Export
   const handleExport = () => {
-    const csvContent = locationsToCSV(locations);
     const date = new Date().toISOString().split("T")[0].replace(/-/g, "");
-    downloadCSV(csvContent, `locations_${date}.csv`);
+    locationsToExcel(locations, `locations_${date}.xlsx`);
 
     toast({
       title: "Success",
-      description: `Exported ${locations.length} locations to CSV`,
+      description: `Exported ${locations.length} locations to Excel`,
     });
   };
 
-  // CSV Template Download
+  // Excel Template Download
   const handleDownloadTemplate = () => {
-    const template = generateCSVTemplate();
-    downloadCSV(template, "locations_template.csv");
+    generateExcelTemplate("locations_template.xlsx");
 
     toast({
       title: "Template Downloaded",
@@ -196,17 +193,17 @@ export default function MaintenanceLocations() {
     });
   };
 
-  // CSV Import - File Selection
+  // Excel/CSV Import - File Selection
   const handleImportClick = () => {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = ".csv";
+    input.accept = ".csv,.xlsx,.xls";
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
       try {
-        const csvContent = await readCSVFile(file);
+        const csvContent = await readLocationFile(file);
         const result = parseAndValidateCSV(csvContent, locations);
 
         setImportData(result);
@@ -215,7 +212,7 @@ export default function MaintenanceLocations() {
         toast({
           variant: "destructive",
           title: "Import Error",
-          description: error.message || "Failed to parse CSV file",
+          description: error.message || "Failed to parse file",
         });
       }
     };
@@ -281,7 +278,7 @@ export default function MaintenanceLocations() {
 
   return (
     <MaintenanceLayout>
-      <div className="mx-auto max-w-6xl p-8">
+      <div className="mx-auto max-w-6xl p-6">
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <div>
@@ -296,7 +293,7 @@ export default function MaintenanceLocations() {
             <Button
               variant="outline"
               onClick={handleDownloadTemplate}
-              className="border-teal-200 text-teal-700 hover:bg-teal-50"
+              className="border-teal-200 text-teal-700 hover:bg-teal-50 hover:text-teal-800"
             >
               <FileDown className="mr-2 h-4 w-4" />
               Template
@@ -304,21 +301,21 @@ export default function MaintenanceLocations() {
             <Button
               variant="outline"
               onClick={handleImportClick}
-              className="border-teal-200 text-teal-700 hover:bg-teal-50"
+              className="border-teal-200 text-teal-700 hover:bg-teal-50 hover:text-teal-800"
             >
               <Upload className="mr-2 h-4 w-4" />
-              Import CSV
+              Import Excel/CSV
             </Button>
             <Button
               variant="outline"
               onClick={handleExport}
               disabled={locations.length === 0}
-              className="border-teal-200 text-teal-700 hover:bg-teal-50"
+              className="border-teal-200 text-teal-700 hover:bg-teal-50 hover:text-teal-800"
             >
               <Download className="mr-2 h-4 w-4" />
-              Export CSV
+              Export Excel
             </Button>
-            <Button onClick={handleAddNew} className="bg-teal-600 hover:bg-teal-700">
+            <Button onClick={handleAddNew} className="bg-teal-600 hover:bg-teal-700 text-white">
               <Plus className="mr-2 h-4 w-4" />
               Add location
             </Button>
