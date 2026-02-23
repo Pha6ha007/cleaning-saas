@@ -38,6 +38,8 @@ proof-platform/
 - 🗺️ Location-based job navigation
 - 📱 PWA offline photo capture
 - 📊 Maintenance analytics
+- 👥 Company management (Team Members + Technicians)
+- 🔐 Fine-grained RBAC (Owner/Manager/Staff roles)
 
 ---
 
@@ -408,7 +410,7 @@ pre-commit install
 
 ## 👥 Team & Roles
 
-### User Roles
+### CleanProof User Roles
 
 | Role | Permissions |
 |------|------------|
@@ -416,6 +418,26 @@ pre-commit install
 | **Manager** | User management (excluding owners), location/job CRUD, analytics |
 | **Staff** | Limited admin access, job monitoring |
 | **Cleaner** | View assigned jobs, update status, upload photos |
+
+### MaintainProof User Roles
+
+| Role | Team Members Management | Technicians Management | Operations | Billing |
+|------|------------------------|------------------------|------------|---------|
+| **Owner** | ✅ Full control (invite, activate/deactivate, reset passwords) | ✅ Full control | ✅ All operations | ✅ Access |
+| **Manager** | 👁️ View only | ✅ Full control (add, edit, activate/deactivate) | ✅ Service visits, assets, contracts | ❌ No access |
+| **Staff** | 👁️ View only | 👁️ View only | 👁️ Limited read access | ❌ No access |
+
+#### Team Members vs Technicians
+
+- **Team Members** = Console users (Owner, Manager, Staff) who access the web dashboard
+- **Technicians** = Field workers who perform maintenance tasks and use mobile apps
+
+#### Company Registration & Ownership
+
+1. **First User Registration:** The first user who registers a company via `/signup` automatically becomes the **Owner**
+2. **Inviting Team Members:** Only the Owner can invite additional Team Members (Managers/Staff) via the Company page
+3. **Adding Technicians:** Both Owner and Manager can add Technicians for field operations
+4. **Role Changes:** Only the Owner can modify Team Member roles and permissions
 
 **See:** [`backend/docs/SECURITY.md`](backend/docs/SECURITY.md) → Role-Based Access Control section
 
