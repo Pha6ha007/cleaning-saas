@@ -16,6 +16,8 @@ import {
   MapPin,
   Building2,
   Building,
+  BookOpen,
+  LifeBuoy,
 } from "lucide-react";
 import type { ContextConfig, NavItem } from "./types";
 
@@ -58,6 +60,10 @@ export const maintenanceNavItems: NavItem[] = [
   // === Analytics ===
   { name: "Analytics", href: "/maintenance/analytics", icon: BarChart3 },
   { name: "Reports", href: "/maintenance/reports", icon: FileText },
+
+  // === Help & Support ===
+  { name: "Docs", href: "/maintenance/docs", icon: BookOpen },
+  { name: "Support", href: "/maintenance/support", icon: LifeBuoy },
 ];
 
 /**
