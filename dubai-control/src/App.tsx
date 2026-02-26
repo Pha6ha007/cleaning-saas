@@ -28,6 +28,8 @@ import ReportEmailLogsPage from "./pages/ReportEmailLogs";
 import Analytics from "./pages/Analytics";
 import Docs from "./pages/Docs";
 import Support from "./pages/Support";
+import CompanyProfile from "./pages/company/CompanyProfile";
+import CompanyTeam from "./pages/company/CompanyTeam";
 
 /* Maintenance pages */
 import MaintenanceDocs from "./contexts/maintenance/pages/Docs";
@@ -128,6 +130,8 @@ const App = () => (
               <Route path="/docs/:page" element={<Docs />} />
               <Route path="/support" element={<Support />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/company/profile" element={<CompanyProfile />} />
+              <Route path="/company/team" element={<CompanyTeam />} />
 
               {/* Maintenance */}
               <Route path="/maintenance/dashboard" element={<MaintenanceDashboard />} />
