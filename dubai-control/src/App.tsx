@@ -32,9 +32,24 @@ import Support from "./pages/Support";
 /* Maintenance pages */
 import MaintenanceDocs from "./contexts/maintenance/pages/Docs";
 import MaintenanceSupport from "./contexts/maintenance/pages/Support";
-import { VisitsPage } from "./contexts/maintenance/ui/VisitsPage";
-import { AssetsPage } from "./contexts/maintenance/ui/AssetsPage";
 import { TechniciansPage } from "./contexts/maintenance/ui/TechniciansPage";
+import MaintenanceDashboard from "./pages/maintenance/Dashboard";
+import MaintenanceAssets from "./pages/maintenance/Assets";
+import MaintenanceAssetDetail from "./pages/maintenance/AssetDetail";
+import MaintenanceAssetTypes from "./pages/maintenance/AssetTypes";
+import MaintenanceCalendar from "./pages/maintenance/Calendar";
+import MaintenanceChecklists from "./pages/maintenance/Checklists";
+import MaintenanceCompany from "./pages/maintenance/Company";
+import MaintenanceContracts from "./pages/maintenance/Contracts";
+import MaintenanceLocations from "./pages/maintenance/Locations";
+import MaintenanceMap from "./pages/maintenance/Map";
+import MaintenanceParts from "./pages/maintenance/Parts";
+import MaintenanceRecurringTemplates from "./pages/maintenance/RecurringTemplates";
+import MaintenanceAnalytics from "./pages/maintenance/Analytics";
+import MaintenanceReports from "./pages/maintenance/Reports";
+import MaintenanceVisitList from "./pages/maintenance/VisitList";
+import MaintenanceVisitDetail from "./pages/maintenance/VisitDetail";
+import MaintenanceCreateVisit from "./pages/maintenance/CreateVisit";
 
 /* Contexts */
 import { LocationsProvider } from "@/contexts/LocationsContext";
@@ -115,9 +130,25 @@ const App = () => (
               <Route path="/settings" element={<Settings />} />
 
               {/* Maintenance */}
-              <Route path="/maintenance/visits" element={<VisitsPage />} />
-              <Route path="/maintenance/assets" element={<AssetsPage />} />
+              <Route path="/maintenance/dashboard" element={<MaintenanceDashboard />} />
+              <Route path="/maintenance/visits" element={<MaintenanceVisitList />} />
+              <Route path="/maintenance/visits/new" element={<MaintenanceCreateVisit />} />
+              <Route path="/maintenance/visits/:id" element={<MaintenanceVisitDetail />} />
+              <Route path="/maintenance/assets" element={<MaintenanceAssets />} />
+              <Route path="/maintenance/assets/:id" element={<MaintenanceAssetDetail />} />
+              <Route path="/maintenance/asset-types" element={<MaintenanceAssetTypes />} />
               <Route path="/maintenance/technicians" element={<TechniciansPage />} />
+              <Route path="/maintenance/calendar" element={<MaintenanceCalendar />} />
+              <Route path="/maintenance/schedules" element={<MaintenanceRecurringTemplates />} />
+              <Route path="/maintenance/contracts" element={<MaintenanceContracts />} />
+              <Route path="/maintenance/locations" element={<MaintenanceLocations />} />
+              <Route path="/maintenance/locations/:id" element={<MaintenanceLocations />} />
+              <Route path="/maintenance/checklists" element={<MaintenanceChecklists />} />
+              <Route path="/maintenance/parts" element={<MaintenanceParts />} />
+              <Route path="/maintenance/map" element={<MaintenanceMap />} />
+              <Route path="/maintenance/company" element={<MaintenanceCompany />} />
+              <Route path="/maintenance/analytics" element={<MaintenanceAnalytics />} />
+              <Route path="/maintenance/reports" element={<MaintenanceReports />} />
               <Route path="/maintenance/docs" element={<MaintenanceDocs />} />
               <Route path="/maintenance/docs/:page" element={<MaintenanceDocs />} />
               <Route path="/maintenance/support" element={<MaintenanceSupport />} />
