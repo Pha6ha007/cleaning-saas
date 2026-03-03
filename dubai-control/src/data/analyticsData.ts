@@ -7,7 +7,7 @@ export type KPITrend = "positive" | "negative" | "neutral";
 export type KPIVariant =
   | "primary"   // нежно-синяя, как на Dashboard
   | "success"   // зелёная, когда всё отлично
-  | "grey"   // серый / обычная
+  | "neutral"   // белая / обычная
   | "warning"   // жёлтая, предупреждение
   | "danger";   // красная, всё плохо
 

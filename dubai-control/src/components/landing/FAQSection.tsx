@@ -41,14 +41,14 @@ const FAQItem = ({ faq, index, isOpen, onToggle }: {
 }) => {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 15 }}
+      initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.5 }}
       className="group"
     >
       <button
         onClick={onToggle}
-        className="w-full text-left py-8 flex items-start justify-between gap-8 focus:outline-none"
+        className="w-full text-left py-5 flex items-start justify-between gap-8 focus:outline-none"
       >
         <span className="text-xl md:text-2xl font-medium text-foreground group-hover:text-primary transition-colors duration-300">
           {faq.question}
@@ -89,7 +89,7 @@ const FAQSection = () => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <section ref={ref} className="relative py-32 md:py-48 px-6 bg-background">
+    <section ref={ref} className="relative py-20 md:py-28 px-6 bg-background">
       <div className="max-w-4xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

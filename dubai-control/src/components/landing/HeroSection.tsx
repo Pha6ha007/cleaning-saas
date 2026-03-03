@@ -18,7 +18,7 @@ const HeroSection = () => {
         }}
       />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-32 text-center">
+      <div className="relative z-10 max-w-7xl mx-auto px-6 py-20 text-center">
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -32,7 +32,8 @@ const HeroSection = () => {
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 0.4 }}
-          className="text-hero text-primary-foreground mb-8"
+          className="text-hero mb-8"
+          style={{ color: 'rgba(255, 255, 255, 0.95)' }}
         >
           If it's not proven
           <br />
@@ -43,7 +44,8 @@ const HeroSection = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1, delay: 0.8 }}
-          className="text-primary-foreground/60 text-lg md:text-xl max-w-lg mx-auto mb-4"
+          className="text-lg md:text-xl max-w-lg mx-auto mb-4"
+          style={{ color: 'rgba(255, 255, 255, 0.85)' }}
         >
           Proof of work for cleaning teams.
         </motion.p>
@@ -52,7 +54,8 @@ const HeroSection = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1, delay: 1 }}
-          className="text-primary-foreground/40 text-sm md:text-base max-w-md mx-auto mb-12"
+          className="text-sm md:text-base max-w-md mx-auto mb-12"
+          style={{ color: 'rgba(255, 255, 255, 0.70)' }}
         >
           GPS. Photos. Checklists. One verified PDF report.
         </motion.p>

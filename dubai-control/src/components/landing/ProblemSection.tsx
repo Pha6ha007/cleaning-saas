@@ -13,7 +13,7 @@ const ProblemSection = () => {
   const isInView = useInView(ref, { once: true, margin: "-100px" });
 
   return (
-    <section ref={ref} className="relative py-32 md:py-48 px-6 bg-background overflow-hidden">
+    <section ref={ref} className="relative py-20 md:py-28 px-6 bg-background overflow-hidden">
       {/* Subtle texture */}
       <div className="absolute inset-0 opacity-[0.02]" 
         style={{

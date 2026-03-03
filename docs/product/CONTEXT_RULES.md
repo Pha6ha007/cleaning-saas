@@ -118,13 +118,40 @@ If any answer is **NO**, the context is invalid.
 
 ---
 
-## 7. Relationship to Other Documents
+## 7. UAE Market Implications (Product Consequences)
+
+All operational contexts must be evaluated against **UAE enterprise reality**
+(see `docs/vision/UAE_MARKET_CONTEXT.md`).
+
+This implies the following **non-negotiable product priorities**:
+
+* **proof > workflow**
+  Verification and evidence always take precedence over convenience or speed.
+
+* **PDF reports > dashboards**
+  Audit-ready documents are primary artifacts; dashboards are secondary.
+
+* **WhatsApp > email**
+  Operational communication assumes WhatsApp as the dominant channel.
+
+* **audit-readiness > experimentation**
+  Stability, traceability, and documentation matter more than rapid iteration.
+
+* **conservative evolution > aggressive feature expansion**
+  Changes must strengthen trust, not introduce ambiguity.
+
+Any context design that contradicts these priorities must be rejected.
+
+---
+
+## 8. Relationship to Other Documents
 
 Context profiles:
 
 * depend on `PROOF_PLATFORM_VISION.md`
 * must not contradict Vision principles
 * must remain consistent with `API_CONTRACTS.md`
+* must respect `UAE_MARKET_CONTEXT.md`
 
 Context profiles:
 
@@ -134,7 +161,7 @@ Context profiles:
 
 ---
 
-## 8. Change Policy
+## 9. Change Policy
 
 Context profiles may change only when:
 
@@ -164,5 +191,8 @@ Proof Platform grows by deepening a single standard of proof — not by multiply
 
 * Document type: Canonical Guardrail
 * Scope: All operational contexts
-* Authority: PROOF_PLATFORM_VISION.md
+* Authority: `PROOF_PLATFORM_VISION.md`
+* Market anchor: `UAE_MARKET_CONTEXT.md`
 * Change policy: Extremely rare, explicit, architectural
+
+---

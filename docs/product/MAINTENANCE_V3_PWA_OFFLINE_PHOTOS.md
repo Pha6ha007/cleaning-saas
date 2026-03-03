@@ -1,4 +1,4 @@
-# MAINTENANCE V3 — PWA Enhancement: Offline Photo Capture
+
 
 **Status:** IMPLEMENTED ✅
 **Version:** 1.0

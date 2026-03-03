@@ -11,6 +11,8 @@ import {
   FileText,
   MapPin,
   Building2,
+  BookOpen,
+  MessageCircle,
   Settings,
 } from "lucide-react";
 import type { ContextConfig, NavItem } from "./types";
@@ -30,6 +32,8 @@ export const cleaningNavItems: NavItem[] = [
   { name: "Locations", href: "/locations", icon: MapPin },
   // Company is RBAC-gated (owner/manager only)
   { name: "Company", href: "/company/profile", icon: Building2, roles: ["owner", "manager"] },
+  { name: "Docs", href: "/docs", icon: BookOpen },
+  { name: "Support", href: "/support", icon: MessageCircle },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 

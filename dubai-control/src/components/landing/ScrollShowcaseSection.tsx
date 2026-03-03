@@ -57,7 +57,7 @@ const DashboardMockup = () => (
               <span>
                 <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ${
                   job.status === 'completed' ? 'bg-green-100 text-green-700' :
-                  job.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
+                  job.status === 'in-progress' ? 'bg-blue-100 text-primary' :
                   'bg-gray-100 text-gray-600'
                 }`}>
                   {job.status === 'completed' ? 'Completed' : job.status === 'in-progress' ? 'In Progress' : 'Scheduled'}
@@ -80,7 +80,7 @@ const DashboardMockup = () => (
         <div className="grid grid-cols-3 gap-3 mt-4">
           {[
             { label: "Completed", value: "8", color: "text-green-600" },
-            { label: "In Progress", value: "2", color: "text-blue-600" },
+            { label: "In Progress", value: "2", color: "text-primary" },
             { label: "Pending", value: "2", color: "text-muted-foreground" },
           ].map((stat, i) => (
             <div key={i} className="bg-white rounded-lg border border-border p-3 text-center">
@@ -130,7 +130,7 @@ const MobileMockup = () => (
                   <MapPin className="w-3 h-3" /> Dubai Marina
                 </p>
               </div>
-              <span className="px-2 py-1 bg-blue-100 text-blue-700 text-[10px] font-medium rounded-full">
+              <span className="px-2 py-1 bg-blue-100 text-primary text-[10px] font-medium rounded-full">
                 In Progress
               </span>
             </div>
@@ -179,7 +179,7 @@ const MobileMockup = () => (
         <div className="absolute bottom-0 left-0 right-0 px-6 pb-6 pt-3 bg-white border-t border-border/50">
           <div className="flex justify-around">
             <div className="text-center">
-              <div className="w-6 h-6 mx-auto bg-primary/10 rounded-lg flex items-center justify-center">
+              <div className="w-6 h-6 mx-auto bg-blue-100 rounded-lg flex items-center justify-center">
                 <FileText className="w-4 h-4 text-primary" />
               </div>
               <span className="text-[10px] text-primary font-medium">Jobs</span>
@@ -308,10 +308,10 @@ const ScrollShowcaseSection = () => {
             className="max-w-4xl mx-auto text-center"
           >
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold leading-tight">
-              <span className="text-white">Every step leaves </span>
+              <span style={{ color: 'rgba(255, 255, 255, 0.95)' }}>Every step leaves </span>
               <span className="text-primary">evidence.</span>
               <br />
-              <span className="text-white">Nothing can be skipped.</span>
+              <span style={{ color: 'rgba(255, 255, 255, 0.95)' }}>Nothing can be skipped.</span>
             </h2>
           </motion.div>
         </div>
@@ -329,10 +329,10 @@ const ScrollShowcaseSection = () => {
               <p className="text-primary text-sm uppercase tracking-[0.15em] mb-4 font-medium">
                 Manager Dashboard
               </p>
-              <h3 className="text-2xl md:text-3xl font-semibold text-white mb-4">
+              <h3 className="text-2xl md:text-3xl font-semibold mb-4" style={{ color: 'rgba(255, 255, 255, 0.95)' }}>
                 Plan, track, and verify all jobs
               </h3>
-              <p className="text-slate-400 text-lg leading-relaxed">
+              <p className="text-lg leading-relaxed" style={{ color: 'rgba(255, 255, 255, 0.75)' }}>
                 See every job's status in real time. Open any completed job to view full proof — GPS, photos, checklist, and timestamps.
               </p>
             </div>
@@ -354,10 +354,10 @@ const ScrollShowcaseSection = () => {
               <p className="text-primary text-sm uppercase tracking-[0.15em] mb-4 font-medium">
                 Cleaner Mobile App
               </p>
-              <h3 className="text-2xl md:text-3xl font-semibold text-white mb-4">
+              <h3 className="text-2xl md:text-3xl font-semibold mb-4" style={{ color: 'rgba(255, 255, 255, 0.95)' }}>
                 A strict flow that can't be skipped
               </h3>
-              <p className="text-slate-400 text-lg leading-relaxed">
+              <p className="text-lg leading-relaxed" style={{ color: 'rgba(255, 255, 255, 0.75)' }}>
                 Cleaners check in on site, capture before/after photos, complete a checklist, and check out. Every step is required — no shortcuts.
               </p>
             </div>
@@ -373,10 +373,10 @@ const ScrollShowcaseSection = () => {
               <p className="text-primary text-sm uppercase tracking-[0.15em] mb-4 font-medium">
                 Verified PDF Report
               </p>
-              <h3 className="text-2xl md:text-3xl font-semibold text-white mb-4">
+              <h3 className="text-2xl md:text-3xl font-semibold mb-4" style={{ color: 'rgba(255, 255, 255, 0.95)' }}>
                 One PDF. All the proof you need.
               </h3>
-              <p className="text-slate-400 text-lg leading-relaxed">
+              <p className="text-lg leading-relaxed" style={{ color: 'rgba(255, 255, 255, 0.75)' }}>
                 Verified GPS location, immutable timestamps, and confirmed checklist completion — captured as permanent record. This report is the final source of truth.
               </p>
             </div>

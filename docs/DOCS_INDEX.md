@@ -1,160 +1,591 @@
-# CleanProof Documentation Index
+# CleanProof — Docs Index
 
-## Quick Links
+Карта основных документов проекта: **что это**, **для чего**, **когда открывать** и **кому он нужен**.
 
-### Verification & Testing
+---
 
-| Resource | Path | Purpose |
-|----------|------|---------|
-| **RBAC Smoke Test** | `backend/verify_roles.sh` | Automated RBAC regression guard (20 tests) |
-| **Test Users Setup** | `backend/setup_test_users.py` | Create test fixtures for all roles |
-| **Verification Checklist** | [docs/settings/VERIFICATION_CHECKLIST.md](settings/VERIFICATION_CHECKLIST.md) | Pre-deployment checklist |
-| **Offline Photos Testing** | [docs/testing/OFFLINE_PHOTOS_TESTING_GUIDE.md](testing/OFFLINE_PHOTOS_TESTING_GUIDE.md) | Manual testing guide for V3 offline photo capture |
-| **API Test Guide** | [docs/testing/TEST_API.md](testing/TEST_API.md) | Photo upload API testing procedures |
+# Documentation Index — Proof Platform
 
-### API Documentation
+## How to read these docs
 
-| Document | Path | Content |
-|----------|------|---------|
-| **API Contracts** | [docs/api/API_CONTRACTS.md](api/API_CONTRACTS.md) | Error formats, RBAC matrix, trial semantics |
-| **Settings RBAC** | [docs/api/SETTINGS_API_RBAC.md](api/SETTINGS_API_RBAC.md) | Detailed Settings API documentation |
+1. Start with Vision
+   - docs/vision/PROOF_PLATFORM_VISION.md
+   Defines non-negotiable platform principles.
 
-### Project Status
+2. Platform Architecture
+   - docs/architecture/
+   Describes how the vision is implemented structurally.
 
-| Document | Path | Content |
-|----------|------|---------|
-| **Project State** | [docs/execution/PROJECT_STATE.md](execution/PROJECT_STATE.md) | Implementation status by layer |
-| **Parallel Work Protocol** | [docs/execution/WORKING_MODE_PROTOCOL.md](execution/WORKING_MODE_PROTOCOL.md) | Rules for using parallel agents |
-| **Commercial Readiness** | [docs/commercial/COMMERCIAL_READINESS_CHECKLIST.md](commercial/COMMERCIAL_READINESS_CHECKLIST.md) | Pre-revenue go-live checklist |
+3. Operational Contexts
+   - docs/product/
+   Industry-specific configurations of the same platform.
 
-### Product Specifications
+4. Current Execution State
+   - docs/execution/
+   What is built, what is done, what is limited today.
 
-| Document | Path | Content |
-|----------|------|---------|
-| **Paid Activation Flow** | [docs/product/PAID_ACTIVATION_FLOW_v1.md](product/PAID_ACTIVATION_FLOW_v1.md) | Manual paid plan activation (pre-Paddle) |
-| **PDF Reports** | [docs/reports/PDF_REPORTS.md](reports/PDF_REPORTS.md) | Job Report, Company SLA Report, XLSX Export |
-| **V3 PWA Offline Photos** | [docs/product/MAINTENANCE_V3_PWA_OFFLINE_PHOTOS.md](product/MAINTENANCE_V3_PWA_OFFLINE_PHOTOS.md) | Phase 1: Offline photo capture specification |
-| **Photo Capture Integration** | [docs/product/PHOTO_CAPTURE_OFFLINE_INTEGRATION.md](product/PHOTO_CAPTURE_OFFLINE_INTEGRATION.md) | PhotoCapture component integration guide |
+5. API & Analytics
+   - docs/api/
+   - docs/analytics/
 
-### Product Contexts
+6. Sales & Go-to-Market
+   - docs/sales/
 
-| Document | Path | Content |
-|----------|------|---------|
-| **Cleaning Context** | [docs/product/context_cleaning.md](product/context_cleaning.md) | Cleaning services operational context |
-| **Maintenance Context V1 Scope** | [docs/product/MAINTENANCE_CONTEXT_V1_SCOPE.md](product/MAINTENANCE_CONTEXT_V1_SCOPE.md) | Strict V1 scope definition (assets, visits, boundaries) |
-| **Maintenance V2 Strategy** | [docs/product/MAINTENANCE_V2_STRATEGY.md](product/MAINTENANCE_V2_STRATEGY.md) | Stage-based evolution roadmap (Stages 2-5) |
-| **Fit-out Context** | [docs/product/context_fitout.md](product/context_fitout.md) | Fit-out/construction operational context |
-| **Property Context** | [docs/product/context_property.md](product/context_property.md) | Property management operational context |
+---
 
-### Technical Fixes & Guides
+## 0. Как читать эту карту
 
-| Document | Path | Content |
-|----------|------|---------|
-| **Photo Display Priority Fix** | [docs/execution/fixes/PHOTO_DISPLAY_PRIORITY_FIX.md](execution/fixes/PHOTO_DISPLAY_PRIORITY_FIX.md) | Offline-first photo display implementation |
+Для каждого документа указано:
 
-### Deployment
+- **Роль** — зачем документ существует в системе.
+- **Кому** — основной читатель / владелец.
+- **Когда использовать** — типичные ситуации, когда его нужно открывать.
+- **Что внутри** — краткое содержание.
+- **Как менять** — правила обновления (и нужен ли CHANGELOG).
 
-| Document | Path | Content |
-|----------|------|---------|
-| **Production Deployment** | [docs/deployment/PRODUCTION_DEPLOYMENT_V1.md](deployment/PRODUCTION_DEPLOYMENT_V1.md) | VPS deployment guide (Nginx + Gunicorn + Postgres) |
-| **Backend Env Example** | `backend/.env.production.example` | Backend environment template |
-| **Frontend Env Example** | `dubai-control/.env.production.example` | Frontend Vite environment template |
+Эта карта **не дубль** содержимого, а навигатор по документации.
 
-## Test Credentials
+---
 
-| Role | Email/Phone | Password/PIN |
-|------|-------------|--------------|
-| Owner | `owner@test.com` | `testpass123!` |
-| Manager | `manager@test.com` | `testpass123!` |
-| Staff | `staff@test.com` | `testpass123!` |
-| SSO Owner | `sso@test.com` | `testpass123!` |
-| Cleaner | `+971500000001` | PIN `1234` |
+## 1. MASTER_BRIEF.md
 
-## Running Verification
+**Роль:**  
+Главный “паспорт продукта” для CleanProof. Описывает, что это за продукт, для кого, какие основные слои и принципы.
 
-```bash
-# Full RBAC smoke test
-cd backend
-./verify_roles.sh
+**Кому:**  
+Фаундер, product, любые новые люди в проекте, внешние партнёры.
 
-# Frontend build check
-cd dubai-control
-npm run build
+**Когда использовать:**
 
-# Backend unit tests
-cd backend
-./venv/bin/python manage.py test
-```
+- когда кто-то новый подключается к проекту;
+- когда нужно вспомнить продуктовое видение и границы MVP;
+- при обсуждении новых направлений (V2, масштабирование, тарифы).
 
-## Key Scripts
+**Что внутри:**
 
-| Script | Location | Purpose |
-|--------|----------|---------|
-| `verify_roles.sh` | `backend/` | RBAC regression (20 tests, ~30s) |
-| `setup_test_users.py` | `backend/` | Create Owner/Manager/Staff/Cleaner test users |
+- общая формула продукта;
+- ключевые слои (execution, proof, SLA, reports, analytics);
+- принципы развития («что не делаем»);
+- связь с рынком и позиционирование.
 
-## Folder Structure
+**Как менять:**
 
-```
-docs/
-├── DOCS_INDEX.md           # This file
-├── api/
-│   ├── API_CONTRACTS.md    # Error formats, RBAC matrix
-│   └── SETTINGS_API_RBAC.md # Settings API details
-├── commercial/
-│   ├── COMMERCIAL_READINESS_CHECKLIST.md # Pre-revenue go-live checklist
-│   └── FIRST_PAYING_CLIENT_DRY_RUN_REPORT.md # Dry-run simulation results
-├── deployment/
-│   └── PRODUCTION_DEPLOYMENT_V1.md # VPS deployment guide
-├── execution/
-│   ├── PROJECT_STATE.md    # Implementation status
-│   ├── WORKING_MODE_PROTOCOL.md # Parallel agent rules
-│   └── fixes/
-│       └── PHOTO_DISPLAY_PRIORITY_FIX.md # Offline-first photo display
-├── product/
-│   ├── PAID_ACTIVATION_FLOW_v1.md # Manual paid activation spec
-│   ├── MAINTENANCE_CONTEXT_V1_SCOPE.md # Maintenance V1 strict scope
-│   ├── MAINTENANCE_V2_STRATEGY.md # Maintenance V2 evolution roadmap
-│   ├── MAINTENANCE_V3_PLANNING.md # Maintenance V3 roadmap
-│   ├── MAINTENANCE_V3_PWA_OFFLINE_PHOTOS.md # V3 Phase 1 specification
-│   ├── PHOTO_CAPTURE_OFFLINE_INTEGRATION.md # PhotoCapture integration
-│   ├── context_cleaning.md     # Cleaning operational context
-│   ├── context_maintenance.md  # Maintenance operational context
-│   ├── context_fitout.md       # Fit-out operational context
-│   └── context_property.md     # Property operational context
-├── testing/
-│   ├── OFFLINE_PHOTOS_TESTING_GUIDE.md # Manual offline photo testing
-│   └── TEST_API.md             # API testing procedures
-├── settings/
-│   └── VERIFICATION_CHECKLIST.md # Testing checklist
-├── reports/
-│   ├── MASTER_CONTEXT_REPORTS.md # Reports overview
-│   └── PDF_REPORTS.md      # PDF/XLSX export documentation
-├── analytics/              # (future)
-├── architecture/           # System architecture docs
-├── audit/                  # Audit trail documentation
-├── billing/                # (future - payment integration)
-├── sla/                    # SLA rules and logic
-└── vision/                 # Product vision docs
-```
+- аккуратно, не превращая в свалку деталей;
+- большие изменения — только после того, как они уже закреплены в коде/API/остальных доках;
+- можно вести краткий CHANGELOG в конце файла (опционально).
 
-## What's "Done"
+---
 
-See [PROJECT_STATE.md](execution/PROJECT_STATE.md) for full details.
+## 2. MASTER_CONTEXT_*.md
 
-**Completed layers:**
-- Roles/RBAC
-- Company/Team management
-- Trial enforcement
-- Billing stub (invoice download = 501, not a bug)
-- Plan tiers (standard/pro/enterprise)
+Семейство файлов:
 
-## Error Code Reference
+- `MASTER_CONTEXT_EXECUTION.md`
+- `MASTER_CONTEXT_SLA.md`
+- `MASTER_CONTEXT_ANALYTICS.md`
+- `MASTER_CONTEXT_REPORTS.md`
+- `MASTER_CONTEXT_ARCHITECTURE.md`
+- `MASTER_CONTEXT_PRODUCT.md`
 
-See [API_CONTRACTS.md](api/API_CONTRACTS.md) for full list.
+**Роль:**  
+Разрезают MASTER_BRIEF на фокусные контексты по слоям. Это “линзы” на продукт: execution, SLA, analytics, reports и т.д.
 
-| Code | Meaning |
-|------|---------|
-| `trial_expired` | Trial ended, upgrade required |
-| `FORBIDDEN` | RBAC access denied |
-| `NOT_IMPLEMENTED` | Feature stub (501) |
+**Кому:**  
+Точечно — тому, кто работает с конкретным слоем:
+
+- backend / mobile — execution, SLA, architecture;
+- frontend — execution, reports, analytics;
+- product — product / reports / sla / analytics.
+
+**Когда использовать:**
+
+- когда нужно глубже понять **конкретный слой** (например, только SLA-логика);
+- при проектировании новых фич внутри слоя;
+- при подготовке PRD для отдельного блока.
+
+**Что внутри:**
+
+- фокусированный контекст по слою;
+- причины, почему так спроектировано;
+- границы «что делаем / чего не делаем» в рамках слоя.
+
+**Как менять:**
+
+- обновлять только после того, как слой реально доехал до факта (код + API + PROJECT_STATE);
+- использовать как “extended context”, не как source of truth;
+- без детальных контрактов и статусов — для этого есть другие файлы.
+
+---
+
+## 3. API_CONTRACTS.md
+
+**Роль:**  
+**Единственный закон** по API. Контракты, эндпоинты, поля, коды ошибок, семантика.
+
+**Кому:**  
+Backend, frontend, mobile, любой интегратор.
+
+**Когда использовать:**
+
+- при любом изменении API;
+- при интеграции фронта или мобилки;
+- при отладке запросов (какие поля, какие коды).
+
+**Что внутри:**
+
+- список эндпоинтов;
+- структуры запросов/ответов;
+- коды ошибок и их значение;
+- секция `## CHANGELOG` с версионированием контрактов.
+
+**Как менять:**
+
+- **только после** того, как код реально соответствует контракту (или вместе с изменением кода);
+- каждое изменение оформлять в `## CHANGELOG`:
+  - `X.Y.Z — YYYY-MM-DD`
+  - `NEW / CHANGED / FIXED / DEPRECATED / BREAKING`.
+
+---
+
+## 4. DEV_BRIEF.md
+
+**Роль:**  
+“Как жить с backend’ом” для frontend и mobile. Инварианты, флоу, запреты, правила использования API.
+
+**Кому:**  
+Frontend, mobile, backend (как напоминание инвариантов).
+
+**Когда использовать:**
+
+- при разработке/рефакторинге фронта или мобилки;
+- при онбординге нового разработчика;
+- когда нужно понять **как правильно** использовать API и что трогать нельзя.
+
+**Что внутри:**
+
+- execution-флоу (jobs, check-in/out, photos, checklist);
+- правила GPS, proof, SLA;
+- trial / commercial поведение;
+- инварианты и “что нарушать нельзя”.
+
+**Как менять:**
+
+- синхронно с `API_CONTRACTS.md` и фактическим кодом;
+- без фантазий и будущих хотелок — только то, что реально работает;
+- можно вести небольшой `## CHANGELOG` по крупным изменениям.
+
+---
+
+## 5. PROJECT_STATE.md
+
+**Роль:**  
+Фактический снимок проекта **на сегодня**.  
+Только статусы: ✅ / 🟡 / ⛔ по слоям.
+
+**Кому:**  
+Фаундер, product, любой разработчик, кто хочет быстро понять “что уже есть”.
+
+**Когда использовать:**
+
+- перед планированием следующих задач;
+- перед хэнд-оффом в новый чат / новому исполнителю;
+- когда нужно честно ответить «где мы сейчас по проекту».
+
+**Что внутри:**
+
+- слои (Core, Mobile, Management, Commerce, Marketing, Scale);
+- для каждого — короткие bullets с фактом и статусом;
+- без мотиваций и философии.
+
+**Как менять:**
+
+- только по факту (после слияния кода / фичи);
+- не добавлять туда планы и гипотезы;
+- желательно хранить версию и дату в шапке (`v7.0`, `Обновлено: YYYY-MM-DD`).
+
+---
+
+## 6. PROJECT_CONTEXT.md
+
+**Роль:**  
+Архитектурный контекст и история проекта. Объясняет **почему** всё устроено так, а не иначе.
+
+**Кому:**  
+
+- новые разработчики (особенно backend / архитекторы);
+- product, который хочет понять архитектурные ограничения;
+- сам фаундер, когда нужно вспомнить прошлые решения.
+
+**Когда использовать:**
+
+- при обсуждении архитектурных изменений;
+- при проектировании новых слоёв (Analytics, Scale, Commerce);
+- при объяснении проекта внешнему технарю.
+
+**Что внутри:**
+
+- high-level обзор продукта;
+- основные Django apps и их роль;
+- концептуальные слои (Layer 0–5);
+- ключевые решения по execution, proof, GPS, photos, PDF;
+- исторические заметки (как развивался продукт).
+
+**Как менять:**
+
+- не пытаться делать его “идеально актуальным” до байта — для этого есть PROJECT_STATE и API_CONTRACTS;
+- периодически обновлять, когда меняются крупные архитектурные решения;
+- явные лажи/устаревшее — править сразу.
+
+---
+
+## 7. CLEANPROOF_V2_SCOPE.md
+
+**Роль:**  
+Продуктовый и архитектурный **scope для V2**. Документ не про то, “что есть”, а про то, **куда мы развиваемся**.
+
+**Кому:**  
+Фаундер, product, архитектура.
+
+**Когда использовать:**
+
+- при планировании V2 (offline, proof policies, advanced checklist, email history v2 и т.д.);
+- при подготовке PRD по конкретным пилонам V2 (Execution, SLA, Analytics, Commerce, Platform);
+- когда нужно объяснить партнёру/подрядчику, что такое “V2” именно для CleanProof.
+
+**Что внутри:**
+
+- V1 vs V2 (чем отличаются);
+- принципы V2 (evolution, not rewrite);
+- пилоны: V2.1 Execution & Mobile, V2.2 SLA & Evidence, V2.3 Analytics, V2.4 Commerce & Roles, V2.5 Platform & Security;
+- что **осознанно не делаем** в V2.
+
+**Как менять:**
+
+- только после того, как стратегическое решение принято (иначе будет мусорный wish-list);
+- это **не** зеркало кода, а дорожная карта по взрослому, без фичек ради фичек.
+
+---
+
+## 8. SCALE_BRIEF.md
+
+**Роль:**  
+Документ про **Layer 5 / Scale & Enterprise Readiness**: проскейленная версия CleanProof для Pro / Enterprise.
+
+**Кому:**  
+Фаундер, product, продажи (в будущем), архитектура.
+
+**Когда использовать:**
+
+- когда нужно думать про тарифы Standard / Pro / Enterprise;
+- при проработке enterprise-функций (audit exports, hierarchy, integrations);
+- когда нужно понять, какие фичи относятся к “scale”, а какие — к “core”.
+
+**Что внутри:**
+
+- Layer 5 — смысл (масштаб, enterprise readiness);
+- trial / usage / pre-billing архитектура;
+- микроскоп SLA v2 (time-based, repeated violations);
+- роль планов и тарифов (Standard / Pro / Enterprise);
+- философия ценообразования.
+
+**Как менять:**
+
+- как стратегический документ: редко, но осмысленно;
+- не мешать туда текущее состояние кода;
+- использовать вместе с CLEANPROOF_V2_SCOPE.md для планирования будущих фич.
+
+---
+
+## 9. ANALYTICS_API_V1.md
+
+**Роль:**  
+Подробное описание **Analytics API v1** — операционная аналитика: summary, тренды, performance по клинерам, proof completion.
+
+**Кому:**  
+Backend, frontend (Analytics page), product при проектировании аналитики.
+
+**Когда использовать:**
+
+- при разработке / доработке `/analytics` страницы;
+- при отладке KPI / трендов;
+- при будущем расширении до v1.1 / v2.
+
+**Что внутри:**
+
+- список эндпоинтов Analytics:
+  - `analytics/summary`
+  - `analytics/jobs-completed`
+  - `analytics/job-duration`
+  - `analytics/proof-completion`
+  - `analytics/cleaners-performance`
+- семантика полей (что такое `on_time_completion_rate`, `proof_completion_rate` и т.д.);
+- связь с SLA Engine (`compute_sla_status_and_reasons_for_job`).
+
+**Как менять:**
+
+- только после того, как реально меняется Analytics backend;
+- не дублировать сюда всё из `API_CONTRACTS.md` — это более “расширенный” техдок именно по аналитике;
+- можно завести маленький `## CHANGELOG` при изменениях API.
+
+---
+
+## 10. DEV_QUICKSTART.md
+
+**Роль:**  
+Быстрый старт для локальной разработки backend.
+
+**Кому:**  
+Backend-разработчики, подрядчики, фаундер.
+
+**Когда использовать:**
+
+- первый запуск проекта;
+- проверка, что backend жив;
+- быстрый доступ к DEV-аккаунтам и auth.
+
+**Что внутри:**
+
+- команды запуска сервера и тестов;
+- base URL;
+- DEV credentials (manager / cleaner);
+- auth endpoints;
+- минимальный набор ключевых API-эндпоинтов.
+
+**Как менять:**
+
+- только при изменении локального dev-флоу;
+- credentials — **только DEV**, никогда PROD;
+- не дублировать сюда контракты (они в API_CONTRACTS.md).
+
+---
+## 11. DEMO_CALL_SCRIPT.md
+
+**Роль:**  
+Скрипт живого демо и квалификации клиентов.
+
+**Кому:**  
+Founder, sales, bizdev.
+
+**Когда использовать:**
+
+- перед демо-звонками;
+- при онбординге sales;
+- для проверки, что демо не врёт возможностям продукта.
+
+**Что внутри:**
+
+- жёсткая формула позиционирования (“proof layer”);
+- live demo flow: manager → cleaner → PDF;
+- акценты на доказательства, а не UI;
+- квалификация и фильтрация неподходящих клиентов;
+- строгие language rules (что говорить / не говорить).
+
+**Как менять:**
+
+- только если реально меняется продукт или позиционирование;
+- запрещено добавлять фичи, которых нет в коде;
+- не использовать как маркетинговый текст для лендинга.
+
+---
+## 12. QA & Operations
+
+**`QA_CHECKLIST.md`**  
+– Ручной regression-checklist:  
+  - smoke-инварианты;  
+  - happy-path (manager + cleaner);  
+  - SLA / force-complete;  
+  - Reports + Email + Email history;  
+  - Analytics.  
+– Используется: перед релизами, крупными изменениями и refactor, чтобы убедиться, что
+  ядро продукта (proof + SLA + reports) не сломано.
+---
+
+
+## 13. Остальные документы
+
+Если будут добавляться новые `.md`-файлы (например, PRD по конкретным фичам):
+
+- **PRD_*:**  
+  - чётко маркировать в названии: `PRD_CHECKLIST_V2.md`, `PRD_OFFLINE_EXECUTION.md` и т.п.;
+  - в начале файла указывать связь:  
+    - “Базируется на: CLEANPROOF_V2_SCOPE.md, раздел 2.5”.
+
+- **README / ONBOARDING:**  
+  - для совсем новых людей;
+  - могут ссылаться на этот `DOCS_INDEX.md` как на карту.
+
+---
+
+## 14. Как пользоваться всей системой документов
+
+Ниже — типовые ситуации и **какой документ открывать в первую очередь**.
+Это не иерархия важности, а **карта навигации**, чтобы не читать всё подряд.
+
+---
+
+### 1. **Я только зашёл в проект и хочу быстро понять, что это вообще за продукт**
+
+→ `MASTER_BRIEF.md`
+
+Что даёт:
+
+* что за продукт;
+* для кого он;
+* какую управленческую боль решает;
+* где границы и чего **он не пытается быть**.
+
+👉 Всегда начинать отсюда.
+👉 Если после него хочется «прикрутить фичей» — сначала вернись сюда.
+
+---
+
+### 2. **Нужно за 2 минуты понять, что реально уже работает прямо сейчас**
+
+→ `PROJECT_STATE.md`
+
+Что даёт:
+
+* честный фактологический снимок;
+* только статусы: ✅ 🟡 ⛔;
+* без планов, обещаний и гипотез.
+
+👉 Это **единственный документ**, который отвечает на вопрос
+«что реально реализовано сегодня».
+
+---
+
+### 3. **Мне нужно запустить backend локально и дернуть API**
+
+→ `DEV_QUICKSTART.md`
+
+Что даёт:
+
+* как запустить сервер;
+* DEV-аккаунты (manager / cleaner);
+* auth;
+* базовые рабочие эндпоинты.
+
+👉 Это входная точка в код.
+👉 Не заменяет `DEV_BRIEF` и `API_CONTRACTS`.
+
+---
+
+### 4. **Подключаю фронт или мобилку и хочу понять, как правильно работать с API**
+
+→ `DEV_BRIEF.md` + `API_CONTRACTS.md`
+
+Роли документов:
+
+* `API_CONTRACTS.md` — **что есть и какие контракты**;
+* `DEV_BRIEF.md` — **как этим пользоваться правильно** и что нельзя ломать
+  (source of truth, запреты, ожидания backend’а).
+
+👉 `API_CONTRACTS` без `DEV_BRIEF` читать опасно.
+👉 `DEV_BRIEF` без `API_CONTRACTS` — бесполезно.
+
+---
+
+### 5. **Нужно разобраться, почему архитектура устроена именно так**
+
+→ `PROJECT_CONTEXT.md`
+
+* соответствующий `MASTER_CONTEXT_*.md`
+
+Как пользоваться:
+
+* `PROJECT_CONTEXT.md` — общая картина и история решений;
+* `MASTER_CONTEXT_*` — углубление **в один слой**, например:
+
+  * execution,
+  * SLA,
+  * analytics,
+  * reports,
+  * architecture.
+
+👉 Эти документы **не про “что делать дальше”**,
+а про **почему это уже сделано именно так**.
+
+---
+
+### 6. **Работаю с аналитикой или страницей Analytics**
+
+→ `ANALYTICS_API_V1.md` + `API_CONTRACTS.md`
+
+Что дают:
+
+* семантика метрик;
+* правила времени (actual vs scheduled);
+* что считается фактом, а что интерпретацией;
+* какие данные использует UI.
+
+👉 Analytics здесь — **операционная**, не BI.
+👉 SLA и Reports интерпретируют эти данные, но не меняют их.
+
+---
+
+### 7. **Планируем развитие продукта, V2 или масштабирование под Enterprise**
+
+→ `CLEANPROOF_V2_SCOPE.md` + `SCALE_BRIEF.md`
+
+Что дают:
+
+* куда продукт идёт;
+* какие пилоны существуют (Execution / SLA / Analytics / Commerce / Platform);
+* что **осознанно не делаем**;
+* где границы V2 и Layer 5.
+
+👉 Эти документы — **не план задач**,
+а рамка, чтобы roadmap не расползался.
+
+---
+
+### 8. **Готовлюсь к демо или хочу понять, как правильно показывать продукт клиентам**
+
+→ `DEMO_SCRIPT_v1.md`
+
+Что даёт:
+
+* живой сценарий демо;
+* правильные акценты (proof, evidence, audit);
+* фильтрация неподходящих клиентов;
+* никакого оверсейла.
+
+👉 Если демо не укладывается в этот скрипт —
+значит, ты показываешь то, чего продукт не обещает.
+
+---
+
+### 9. **Хочу проверить, что ничего не сломалось после изменений**
+
+→ `QA_CHECKLIST.md`
+
+Что даёт:
+
+* ручной regression-checklist;
+* smoke + happy-path;
+* SLA / force-complete;
+* Reports / PDF / Email / Email history;
+* Analytics.
+
+👉 Используется перед:
+
+* релизами;
+* биллингом;
+* V2-изменениями;
+* крупными refactor’ами.
+
+---
+
+###  Как пользоваться этим индексом
+
+
+* Хочешь понять **что за продукт** → смотри `MASTER_BRIEF.md`.  
+* Хочешь узнать **что уже работает** → `PROJECT_STATE.md`.  
+* Подключаешь фронт/мобилу → `DEV_QUICKSTART.md` + `DEV_BRIEF.md` + `API_CONTRACTS.md`.  
+* Разбираешься в архитектуре и слоях → `PROJECT_CONTEXT.md` + нужный `MASTER_CONTEXT_*.md`.  
+* Планируешь V2 / масштаб / enterprise → `CLEANPROOF_V2_SCOPE.md` + `SCALE_BRIEF.md`.  
+* Проверяешь, что ничего не сломалось → `QA_CHECKLIST.md`.  
+* Готовишься к демо клиенту → `DEMO_SCRIPT_v1.md`.
+
+Если не укладывается никуда — лучше сначала придумать, **к какому слою это относится**, а уже потом писать документ.
+

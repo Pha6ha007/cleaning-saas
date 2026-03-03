@@ -9,7 +9,7 @@ const CTASection = () => {
   const isInView = useInView(ref, { once: true, margin: "-100px" });
 
   return (
-    <section ref={ref} className="relative py-32 md:py-48 px-6 bg-foreground">
+    <section ref={ref} className="relative py-20 md:py-28 px-6 bg-foreground">
       <div className="absolute inset-0 gradient-glow opacity-30" />
 
       <div className="relative z-10 max-w-3xl mx-auto text-center">
@@ -34,7 +34,7 @@ const CTASection = () => {
             </Button>
           </Link>
 
-          <p className="text-slate-400 text-sm">
+          <p className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.70)' }}>
             No public signup. Demo only.
           </p>
         </motion.div>

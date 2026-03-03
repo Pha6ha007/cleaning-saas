@@ -74,6 +74,7 @@ INSTALLED_APPS = [
     "apps.locations",
     "apps.jobs",
     "apps.maintenance",
+    "apps.support",
     "apps.api",
     "apps.marketing",
 ]

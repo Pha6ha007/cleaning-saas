@@ -26,11 +26,11 @@ const TransitionSection3 = () => {
           transition={{ duration: 0.8 }}
         >
           <h2 className="text-4xl md:text-5xl lg:text-6xl font-semibold leading-tight">
-            <span className="text-white">If it's not </span>
+            <span style={{ color: 'rgba(255, 255, 255, 0.95)' }}>If it's not </span>
             <span className="text-primary">proven</span>
-            <span className="text-white"> —</span>
+            <span style={{ color: 'rgba(255, 255, 255, 0.95)' }}> —</span>
             <br />
-            <span className="text-white">it didn't happen.</span>
+            <span style={{ color: 'rgba(255, 255, 255, 0.95)' }}>it didn't happen.</span>
           </h2>
         </motion.div>
       </div>

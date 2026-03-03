@@ -1,5 +1,5 @@
 # backend/apps/api/urls.py
-from django.urls import path
+from django.urls import path, include
 from django.http import JsonResponse
 
 from apps.marketing.views import DemoRequestCreateView, ContactMessageCreateView
@@ -783,4 +783,9 @@ urlpatterns = [
         api_views.VisitPhotoDeleteView.as_view(),
         name="maintenance-visit-delete-photo",
     ),
+
+    # =====================
+    # Support Chat (AI-powered documentation assistant)
+    # =====================
+    path("support/", include("apps.support.urls")),
 ]

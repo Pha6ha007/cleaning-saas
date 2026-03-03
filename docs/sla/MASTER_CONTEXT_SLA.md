@@ -1,3 +1,4 @@
+
 # MASTER_CONTEXT_SLA.md
 
 *micro-SLA, proof-first, violations as facts*

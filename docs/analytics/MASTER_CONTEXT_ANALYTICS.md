@@ -228,10 +228,12 @@ Analytics никогда не заменяет History.
 Единственное допустимое “погружение”:
 
 ```
+
 Analytics metric
 → SLA reason
 → список jobs (read-only)
 → Job Details
+
 ```
 
 Это:
@@ -242,15 +244,20 @@ Analytics metric
 
 ---
 
-## 12. Что запрещено добавлять в Analytics
+## 12. Guardrails and Non-Goals
 
-Запрещено:
+Analytics in Proof Platform is strictly operational.
 
-* бизнес-правила;
-* автоматические решения;
-* “оценки качества” без SLA;
-* рекомендации “что делать”;
-* ML / AI / scoring без отдельного продукта.
+It exists to summarize and validate executed proof data,
+not to provide forecasting, performance management,
+or business intelligence insights.
+
+Analytics must not:
+
+* introduce predictive metrics or trends;
+* rank or score people or contractors;
+* infer intent, efficiency, or responsibility;
+* replace reports as audit artifacts.
 
 Analytics — зеркало, не советник.
 

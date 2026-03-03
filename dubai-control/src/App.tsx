@@ -30,6 +30,7 @@ import Docs from "./pages/Docs";
 import Support from "./pages/Support";
 import CompanyProfile from "./pages/company/CompanyProfile";
 import CompanyTeam from "./pages/company/CompanyTeam";
+import Billing from "./pages/settings/Billing";
 
 /* Maintenance pages */
 import MaintenanceDocs from "./contexts/maintenance/pages/Docs";
@@ -57,6 +58,26 @@ import MaintenanceCreateVisit from "./pages/maintenance/CreateVisit";
 import { LocationsProvider } from "@/contexts/LocationsContext";
 import { AppContextProvider } from "@/contexts/AppContext";
 
+/* Marketing – Platform */
+import {
+  PlatformLanding,
+  Products,
+  Contact,
+  Updates,
+  Principles,
+  TermsOfService,
+  PrivacyPolicy,
+  RefundPolicy,
+} from "@/pages/platform";
+
+/* Marketing – Product Landing Pages */
+import {
+  CleaningLanding,
+  MaintenanceLanding,
+  PropertyComing,
+  FitoutComing,
+} from "@/pages/products";
+
 /* Marketing – CleanProof */
 import CleanProofLanding from "@/marketing/cleanproof/CleanProofLanding";
 import CleanProofDemoRequest from "@/marketing/cleanproof/CleanProofDemoRequest";
@@ -80,20 +101,37 @@ const App = () => (
           <LocationsProvider>
             <Routes>
             {/* =========================
-                Marketing (public)
+                Platform Marketing (public)
                 ========================= */}
-            <Route path="/cleanproof" element={<CleanProofLanding />} />
-            <Route path="/cleanproof/demo" element={<CleanProofDemoRequest />} />
-            <Route path="/cleanproof/pricing" element={<PricingPage />} />
-            <Route path="/cleanproof/updates" element={<CleanProofUpdates />} />
-            <Route path="/cleanproof/contact" element={<CleanProofContact />} />
-            {/* alias на всякий случай */}
+            <Route path="/" element={<PlatformLanding />} />
+            <Route path="/products" element={<Products />} />
+            <Route path="/products/cleaning" element={<CleaningLanding />} />
+            <Route path="/products/maintenance" element={<MaintenanceLanding />} />
+            <Route path="/products/property" element={<PropertyComing />} />
+            <Route path="/products/fitout" element={<FitoutComing />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/updates" element={<Updates />} />
+            <Route path="/principles" element={<Principles />} />
             <Route path="/pricing" element={<PricingPage />} />
+
+            {/* Legal pages */}
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/refund" element={<RefundPolicy />} />
+
+            {/* =========================
+                Legacy Redirects (CleanProof)
+                ========================= */}
+            <Route path="/cleanproof" element={<Navigate to="/products/cleaning" replace />} />
+            <Route path="/cleanproof/pricing" element={<Navigate to="/pricing" replace />} />
+            <Route path="/cleanproof/demo" element={<Navigate to="/contact" replace />} />
+            <Route path="/cleanproof/updates" element={<Navigate to="/updates" replace />} />
+            <Route path="/cleanproof/contact" element={<Navigate to="/contact" replace />} />
 
             {/* =========================
                 Auth
                 ========================= */}
-            <Route path="/" element={<Login />} />
+            <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
 
             {/* =========================
@@ -130,6 +168,7 @@ const App = () => (
               <Route path="/docs/:page" element={<Docs />} />
               <Route path="/support" element={<Support />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/settings/billing" element={<Billing />} />
               <Route path="/company/profile" element={<CompanyProfile />} />
               <Route path="/company/team" element={<CompanyTeam />} />
 

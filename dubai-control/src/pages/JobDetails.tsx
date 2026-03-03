@@ -1,3 +1,5 @@
+// dubai-control/src/pages/JobDetails.tsx
+
 import type React from "react";
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
@@ -24,7 +26,6 @@ import {
   emailJobReportPdf,
   fetchManagerJobReportEmails,
   ManagerJobReportEmailLogEntry,
-  forceCompleteJob,
 } from "@/api/client";
 import { cn } from "@/lib/utils";
 import {
@@ -165,15 +166,6 @@ const SLA_REASON_LABELS: Record<string, string> = {
   checklist_not_completed: "Checklist not completed",
 };
 
-const FORCE_REASON_OPTIONS: { value: string; label: string }[] = [
-  { value: "missing_before_photo", label: "Missing before photo" },
-  { value: "missing_after_photo", label: "Missing after photo" },
-  { value: "checklist_not_completed", label: "Checklist not completed" },
-  { value: "missing_check_in", label: "Check-in missing" },
-  { value: "missing_check_out", label: "Check-out missing" },
-  { value: "other", label: "Other (manual override)" },
-];
-
 export default function JobDetails() {
   const { id } = useParams<{ id: string }>();
   const [job, setJob] = useState<ManagerJobDetail | null>(null);
@@ -198,14 +190,6 @@ export default function JobDetails() {
     useState<string | null>(null);
 
   const [showOnlyViolations, setShowOnlyViolations] = useState(false);
-
-  const [isForceDialogOpen, setIsForceDialogOpen] = useState(false);
-  const [forceReason, setForceReason] = useState<string>(
-    "missing_after_photo"
-  );
-  const [forceComment, setForceComment] = useState("");
-  const [forceError, setForceError] = useState<string | null>(null);
-  const [forceLoading, setForceLoading] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -381,42 +365,6 @@ export default function JobDetails() {
     }
   }
 
-  async function handleForceComplete() {
-    if (!job || forceLoading) return;
-
-    const jobIdNumber =
-      typeof job.id === "number" ? job.id : Number(job.id);
-    if (!Number.isFinite(jobIdNumber)) return;
-
-    const trimmedComment = forceComment.trim();
-    if (!trimmedComment) {
-      setForceError("Comment is required to force-complete a job.");
-      return;
-    }
-
-    try {
-      setForceLoading(true);
-      setForceError(null);
-
-      const updated = await forceCompleteJob(jobIdNumber, {
-        reason_code: forceReason,
-        comment: trimmedComment,
-      });
-
-      setJob(updated);
-      setIsForceDialogOpen(false);
-    } catch (e: any) {
-      console.error("[JobDetails] Force complete failed", e);
-      const detail =
-        e?.response?.data?.detail ||
-        e?.response?.data?.error ||
-        (e instanceof Error ? e.message : "Failed to force-complete job.");
-      setForceError(detail);
-    } finally {
-      setForceLoading(false);
-    }
-  }
-
   // базовые состояния
 
   if (!id) {
@@ -528,6 +476,26 @@ export default function JobDetails() {
   const slaReasons = Array.isArray(job.sla_reasons) ? job.sla_reasons : [];
   const hasSlaIssue = slaStatus === "violated";
 
+  // force-complete флаги
+  const isForceCompleted =
+    (job as any).force_completed === true ||
+    (job as any).forceCompleted === true;
+
+  const forceCompletedAtRaw: string | null =
+    (job as any).force_completed_at ??
+    (job as any).forceCompletedAt ??
+    null;
+
+  const forceCompletedAtFormatted = forceCompletedAtRaw
+    ? new Date(forceCompletedAtRaw).toLocaleString()
+    : null;
+
+  const forceCompletedBy: string | null =
+    (job as any).force_completed_by?.full_name ??
+    (job as any).force_completed_by_full_name ??
+    (job as any).forceCompletedBy ??
+    null;
+
   const hourlyRate = (job as any).hourlyRate ?? (job as any).hourly_rate;
   const flatRate = (job as any).flatRate ?? (job as any).flat_rate;
 
@@ -557,18 +525,6 @@ export default function JobDetails() {
     (job as any).actual_end_time || (checkOutEvent as any)?.created_at
   );
 
-  const isForceCompleted = (job as any).force_completed === true;
-  const forceCompletedAt = (job as any).force_completed_at
-    ? formatDateTime((job as any).force_completed_at)
-    : null;
-  const forceCompletedBy =
-    (job as any).force_completed_by?.full_name ||
-    (job as any).force_completed_by ||
-    null;
-
-  const canForceComplete =
-    job.status !== "completed" && !isForceCompleted;
-
   return (
     <div className="p-8 animate-fade-in">
       {/* Header */}
@@ -587,6 +543,11 @@ export default function JobDetails() {
                 {job.location_name || (job as any).location || "Job"}
               </h1>
               <StatusPill status={job.status as any} />
+              {job.status === "completed" && hasSlaIssue && (
+                <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border bg-red-50 text-red-700 border-red-100">
+                  Completed with issues
+                </span>
+              )}
             </div>
             <p className="text-muted-foreground">
               {job.location_address || (job as any).address || "—"}
@@ -712,92 +673,6 @@ export default function JobDetails() {
             </Button>
             <Button onClick={handleEmailPdf} disabled={emailLoading}>
               {emailLoading ? "Sending…" : "Send"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Force-complete dialog */}
-      <Dialog
-        open={isForceDialogOpen}
-        onOpenChange={(open) => {
-          setIsForceDialogOpen(open);
-          if (!open) {
-            setForceError(null);
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Force complete job</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <p className="text-sm text-muted-foreground">
-              This action will mark the job as completed and set SLA status to
-              violated. Choose a reason and add a short comment explaining the
-              override.
-            </p>
-
-            <div className="space-y-2">
-              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Reason
-              </Label>
-              <RadioGroup
-                value={forceReason}
-                onValueChange={(v) => setForceReason(v)}
-                className="space-y-2"
-              >
-                {FORCE_REASON_OPTIONS.map((opt) => (
-                  <div key={opt.value} className="flex items-center space-x-2">
-                    <RadioGroupItem
-                      id={`force-${opt.value}`}
-                      value={opt.value}
-                    />
-                    <Label
-                      htmlFor={`force-${opt.value}`}
-                      className="text-sm font-normal"
-                    >
-                      {opt.label}
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Comment
-              </Label>
-              <textarea
-                className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                placeholder="Explain why you are force-completing this job…"
-                value={forceComment}
-                onChange={(e) => {
-                  setForceComment(e.target.value);
-                  setForceError(null);
-                }}
-              />
-              {forceError && (
-                <p className="text-xs text-red-600">{forceError}</p>
-              )}
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsForceDialogOpen(false)}
-              disabled={forceLoading}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleForceComplete}
-              disabled={forceLoading}
-            >
-              {forceLoading ? "Applying…" : "Force complete job"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1026,17 +901,17 @@ export default function JobDetails() {
                     {hourlyRate && (
                       <div>
                         Hourly rate:{" "}
-                        <span className="font-medium">
-                          AED {Number(hourlyRate).toFixed(2)}
-                        </span>
+                          <span className="font-medium">
+                            AED {Number(hourlyRate).toFixed(2)}
+                          </span>
                       </div>
                     )}
                     {flatRate && (
                       <div>
                         Flat rate:{" "}
-                        <span className="font-medium">
-                          AED {Number(flatRate).toFixed(2)}
-                        </span>
+                          <span className="font-medium">
+                            AED {Number(flatRate).toFixed(2)}
+                          </span>
                       </div>
                     )}
                   </dd>
@@ -1097,37 +972,18 @@ export default function JobDetails() {
               )}
 
               {isForceCompleted && (
-                <div className="pt-2 border-t border-border mt-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
-                    Force-completed
+                <div className="mt-3 rounded-md border border-amber-100 bg-amber-50 px-3 py-2">
+                  <p className="text-xs font-semibold text-amber-800">
+                    Force-completed job
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    Job was force-completed
-                    {forceCompletedBy ? ` by ${forceCompletedBy}` : ""}{" "}
-                    {forceCompletedAt ? `on ${forceCompletedAt}` : ""}.
+                  <p className="text-xs text-amber-800 mt-0.5">
+                    This job was manually marked as completed
+                    {forceCompletedBy ? ` by ${forceCompletedBy}` : ""}
+                    {forceCompletedAtFormatted
+                      ? ` on ${forceCompletedAtFormatted}`
+                      : ""}
+                    .
                   </p>
-                </div>
-              )}
-
-              {canForceComplete && (
-                <div className="pt-3 border-t border-border mt-3">
-                  <p className="text-xs text-muted-foreground mb-2">
-                    If the cleaner cannot provide full proof but the job is
-                    effectively done, you can force-complete it with an SLA
-                    violation.
-                  </p>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
-                    onClick={() => {
-                      setForceError(null);
-                      setIsForceDialogOpen(true);
-                    }}
-                  >
-                    Force complete job
-                  </Button>
                 </div>
               )}
             </div>

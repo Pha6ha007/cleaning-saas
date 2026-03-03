@@ -102,3 +102,4 @@ export function JobsTrendChart({ data }: JobsTrendChartProps) {
     </div>
   );
 }
+    

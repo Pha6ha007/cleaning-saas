@@ -1,0 +1,450 @@
+/*
+  MARKETING THEME (LOVABLE) - SCOPED
+  Light enterprise design system for marketing pages
+  Scoped to .marketing-root to avoid conflicts with dubai-control styles
+*/
+
+.marketing-root {
+  /*
+    COLOR SYSTEM - Light, clean, professional
+  */
+
+  /* Surface colors - clean white */
+  --marketing-background: 0 0% 100%;
+  --marketing-foreground: 220 20% 12%;
+
+  /* Card surfaces */
+  --marketing-card: 0 0% 100%;
+  --marketing-card-foreground: 220 20% 12%;
+
+  /* Primary - near black for authority */
+  --marketing-primary: 220 20% 12%;
+  --marketing-primary-foreground: 0 0% 100%;
+
+  /* Secondary - very light cool gray */
+  --marketing-secondary: 220 15% 96%;
+  --marketing-secondary-foreground: 220 20% 12%;
+
+  /* Muted - light gray for backgrounds */
+  --marketing-muted: 220 10% 94%;
+  --marketing-muted-foreground: 220 12% 35%;
+
+  /* Accent - warm amber/bronze */
+  --marketing-accent: 32 85% 48%;
+  --marketing-accent-foreground: 0 0% 100%;
+
+  /* Dark sections */
+  --marketing-dark-bg: 220 20% 14%;
+  --marketing-dark-fg: 0 0% 98%;
+  --marketing-dark-muted: 220 10% 60%;
+
+  /* Glass effects */
+  --marketing-glass-bg: 0 0% 100% / 0.7;
+  --marketing-glass-border: 220 15% 90% / 0.5;
+  --marketing-glass-shadow: 220 20% 12% / 0.04;
+}
+
+/* Dark mode overrides */
+.marketing-root.dark {
+  --marketing-background: 220 20% 8%;
+  --marketing-foreground: 0 0% 96%;
+  --marketing-card: 220 18% 11%;
+  --marketing-card-foreground: 0 0% 96%;
+  --marketing-primary: 0 0% 96%;
+  --marketing-primary-foreground: 220 20% 8%;
+  --marketing-secondary: 220 15% 16%;
+  --marketing-secondary-foreground: 0 0% 92%;
+  --marketing-muted: 220 12% 18%;
+  --marketing-muted-foreground: 220 8% 55%;
+  --marketing-accent: 32 85% 52%;
+  --marketing-accent-foreground: 220 20% 8%;
+}
+
+/*
+  TYPOGRAPHY - Strong, confident
+*/
+
+.marketing-root h1,
+.marketing-root h2,
+.marketing-root h3,
+.marketing-root h4 {
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: hsl(220 20% 12%);
+  line-height: 1.15;
+}
+
+.marketing-root h1 {
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+@media (min-width: 768px) {
+  .marketing-root h1 {
+    font-size: 3rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .marketing-root h1 {
+    font-size: 3.75rem;
+  }
+}
+
+.marketing-root h2 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+@media (min-width: 768px) {
+  .marketing-root h2 {
+    font-size: 2.25rem;
+  }
+}
+
+.marketing-root h3 {
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+}
+
+@media (min-width: 768px) {
+  .marketing-root h3 {
+    font-size: 1.875rem;
+  }
+}
+
+.marketing-root h4 {
+  font-size: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .marketing-root h4 {
+    font-size: 1.5rem;
+  }
+}
+
+.marketing-root p {
+  color: hsl(220 12% 35%);
+  font-size: 15px;
+  line-height: 1.65;
+  letter-spacing: -0.01em;
+}
+
+/*
+  COMPONENT STYLES
+*/
+
+/* Overline label */
+.marketing-overline {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: hsl(32 85% 48%);
+}
+
+/* Dark section */
+.marketing-section-dark {
+  background: linear-gradient(
+    180deg,
+    hsl(220 20% 14%) 0%,
+    hsl(220 18% 16%) 100%
+  );
+  color: hsl(0 0% 98%);
+}
+
+.marketing-section-dark h1,
+.marketing-section-dark h2,
+.marketing-section-dark h3,
+.marketing-section-dark h4 {
+  color: hsl(0 0% 98%);
+}
+
+.marketing-section-dark p {
+  color: hsl(220 10% 60%);
+}
+
+.marketing-section-dark .marketing-overline {
+  color: hsl(32 85% 48%);
+}
+
+/* Section spacing */
+.marketing-section {
+  padding-top: 5rem;
+  padding-bottom: 5rem;
+}
+
+@media (min-width: 768px) {
+  .marketing-section {
+    padding-top: 7rem;
+    padding-bottom: 7rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .marketing-section {
+    padding-top: 8rem;
+    padding-bottom: 8rem;
+  }
+}
+
+.marketing-section-dense {
+  padding-top: 3.5rem;
+  padding-bottom: 3.5rem;
+}
+
+@media (min-width: 768px) {
+  .marketing-section-dense {
+    padding-top: 5rem;
+    padding-bottom: 5rem;
+  }
+}
+
+/* Containers */
+.marketing-container-tight {
+  max-width: 64rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .marketing-container-tight {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+.marketing-container-wide {
+  max-width: 80rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .marketing-container-wide {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+/* Hero overlay */
+.marketing-hero-overlay {
+  background: linear-gradient(
+    to right,
+    hsl(220 20% 14% / 0.92) 0%,
+    hsl(220 20% 14% / 0.85) 35%,
+    hsl(220 20% 14% / 0.6) 65%,
+    hsl(220 20% 14% / 0.3) 100%
+  );
+}
+
+/* Glass card - enterprise style */
+.marketing-enterprise-card {
+  padding: 2rem;
+  border-radius: 0.75rem;
+  background: hsl(0 0% 100% / 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid hsl(220 15% 90% / 0.6);
+  box-shadow:
+    0 1px 2px hsl(220 20% 12% / 0.03),
+    0 4px 12px hsl(220 20% 12% / 0.04),
+    0 16px 40px hsl(220 20% 12% / 0.04);
+  transition: all 250ms ease;
+}
+
+@media (min-width: 768px) {
+  .marketing-enterprise-card {
+    padding: 2.5rem;
+  }
+}
+
+.marketing-enterprise-card:hover {
+  box-shadow:
+    0 1px 2px hsl(220 20% 12% / 0.03),
+    0 8px 24px hsl(220 20% 12% / 0.06),
+    0 24px 48px hsl(220 20% 12% / 0.06);
+  transform: translateY(-2px);
+  border-color: hsl(220 15% 85%);
+}
+
+/* Feature icon */
+.marketing-feature-icon {
+  height: 3.5rem;
+  width: 3.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  background: hsl(32 85% 48% / 0.08);
+  color: hsl(32 85% 48%);
+}
+
+/* Stats */
+.marketing-stat-number {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: hsl(32 85% 48%);
+  line-height: 1;
+}
+
+@media (min-width: 768px) {
+  .marketing-stat-number {
+    font-size: 3rem;
+  }
+}
+
+/* CTA buttons */
+.marketing-cta-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 0.375rem;
+  background: #E97A1F;
+  color: hsl(0 0% 100%);
+  box-shadow:
+    0 2px 4px hsl(24 85% 40% / 0.2),
+    0 8px 24px hsl(24 85% 40% / 0.25),
+    inset 0 1px 0 hsl(0 0% 100% / 0.15);
+  transition: all 200ms ease;
+}
+
+.marketing-cta-primary:hover {
+  transform: translateY(-1px);
+  background: hsl(24 85% 48%);
+  box-shadow:
+    0 4px 8px hsl(24 85% 40% / 0.25),
+    0 16px 40px hsl(24 85% 40% / 0.3),
+    inset 0 1px 0 hsl(0 0% 100% / 0.2);
+}
+
+.marketing-cta-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 0.375rem;
+  background: hsl(0 0% 100% / 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid hsl(0 0% 100% / 0.2);
+  color: hsl(0 0% 98%);
+  transition: all 200ms ease;
+}
+
+.marketing-cta-secondary:hover {
+  background: hsl(0 0% 100% / 0.12);
+  border-color: hsl(0 0% 100% / 0.3);
+}
+
+/* Helper class for Button components to match marketing-cta-primary styling */
+.marketing-btn-orange {
+  background: #E97A1F !important;
+  border-radius: 0.375rem !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  padding: 1rem 2rem !important;
+  box-shadow: 0 2px 4px hsl(24 85% 40% / 0.2),
+    0 8px 24px hsl(24 85% 40% / 0.25),
+    inset 0 1px 0 hsl(0 0% 100% / 0.15) !important;
+  transition: all 200ms ease !important;
+}
+
+.marketing-btn-orange:hover {
+  background: hsl(24 85% 48%) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px hsl(24 85% 40% / 0.25),
+    0 16px 40px hsl(24 85% 40% / 0.3),
+    inset 0 1px 0 hsl(0 0% 100% / 0.2) !important;
+}
+
+.marketing-cta-primary-light {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  background: hsl(220 20% 12%);
+  color: hsl(0 0% 100%);
+  box-shadow:
+    0 2px 4px hsl(220 20% 12% / 0.08),
+    0 8px 24px hsl(220 20% 12% / 0.12);
+  transition: all 200ms ease;
+}
+
+.marketing-cta-primary-light:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 4px 8px hsl(220 20% 12% / 0.1),
+    0 16px 40px hsl(220 20% 12% / 0.15);
+}
+
+/* Glass panels for dark sections */
+.marketing-glass-panel-dark {
+  background: hsl(0 0% 100% / 0.04);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid hsl(0 0% 100% / 0.08);
+  border-radius: 1rem;
+  transition: all 250ms ease;
+}
+
+.marketing-glass-panel-dark:hover {
+  background: hsl(0 0% 100% / 0.06);
+  border-color: hsl(32 85% 48% / 0.3);
+}
+
+.marketing-glass-stat-card {
+  background: hsl(0 0% 100% / 0.04);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid hsl(0 0% 100% / 0.06);
+  border-radius: 0.75rem;
+}
+
+/* Animations */
+.marketing-animate-fade-in {
+  animation: marketing-fadeIn 600ms ease-out forwards;
+}
+
+.marketing-animate-slide-up {
+  animation: marketing-slideUp 700ms ease-out forwards;
+}
+
+.marketing-animate-slide-up-delayed {
+  animation: marketing-slideUp 700ms ease-out 200ms forwards;
+  opacity: 0;
+}
+
+@keyframes marketing-fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes marketing-slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

@@ -25,10 +25,10 @@ const TransitionSection1 = () => {
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.8 }}
         >
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold text-white mb-6">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold mb-6" style={{ color: 'rgba(255, 255, 255, 0.95)' }}>
             Without proof, cleaning is just a <span className="text-primary">promise.</span>
           </h2>
-          <p className="text-slate-400 text-lg">
+          <p className="text-lg" style={{ color: 'rgba(255, 255, 255, 0.75)' }}>
             CleanProof turns promises into facts.
           </p>
         </motion.div>
