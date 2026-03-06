@@ -47,6 +47,7 @@ def _calculate_summary_for_range(company, date_from, date_to):
   qs = (
     Job.objects.filter(
       company=company,
+      context=Job.CONTEXT_CLEANING,
       status=Job.STATUS_COMPLETED,
       actual_end_time__isnull=False,
       actual_end_time__date__gte=date_from,
@@ -67,7 +68,7 @@ def _calculate_summary_for_range(company, date_from, date_to):
 
   tz = timezone.get_current_timezone()
 
-  for job in qs:
+  for job in qs.iterator(chunk_size=500):
     # --- фактическая длительность job ---
     if job.actual_start_time and job.actual_end_time:
       delta = job.actual_end_time - job.actual_start_time
@@ -305,6 +306,7 @@ def analytics_jobs_completed(request):
   # только completed jobs по дате фактического завершения
   qs = Job.objects.filter(
     company=company,
+    context=Job.CONTEXT_CLEANING,
     status=Job.STATUS_COMPLETED,
     actual_end_time__isnull=False,
     actual_end_time__date__gte=date_from,
@@ -314,7 +316,7 @@ def analytics_jobs_completed(request):
   # агрегируем по дате
   by_day: dict = {}
 
-  for job in qs:
+  for job in qs.iterator(chunk_size=500):
     day = job.actual_end_time.date()
     by_day[day] = by_day.get(day, 0) + 1
 
@@ -394,6 +396,7 @@ def analytics_violations_trend(request):
   qs = (
     Job.objects.filter(
       company=company,
+      context=Job.CONTEXT_CLEANING,
       status=Job.STATUS_COMPLETED,
       actual_end_time__isnull=False,
       actual_end_time__date__gte=date_from,
@@ -405,7 +408,7 @@ def analytics_violations_trend(request):
   # агрегаты по дням
   by_day: dict = {}
 
-  for job in qs:
+  for job in qs.iterator(chunk_size=500):
     day = job.actual_end_time.date()
 
     bucket = by_day.get(day)
@@ -500,6 +503,7 @@ def analytics_job_duration(request):
   qs = (
     Job.objects.filter(
       company=company,
+      context=Job.CONTEXT_CLEANING,
       status=Job.STATUS_COMPLETED,
       actual_start_time__isnull=False,
       actual_end_time__isnull=False,
@@ -512,7 +516,7 @@ def analytics_job_duration(request):
   # Собираем суммы длительности и количество по дням
   by_day: dict = {}
 
-  for job in qs:
+  for job in qs.iterator(chunk_size=500):
     day = job.actual_end_time.date()
     delta = job.actual_end_time - job.actual_start_time
     duration_hours = delta.total_seconds() / 3600.0
@@ -604,6 +608,7 @@ def analytics_proof_completion(request):
   qs = (
     Job.objects.filter(
       company=company,
+      context=Job.CONTEXT_CLEANING,
       status=Job.STATUS_COMPLETED,
       actual_end_time__isnull=False,
       actual_end_time__date__gte=date_from,
@@ -615,7 +620,7 @@ def analytics_proof_completion(request):
   # агрегаты по дням
   by_day: dict = {}
 
-  for job in qs:
+  for job in qs.iterator(chunk_size=500):
     day = job.actual_end_time.date()
 
     bucket = by_day.get(day)
@@ -766,6 +771,7 @@ def analytics_sla_breakdown(request):
   qs = (
     Job.objects.filter(
       company=company,
+      context=Job.CONTEXT_CLEANING,
       status=Job.STATUS_COMPLETED,
       actual_end_time__isnull=False,
       actual_end_time__date__gte=date_from,
@@ -781,7 +787,7 @@ def analytics_sla_breakdown(request):
   cleaners_stats: dict[object, dict] = {}
   locations_stats: dict[object, dict] = {}
 
-  for job in qs:
+  for job in qs.iterator(chunk_size=500):
     sla_status, reasons = compute_sla_status_and_reasons_for_job(job)
 
     # нормализуем reasons к списку строк
@@ -962,6 +968,7 @@ def analytics_locations_performance(request):
   qs = (
     Job.objects.filter(
       company=company,
+      context=Job.CONTEXT_CLEANING,
       status=Job.STATUS_COMPLETED,
       actual_end_time__isnull=False,
       actual_end_time__date__gte=date_from,
@@ -974,7 +981,7 @@ def analytics_locations_performance(request):
   # агрегаты по каждой локации
   locations: dict[int, dict] = {}
 
-  for job in qs:
+  for job in qs.iterator(chunk_size=500):
     location = getattr(job, "location", None)
     if location is None:
       # джобы без локации в рейтинг не включаем
@@ -1140,6 +1147,7 @@ def analytics_cleaners_performance(request):
   qs = (
     Job.objects.filter(
       company=company,
+      context=Job.CONTEXT_CLEANING,
       status=Job.STATUS_COMPLETED,
       actual_end_time__isnull=False,
       actual_end_time__date__gte=date_from,
@@ -1152,7 +1160,7 @@ def analytics_cleaners_performance(request):
   # агрегаты по каждому клинеру
   cleaners: dict[int, dict] = {}
 
-  for job in qs:
+  for job in qs.iterator(chunk_size=500):
     cleaner = getattr(job, "cleaner", None)
     if cleaner is None:
       # джобы без клинера в рейтинг не включаем

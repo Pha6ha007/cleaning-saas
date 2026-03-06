@@ -19,15 +19,11 @@ This is a multi-context SaaS platform with two operational products:
 ### Frontend (Cleaning) — LOCKED
 
 ```
-src/pages/Dashboard.tsx
 src/pages/Jobs.tsx
 src/pages/JobPlanning.tsx
 src/pages/JobDetails.tsx
-src/pages/History.tsx
 src/pages/Performance.tsx
-src/pages/Analytics.tsx
 src/pages/Reports.tsx
-src/pages/Locations.tsx
 src/pages/company/**
 src/pages/settings/**
 src/components/planning/**
@@ -35,6 +31,17 @@ src/components/analytics/**
 src/api/planning.ts
 src/api/analytics.ts
 src/hooks/useUserRole.ts
+```
+
+### Frontend (Cleaning) — UNLOCKED for Phase 5 fixes
+
+# Unlocked 2026-03-06 for Phase 5: pagination (History, Locations), retry buttons (Dashboard, Analytics)
+
+```
+src/pages/Dashboard.tsx
+src/pages/History.tsx
+src/pages/Analytics.tsx
+src/pages/Locations.tsx
 ```
 
 ### Global Styles — LOCKED

@@ -1,9 +1,12 @@
 # backend/apps/api/views_auth.py
 
 from django.contrib.auth.hashers import check_password
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 
 from apps.accounts.models import Company, User
@@ -78,6 +81,7 @@ class CleanerPinLoginView(APIView):
 
     authentication_classes = []
     permission_classes = []
+    throttle_classes = [AnonRateThrottle]
 
     def post(self, request, *args, **kwargs):
         phone = (request.data.get("phone") or "").strip()
@@ -144,6 +148,7 @@ class ManagerLoginView(APIView):
 
     authentication_classes = []
     permission_classes = []
+    throttle_classes = [AnonRateThrottle]
 
     def post(self, request):
         email = (request.data.get("email") or "").strip().lower()
@@ -209,6 +214,7 @@ class ManagerSignupView(APIView):
 
     authentication_classes: list = []
     permission_classes: list = []
+    throttle_classes = [AnonRateThrottle]
 
     def post(self, request, *args, **kwargs):
         company_name = (request.data.get("company_name") or "").strip()
@@ -255,6 +261,19 @@ class ManagerSignupView(APIView):
             full_name=full_name,
             is_active=True,
         )
+
+        # Validate password strength before setting
+        try:
+            validate_password(password, user=owner)
+        except DjangoValidationError as e:
+            # Rollback: delete the user and company we just created
+            owner.delete()
+            company.delete()
+            return Response(
+                {"code": "weak_password", "message": "Password too weak.", "fields": {"password": list(e.messages)}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         owner.set_password(password)
         owner.save(update_fields=["password"])
 

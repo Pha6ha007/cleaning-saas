@@ -1,17 +1,16 @@
 // dubai-control/src/pages/History.tsx
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useLocation } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { format, subDays } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { JobsTable } from "@/components/planning/JobsTable";
 import { JobSidePanel } from "@/components/planning/JobSidePanel";
 
 import type { PlanningJob } from "@/types/planning";
-import { fetchJobsHistory } from "@/api/planning";
+import { fetchJobsHistory, type PaginatedJobsHistoryResponse } from "@/api/planning";
 
 import {
   Popover,
@@ -77,6 +76,15 @@ export default function History() {
   );
   const [exportLoading, setExportLoading] = useState(false);
 
+  // Server-side pagination state
+  const [jobs, setJobs] = useState<PlanningJob[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   // если пришли с другой страницы (Reports) с новыми query-параметрами —
   // аккуратно синхронизируем состояние History с URL
   useEffect(() => {
@@ -113,41 +121,65 @@ export default function History() {
     [range.to],
   );
 
-  const {
-    data: jobs,
-    isLoading,
-    isError,
-    error,
-    refetch,
-  } = useQuery<PlanningJob[], Error>({
-    queryKey: ["manager-jobs-history", dateFromStr, dateToStr],
-    queryFn: () =>
-      fetchJobsHistory({
-        dateFrom: dateFromStr,
-        dateTo: dateToStr,
-      }),
-  });
+  // Load jobs from server with pagination
+  const loadJobs = useCallback(
+    async (pageNum: number, append = false) => {
+      if (pageNum === 1) {
+        setIsLoading(true);
+      } else {
+        setIsLoadingMore(true);
+      }
+      setLoadError(null);
 
-  const jobsList = jobs ?? [];
+      try {
+        const data: PaginatedJobsHistoryResponse = await fetchJobsHistory({
+          dateFrom: dateFromStr,
+          dateTo: dateToStr,
+          cleanerId: cleanerFilterId,
+          locationId: locationFilterId,
+          page: pageNum,
+          pageSize: 20,
+        });
 
+        if (append) {
+          setJobs((prev) => [...prev, ...data.results]);
+        } else {
+          setJobs(data.results);
+        }
+        setTotalCount(data.count);
+        setHasMore(!!data.next);
+        setPage(pageNum);
+      } catch (err) {
+        setLoadError(
+          err instanceof Error
+            ? err.message
+            : "Failed to load job history. Please try again."
+        );
+      } finally {
+        setIsLoading(false);
+        setIsLoadingMore(false);
+      }
+    },
+    [dateFromStr, dateToStr, cleanerFilterId, locationFilterId]
+  );
+
+  // Initial load and reload when filters change
+  useEffect(() => {
+    setJobs([]);
+    setPage(1);
+    loadJobs(1, false);
+  }, [dateFromStr, dateToStr, cleanerFilterId, locationFilterId]);
+
+  // Handle "Load more"
+  const handleLoadMore = () => {
+    if (!isLoadingMore && hasMore) {
+      loadJobs(page + 1, true);
+    }
+  };
+
+  // Apply client-side filters (SLA filter) - backend doesn't support it directly
   const jobsForTable = useMemo(() => {
-    let list = jobsList;
-
-    // Фильтр по клинеру, если задан через URL (Reports → History)
-    if (cleanerFilterId != null && !Number.isNaN(cleanerFilterId)) {
-      list = list.filter((job) => {
-        const jobCleanerId = job.cleaner?.id ?? null;
-        return jobCleanerId === cleanerFilterId;
-      });
-    }
-
-    // Фильтр по локации, если задан
-    if (locationFilterId != null && !Number.isNaN(locationFilterId)) {
-      list = list.filter((job) => {
-        const jobLocationId = job.location?.id ?? null;
-        return jobLocationId === locationFilterId;
-      });
-    }
+    let list = jobs;
 
     // UI-фильтр: показывать только проблемные (sla_status = violated)
     if (showOnlyProblem) {
@@ -160,11 +192,10 @@ export default function History() {
       const bScore = b.sla_status === "violated" ? 1 : 0;
       return bScore - aScore;
     });
-  }, [jobsList, showOnlyProblem, cleanerFilterId, locationFilterId]);
+  }, [jobs, showOnlyProblem]);
 
-  const loadError = isError
-    ? error?.message || "Failed to load job history. Please try again."
-    : null;
+  // For display - total from server (filtered count is approximate)
+  const displayCount = showOnlyProblem ? jobsForTable.length : totalCount;
 
   const handleRangeChange = (from: Date, to: Date) => {
     setRange({ from, to });
@@ -193,6 +224,10 @@ export default function History() {
     setShowOnlyProblem(false);
     setCleanerFilterId(null);
     setLocationFilterId(null);
+  };
+
+  const handleRetry = () => {
+    loadJobs(1, false);
   };
 
   const handleExportCsv = async () => {
@@ -370,16 +405,14 @@ export default function History() {
               <p className="text-sm text-muted-foreground">
                 {isLoading
                   ? "Loading…"
-                  : `${jobsForTable.length} job${
-                      jobsForTable.length === 1 ? "" : "s"
-                    }`}
+                  : `${displayCount} job${displayCount === 1 ? "" : "s"}`}
               </p>
             </div>
 
             {loadError && (
               <div className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 flex items-center justify-between gap-3">
                 <div className="text-sm text-destructive">{loadError}</div>
-                <Button size="sm" variant="outline" onClick={() => refetch()}>
+                <Button size="sm" variant="outline" onClick={handleRetry}>
                   Retry
                 </Button>
               </div>
@@ -396,11 +429,34 @@ export default function History() {
                 </p>
               </div>
             ) : (
-              <JobsTable
-                jobs={jobsForTable}
-                loading={isLoading}
-                onJobClick={setSelectedJob}
-              />
+              <>
+                <JobsTable
+                  jobs={jobsForTable}
+                  loading={isLoading}
+                  onJobClick={setSelectedJob}
+                />
+
+                {/* Load More Button */}
+                {hasMore && !showOnlyProblem && (
+                  <div className="mt-4 flex justify-center border-t border-border pt-4">
+                    <Button
+                      variant="outline"
+                      onClick={handleLoadMore}
+                      disabled={isLoadingMore}
+                      className="min-w-[140px]"
+                    >
+                      {isLoadingMore ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Loading…
+                        </>
+                      ) : (
+                        `Load more (${jobs.length} of ${totalCount})`
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

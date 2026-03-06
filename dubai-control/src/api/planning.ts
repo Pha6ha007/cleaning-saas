@@ -228,11 +228,20 @@ export type JobsHistoryFilters = {
   status?: PlanningJobStatus;
   cleanerId?: number | null;
   locationId?: number | null;
+  page?: number;
+  pageSize?: number;
+};
+
+export type PaginatedJobsHistoryResponse = {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: PlanningJob[];
 };
 
 export async function fetchJobsHistory(
   filters: JobsHistoryFilters,
-): Promise<PlanningJob[]> {
+): Promise<PaginatedJobsHistoryResponse> {
   const params = new URLSearchParams({
     date_from: filters.dateFrom,
     date_to: filters.dateTo,
@@ -250,7 +259,15 @@ export async function fetchJobsHistory(
     params.set("location_id", String(filters.locationId));
   }
 
-  const res = await apiClient.get<PlanningJob[]>(
+  if (filters.page) {
+    params.set("page", String(filters.page));
+  }
+
+  if (filters.pageSize) {
+    params.set("page_size", String(filters.pageSize));
+  }
+
+  const res = await apiClient.get<PaginatedJobsHistoryResponse>(
     `/api/manager/jobs/history/?${params.toString()}`,
   );
 

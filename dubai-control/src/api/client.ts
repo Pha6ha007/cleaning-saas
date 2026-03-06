@@ -1160,9 +1160,26 @@ export async function resetTeamMemberPassword(
 
 // ---------- Locations API ----------
 
+export interface PaginatedLocationsResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: Location[];
+}
+
 export async function getLocations(): Promise<Location[]> {
   await loginManager();
   return apiFetch<Location[]>("/api/manager/locations/");
+}
+
+export async function getLocationsPaginated(
+  page = 1,
+  pageSize = 20
+): Promise<PaginatedLocationsResponse> {
+  await loginManager();
+  return apiFetch<PaginatedLocationsResponse>(
+    `/api/manager/locations/?page=${page}&page_size=${pageSize}`
+  );
 }
 
 export async function createLocation(input: {

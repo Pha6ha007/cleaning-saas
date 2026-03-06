@@ -1,6 +1,6 @@
 // dubai-control/src/pages/Analytics.tsx
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { CalendarDays, ShieldAlert, AlertTriangle } from "lucide-react";
 
@@ -50,7 +50,6 @@ type RangePreset = "last7" | "last14" | "last30";
 // человекочитаемые названия причин
 function formatReasonCode(code: string): string {
   const map: Record<string, string> = {
-    late_start: "Late start",
     early_leave: "Early leave",
     missing_before_photo: "Missing before photo",
     missing_after_photo: "Missing after photo",
@@ -188,29 +187,28 @@ function Analytics() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchAnalytics = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  const fetchAnalytics = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-        const [
-          summaryRes,
-          cleanersRes,
-          jobsCompletedRes,
-          jobDurationRes,
-          proofRes,
-          slaRes,
-          violationsTrendRes,
-        ] = await Promise.all([
-          getAnalyticsSummary(range),
-          getAnalyticsCleanersPerformance(range),
-          getAnalyticsJobsCompleted(range),
-          getAnalyticsJobDuration(range),
-          getAnalyticsProofCompletion(range),
-          getAnalyticsSlaBreakdown(range),
-          getAnalyticsSlaViolationsTrend(range),
-        ]);
+      const [
+        summaryRes,
+        cleanersRes,
+        jobsCompletedRes,
+        jobDurationRes,
+        proofRes,
+        slaRes,
+        violationsTrendRes,
+      ] = await Promise.all([
+        getAnalyticsSummary(range),
+        getAnalyticsCleanersPerformance(range),
+        getAnalyticsJobsCompleted(range),
+        getAnalyticsJobDuration(range),
+        getAnalyticsProofCompletion(range),
+        getAnalyticsSlaBreakdown(range),
+        getAnalyticsSlaViolationsTrend(range),
+      ]);
 
         const summary = summaryRes.data;
         const cleaners = cleanersRes.data;
@@ -438,12 +436,13 @@ function Analytics() {
         setSlaBreakdown(null);
         setHasAnyCompletedJobs(false);
       } finally {
-        setLoading(false);
-      }
-    };
+      setLoading(false);
+    }
+  }, [range, navigate]);
 
+  useEffect(() => {
     fetchAnalytics();
-  }, [range.from, range.to, navigate]);
+  }, [fetchAnalytics]);
 
   const violationRatePercent = slaBreakdown
     ? Math.round((slaBreakdown.violation_rate ?? 0) * 100)
@@ -570,9 +569,12 @@ function Analytics() {
         {/* KPI Cards */}
         <section className="mb-10">
           {error && (
-            <p className="mb-2 text-sm text-red-500">
-              {error}
-            </p>
+            <div className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 flex items-center justify-between gap-3">
+              <div className="text-sm text-destructive">{error}</div>
+              <Button size="sm" variant="outline" onClick={fetchAnalytics}>
+                Retry
+              </Button>
+            </div>
           )}
           <div
             className={`grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 ${

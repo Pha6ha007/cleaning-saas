@@ -1,5 +1,6 @@
 // mobile-cleaner/src/api/client.ts
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { resetToLogin } from "../navigation";
 
 /**
  * Mobile API client — Execution Core (Layer 1)
@@ -269,6 +270,16 @@ async function apiFetch<T = any>(
     } else {
       data = raw;
     }
+  }
+
+  // Handle 401 Unauthorized - clear token and redirect to login
+  if (resp.status === 401) {
+    await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
+    auth.token = null;
+    resetToLogin();
+    const err: ApiError = new Error("Session expired. Please login again.");
+    err.status = 401;
+    throw err;
   }
 
   if (!resp.ok) {

@@ -162,7 +162,7 @@ Locations — это не просто справочник адресов, а �
 - SLA-движок на backend (`compute_sla_status_and_reasons_for_job(job)`):
   - `sla_status: ok / violated`;
   - `sla_reasons: string[]` (late_start, missing_after_photo, checklist_not_completed и т.п.).
-- Force-complete интегрирован в SLA: override всегда даёт violation, transitions to `completed_unverified`.
+- Force-complete: transitions to `completed_unverified`, excluded from standard KPIs.
 - **Analytics integrity**: standard KPIs based on `completed` jobs only (exclude `completed_unverified`).
 - Unverified completions tracked separately for audit purposes.
 - SLA-агрегаты:

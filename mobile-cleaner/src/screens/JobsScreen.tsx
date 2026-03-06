@@ -10,11 +10,17 @@ import {
   ActivityIndicator,
   RefreshControl,
   SafeAreaView,
+  Alert,
+  Pressable,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import NetInfo from "@react-native-community/netinfo";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../App";
 import { fetchTodayJobs, type CleanerJobSummary } from "../api/client";
 import { getStatusConfig } from "../components/job-details/statusConfig";
+import { resetToLogin } from "../navigation";
+import { cacheTodayJobs, getCachedTodayJobs } from "../utils/cache";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Jobs">;
 
@@ -43,19 +49,87 @@ export default function JobsScreen({ navigation }: Props) {
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [isOffline, setIsOffline] = React.useState(false);
+  const [showingCached, setShowingCached] = React.useState(false);
+
+  // Logout handler
+  const handleLogout = React.useCallback(() => {
+    Alert.alert("Logout", "Are you sure you want to logout?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: async () => {
+          await AsyncStorage.removeItem("@auth_token");
+          resetToLogin();
+        },
+      },
+    ]);
+  }, []);
+
+  // Add logout button to header
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <Pressable onPress={handleLogout} style={styles.logoutBtn}>
+          <Text style={styles.logoutBtnText}>Logout</Text>
+        </Pressable>
+      ),
+    });
+  }, [navigation, handleLogout]);
 
   const loadJobs = React.useCallback(async () => {
     try {
       setError(null);
+      setShowingCached(false);
       const data = await fetchTodayJobs();
-      setJobs(Array.isArray(data) ? (data as CleanerJobSummary[]) : []);
+      const jobsList = Array.isArray(data) ? (data as CleanerJobSummary[]) : [];
+      setJobs(jobsList);
+      // Cache jobs for offline use
+      await cacheTodayJobs(jobsList);
     } catch (e: any) {
-      setError(e?.message || "Failed to load today jobs.");
+      // 401 is handled in client.ts - don't show error
+      if (e?.status === 401) return;
+
+      // Check if offline error
+      const msg = e?.message || "";
+      const isNetworkError =
+        msg.includes("No internet") ||
+        msg.includes("Network request failed") ||
+        msg.includes("Failed to fetch");
+
+      if (isNetworkError) {
+        // Try to load from cache when offline
+        const cached = await getCachedTodayJobs();
+        if (cached && cached.length > 0) {
+          setJobs(cached);
+          setShowingCached(true);
+          setError(null);
+        } else {
+          setError("No internet. Open the app online first.");
+        }
+      } else {
+        setError("Failed to load jobs. Pull to refresh.");
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, []);
+
+  // Network detection
+  React.useEffect(() => {
+    const unsub = NetInfo.addEventListener((state) => {
+      const online = !!state.isConnected && state.isInternetReachable !== false;
+      setIsOffline(!online);
+      // Auto refetch when back online
+      if (online && !loading) {
+        loadJobs();
+      }
+    });
+
+    return () => unsub();
+  }, [loadJobs, loading]);
 
   React.useEffect(() => {
     loadJobs();
@@ -175,18 +249,32 @@ export default function JobsScreen({ navigation }: Props) {
             />
           }
           ListHeaderComponent={
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryTitle}>Today&apos;s jobs</Text>
-              <Text style={styles.summaryDate}>{formattedDate}</Text>
+            <>
+              {isOffline && (
+                <View style={styles.offlineBanner}>
+                  <Text style={styles.offlineBannerText}>
+                    You are offline
+                  </Text>
+                </View>
+              )}
+              {showingCached && (
+                <View style={styles.cachedBanner}>
+                  <Text style={styles.cachedBannerText}>
+                    Showing cached data
+                  </Text>
+                </View>
+              )}
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryTitle}>Today&apos;s jobs</Text>
+                <Text style={styles.summaryDate}>{formattedDate}</Text>
 
-              {error ? (
-                <Text style={styles.errorText}>
-                  Session expired. Please log in again.
-                </Text>
-              ) : jobsCountText ? (
-                <Text style={styles.summarySubtitle}>{jobsCountText}</Text>
-              ) : null}
-            </View>
+                {error ? (
+                  <Text style={styles.errorText}>{error}</Text>
+                ) : jobsCountText ? (
+                  <Text style={styles.summarySubtitle}>{jobsCountText}</Text>
+                ) : null}
+              </View>
+            </>
           }
           ListEmptyComponent={
             !loading && !error ? (
@@ -323,5 +411,50 @@ const styles = StyleSheet.create({
   chevron: {
     fontSize: 18,
     color: "#CBD5E1", // менее контрастная стрелка
+  },
+
+  // Logout button
+  logoutBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  logoutBtnText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: listColors.teal,
+  },
+
+  // Offline banner
+  offlineBanner: {
+    marginBottom: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: "#FFF4E5",
+    borderWidth: 1,
+    borderColor: "#FCD9A6",
+  },
+  offlineBannerText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#9A5B00",
+    textAlign: "center",
+  },
+
+  // Cached data banner
+  cachedBanner: {
+    marginBottom: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: "#E0F2FE",
+    borderWidth: 1,
+    borderColor: "#7DD3FC",
+  },
+  cachedBannerText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0369A1",
+    textAlign: "center",
   },
 });

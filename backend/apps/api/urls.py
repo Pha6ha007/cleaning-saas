@@ -1,6 +1,7 @@
 # backend/apps/api/urls.py
 from django.urls import path, include
 from django.http import JsonResponse
+from django.db import connection
 
 from apps.marketing.views import DemoRequestCreateView, ContactMessageCreateView
 from . import analytics_views
@@ -24,7 +25,11 @@ from apps.locations.app.views import (
 
 
 def health_view(request):
-  return JsonResponse({"status": "ok"})
+    try:
+        connection.ensure_connection()
+        return JsonResponse({"status": "ok", "database": "connected"})
+    except Exception as e:
+        return JsonResponse({"status": "error", "database": str(e)}, status=503)
 
 
 urlpatterns = [

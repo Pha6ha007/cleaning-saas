@@ -1,7 +1,7 @@
 // dubai-control/src/pages/LocationsNew.tsx
 
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useCallback } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
@@ -22,10 +22,11 @@ import {
   X,
 } from "lucide-react";
 import {
-  getLocations,
+  getLocationsPaginated,
   createLocation,
   updateLocation,
   type Location,
+  type PaginatedLocationsResponse,
 } from "@/api/client";
 import { LocationForm } from "@/components/locations/LocationForm";
 
@@ -40,16 +41,65 @@ export default function LocationsNew() {
   const [showModal, setShowModal] = useState(false);
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
 
-  // Fetch locations
-  const { data: locations = [], isLoading } = useQuery({
-    queryKey: ["locations"],
-    queryFn: getLocations,
-  });
+  // Server-side pagination state
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  // Load locations from server with pagination
+  const loadLocations = useCallback(async (pageNum: number, append = false) => {
+    if (pageNum === 1) {
+      setIsLoading(true);
+    } else {
+      setIsLoadingMore(true);
+    }
+
+    try {
+      const data: PaginatedLocationsResponse = await getLocationsPaginated(pageNum, 20);
+
+      if (append) {
+        setLocations((prev) => [...prev, ...data.results]);
+      } else {
+        setLocations(data.results);
+      }
+      setTotalCount(data.count);
+      setHasMore(!!data.next);
+      setPage(pageNum);
+    } catch (err) {
+      console.error("[Locations] Failed to load locations", err);
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  }, []);
+
+  // Initial load
+  useEffect(() => {
+    loadLocations(1, false);
+  }, [loadLocations]);
+
+  // Handle "Load more"
+  const handleLoadMore = () => {
+    if (!isLoadingMore && hasMore) {
+      loadLocations(page + 1, true);
+    }
+  };
+
+  // Reload after mutations
+  const reloadLocations = () => {
+    setLocations([]);
+    setPage(1);
+    loadLocations(1, false);
+  };
 
   // Create location mutation
   const createMutation = useMutation({
     mutationFn: (data: Partial<Location>) => createLocation(data),
     onSuccess: () => {
+      reloadLocations();
       queryClient.invalidateQueries({ queryKey: ["locations"] });
       toast({
         title: "Success",
@@ -73,7 +123,9 @@ export default function LocationsNew() {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<Location> }) =>
       updateLocation(id, data),
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
+      // Update local state optimistically
+      reloadLocations();
       queryClient.invalidateQueries({ queryKey: ["locations"] });
 
       // If editing in modal, close it
@@ -259,65 +311,88 @@ export default function LocationsNew() {
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="border-b border-border bg-muted/50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Address
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border bg-card">
-                {filteredLocations.map((location) => {
-                  const isActive = location.is_active ?? true;
-                  return (
-                    <tr key={location.id} className="transition-colors hover:bg-muted/30">
-                      <td className="px-6 py-4">
-                        <div className="font-medium text-foreground">{location.name}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-muted-foreground">
-                          {location.address || "—"}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <Switch
-                            checked={isActive}
-                            onCheckedChange={() => handleToggleActive(location)}
-                            disabled={updateMutation.isPending}
-                          />
-                          <span className="text-sm font-medium text-foreground">
-                            {isActive ? "Active" : "Inactive"}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(location)}
-                        >
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="border-b border-border bg-muted/50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      Address
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border bg-card">
+                  {filteredLocations.map((location) => {
+                    const isActive = location.is_active ?? true;
+                    return (
+                      <tr key={location.id} className="transition-colors hover:bg-muted/30">
+                        <td className="px-6 py-4">
+                          <div className="font-medium text-foreground">{location.name}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-muted-foreground">
+                            {location.address || "—"}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <Switch
+                              checked={isActive}
+                              onCheckedChange={() => handleToggleActive(location)}
+                              disabled={updateMutation.isPending}
+                            />
+                            <span className="text-sm font-medium text-foreground">
+                              {isActive ? "Active" : "Inactive"}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(location)}
+                          >
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Load More Button */}
+            {hasMore && !searchTerm && statusFilter === "all" && (
+              <div className="flex justify-center border-t border-border px-6 py-4">
+                <Button
+                  variant="outline"
+                  onClick={handleLoadMore}
+                  disabled={isLoadingMore}
+                  className="min-w-[160px]"
+                >
+                  {isLoadingMore ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Loading…
+                    </>
+                  ) : (
+                    `Load more (${locations.length} of ${totalCount})`
+                  )}
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

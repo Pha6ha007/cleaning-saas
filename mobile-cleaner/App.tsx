@@ -8,6 +8,7 @@ import LoginScreen from "./src/screens/LoginScreen";
 import JobsScreen from "./src/screens/JobsScreen";
 import JobDetailsScreen from "./src/screens/JobDetailsScreen";
 import { loadStoredToken } from "./src/api/client";
+import { navigationRef } from "./src/navigation";
 
 export type RootStackParamList = {
   Login: undefined;
@@ -39,7 +40,7 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator
         initialRouteName={hasToken ? "Jobs" : "Login"}
         screenOptions={{

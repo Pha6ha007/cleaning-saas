@@ -720,3 +720,12 @@ Status: ✅ enforced
 * Слой 2 — DONE ✅
 * Слой 3 — готов к интеграции платёжного провайдера (Settings v1.1 готова)
 * Слои 4–5 — заделы
+
+---
+
+## Context Isolation Fix (2026-03-06)
+
+- Fixed: 11 Job.objects.filter() calls missing context=Job.CONTEXT_CLEANING
+- Affected: views_reports.py (3 views), analytics_views.py (8 functions)
+- Impact: Cleaning reports/analytics no longer include Maintenance jobs
+- Phase 5: Added pagination to History/Locations, retry buttons to Dashboard/Analytics

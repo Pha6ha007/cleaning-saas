@@ -75,7 +75,6 @@ SLA_REASON_LABELS = {
     "no_check_out": "Check-out missing",
     "check_in_too_far": "Check-in location too far",
     "check_out_too_far": "Check-out location too far",
-    "late_start": "Late start",
     "early_end": "Early end",
     "no_photos": "No photos provided",
     "missing_proof": "Missing proof",

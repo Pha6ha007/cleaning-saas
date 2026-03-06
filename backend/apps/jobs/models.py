@@ -123,7 +123,7 @@ class Job(models.Model):
         help_text="Deadline for SLA compliance. Visual timer shows time remaining.",
     )
 
-    scheduled_date = models.DateField()
+    scheduled_date = models.DateField(db_index=True)
     scheduled_start_time = models.TimeField(null=True, blank=True)
     scheduled_end_time = models.TimeField(null=True, blank=True)
 
@@ -134,6 +134,7 @@ class Job(models.Model):
         max_length=30,
         choices=STATUS_CHOICES,
         default=STATUS_SCHEDULED,
+        db_index=True,
     )
 
     manager_notes = models.TextField(blank=True)
@@ -167,6 +168,10 @@ class Job(models.Model):
 
     class Meta:
         db_table = "jobs"
+        indexes = [
+            models.Index(fields=['company', 'status', 'actual_end_time'], name='jobs_company_status_endtime_idx'),
+            models.Index(fields=['company', 'context', 'status'], name='jobs_company_context_status_idx'),
+        ]
 
     def __str__(self) -> str:
         return f"Job #{self.id} – {self.location} – {self.scheduled_date}"

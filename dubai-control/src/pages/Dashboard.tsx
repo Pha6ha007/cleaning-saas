@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/ui/stat-card";
@@ -161,50 +161,38 @@ export default function Dashboard() {
     }
   }, []);
 
-  useEffect(() => {
-    let isMounted = true;
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-    async function loadData() {
-      try {
-        setLoading(true);
-        setError(null);
+      const [apiJobs, usageSummary] = await Promise.all([
+        getManagerTodayJobs(),
+        getUsageSummary(),
+      ]);
 
-        const [apiJobs, usageSummary] = await Promise.all([
-          getManagerTodayJobs(),
-          getUsageSummary(),
-        ]);
-
-        if (!isMounted) return;
-
-        const mappedJobs = (apiJobs as ApiJob[]).map(mapApiJobToUi);
-        setTodayJobs(mappedJobs);
-        setUsage(usageSummary as UsageSummary);
-      } catch (err: any) {
-        if (!isMounted) return;
-
-        // 🔒 company blocked → read-only mode
-        if ((err as any)?.code === "company_blocked") {
-          setCompanyBlocked(true);
-          setTodayJobs([]);
-          setUsage(null);
-          return;
-        }
-
-        setError(err.message || "Failed to load dashboard data");
+      const mappedJobs = (apiJobs as ApiJob[]).map(mapApiJobToUi);
+      setTodayJobs(mappedJobs);
+      setUsage(usageSummary as UsageSummary);
+    } catch (err: any) {
+      // 🔒 company blocked → read-only mode
+      if ((err as any)?.code === "company_blocked") {
+        setCompanyBlocked(true);
         setTodayJobs([]);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        setUsage(null);
+        return;
       }
+
+      setError(err.message || "Failed to load dashboard data");
+      setTodayJobs([]);
+    } finally {
+      setLoading(false);
     }
-
-    loadData();
-
-    return () => {
-      isMounted = false;
-    };
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const stats = {
     total: todayJobs.length,
@@ -354,8 +342,11 @@ export default function Dashboard() {
       </div>
 
       {error && (
-        <div className="mb-4 text-sm text-red-500">
-          Failed to load jobs: {error}
+        <div className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 flex items-center justify-between gap-3">
+          <div className="text-sm text-destructive">Failed to load jobs: {error}</div>
+          <Button size="sm" variant="outline" onClick={loadData}>
+            Retry
+          </Button>
         </div>
       )}
 

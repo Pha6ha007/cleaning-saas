@@ -49,6 +49,7 @@ def _get_company_report(company: Company, days: int) -> dict:
         Job.objects.filter(
             company=company,
             status=Job.STATUS_COMPLETED,
+            context=Job.CONTEXT_CLEANING,
             actual_end_time__date__gte=date_from,
             actual_end_time__date__lte=date_to,
         )
@@ -328,8 +329,9 @@ class ManagerPerformanceView(APIView):
             Job.objects.filter(
                 company=company,
                 status="completed",
-                scheduled_date__gte=date_from,
-                scheduled_date__lte=date_to,
+                context=Job.CONTEXT_CLEANING,
+                actual_end_time__date__gte=date_from,
+                actual_end_time__date__lte=date_to,
             )
             .select_related("cleaner", "location")
         )
@@ -554,11 +556,12 @@ class ManagerViolationJobsView(APIView):
             Job.objects.filter(
                 company=company,
                 status="completed",
-                scheduled_date__gte=period_start,
-                scheduled_date__lte=period_end,
+                context=Job.CONTEXT_CLEANING,
+                actual_end_time__date__gte=period_start,
+                actual_end_time__date__lte=period_end,
             )
             .select_related("location", "cleaner")
-            .order_by("-scheduled_date", "-id")
+            .order_by("-actual_end_time", "-id")
         )
 
         jobs_payload = []

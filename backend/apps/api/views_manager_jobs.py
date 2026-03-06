@@ -18,6 +18,7 @@ from django.db.models import Q
 
 from rest_framework import status
 from rest_framework.authentication import TokenAuthentication
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -58,6 +59,13 @@ VALID_SLA_REASONS = {
     "missing_check_in",
     "missing_check_out",
 }
+
+
+class JobsHistoryPagination(PageNumberPagination):
+    """Pagination for job history endpoint."""
+    page_size = 20
+    page_size_query_param = "page_size"
+    max_page_size = 100
 
 
 class JobPdfReportView(APIView):
@@ -986,18 +994,27 @@ class ManagerJobsHistoryView(APIView):
     """
     Job History list для менеджера (read-only).
 
-    GET /api/manager/jobs/history/?date_from=YYYY-MM-DD&date_to=YYYY-MM-DD
+    GET /api/manager/jobs/history/?date_from=YYYY-MM-DD&date_to=YYYY-MM-DD[&page=1&page_size=20]
+
+    Returns paginated response:
+    {
+        "count": total_count,
+        "next": url_or_null,
+        "previous": url_or_null,
+        "results": [...]
+    }
     """
 
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
+    pagination_class = JobsHistoryPagination
 
     def get(self, request, *args, **kwargs):
         user = request.user
 
-        if getattr(user, "role", None) not in (User.ROLE_MANAGER, "manager"):
+        if getattr(user, "role", None) not in CONSOLE_ROLES:
             return Response(
-                {"detail": "Only managers can access job history."},
+                {"detail": "Only console users can access job history."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -1050,6 +1067,15 @@ class ManagerJobsHistoryView(APIView):
         if asset_id:
             qs = qs.filter(asset_id=asset_id)
 
+        # Apply pagination
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(qs, request)
+
+        if page is not None:
+            data = [build_planning_job_payload(job) for job in page]
+            return paginator.get_paginated_response(data)
+
+        # Fallback (shouldn't happen with pagination)
         data = [build_planning_job_payload(job) for job in qs]
         return Response(data, status=status.HTTP_200_OK)
 

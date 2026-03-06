@@ -1,21 +1,38 @@
 # backend/apps/locations/app/views.py
 
 from rest_framework import generics, permissions
+from rest_framework.pagination import PageNumberPagination
 
 from apps.locations.models import Location
 from apps.locations.app.serializers import LocationSerializer
 
 
+class LocationsPagination(PageNumberPagination):
+    """Pagination for locations list endpoint."""
+    page_size = 20
+    page_size_query_param = "page_size"
+    max_page_size = 100
+
+
 class ManagerLocationsListCreateView(generics.ListCreateAPIView):
     """
-    GET  /api/manager/locations/
+    GET  /api/manager/locations/[?page=1&page_size=20]
     POST /api/manager/locations/
 
     Работает только с локациями компании текущего менеджера.
+
+    Returns paginated response:
+    {
+        "count": total_count,
+        "next": url_or_null,
+        "previous": url_or_null,
+        "results": [...]
+    }
     """
 
     serializer_class = LocationSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = LocationsPagination
 
     def get_queryset(self):
         user = self.request.user

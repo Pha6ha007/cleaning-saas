@@ -28,8 +28,8 @@ const colors = {
 };
 
 export default function LoginScreen({ navigation }: Props) {
-  const [email, setEmail] = React.useState("cleaner@test.com");
-  const [password, setPassword] = React.useState("Test1234!");
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
 
   const handleLogin = async () => {

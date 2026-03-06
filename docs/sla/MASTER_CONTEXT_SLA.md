@@ -53,7 +53,7 @@ SLA v1 проверяет **базовую дисциплину выполнен
 
 #### 1. Тайминг
 
-* `late_start`
+* `late_start` — **NOT IMPLEMENTED in V1, reserved for V2**
 * `late_finish`
 
 #### 2. Proof completeness
@@ -133,8 +133,8 @@ SLA violation означает:
 Force-complete:
 
 * доступен **только менеджеру**;
-* переводит job в `completed`;
-* **всегда** приводит к SLA violation.
+* переводит job в `completed_unverified`;
+* job исключается из стандартных KPI (`completed` only).
 
 Менеджер обязан указать:
 

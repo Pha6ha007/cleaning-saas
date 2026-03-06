@@ -111,7 +111,7 @@ class Asset(models.Model):
     name = models.CharField(max_length=200)
     serial_number = models.CharField(max_length=100, blank=True)
     description = models.TextField(blank=True)
-    is_active = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True, db_index=True)
 
     # Stage 5 Lite: Warranty tracking
     warranty_start_date = models.DateField(
@@ -258,17 +258,20 @@ class ServiceContract(models.Model):
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
-        default=STATUS_DRAFT
+        default=STATUS_DRAFT,
+        db_index=True,
     )
 
     # Contract period
     start_date = models.DateField(
-        help_text="Contract start date"
+        help_text="Contract start date",
+        db_index=True,
     )
     end_date = models.DateField(
         null=True,
         blank=True,
-        help_text="Contract end date (null = open-ended)"
+        help_text="Contract end date (null = open-ended)",
+        db_index=True,
     )
 
     # Service terms (informational, no billing logic)
