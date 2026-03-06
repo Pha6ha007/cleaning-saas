@@ -1,41 +1,9 @@
 import MarketingLayout from "@/components/marketing/MarketingLayout";
-import { ArrowRight, Check, Shield, FileCheck, Users, Clock, Eye, BarChart3, Plus, Send, CheckCircle2, ClipboardCheck, Wrench, Building2, Camera, AlertTriangle } from "lucide-react";
+import { ArrowRight, Check, Shield, FileCheck, Users, Clock, Eye, BarChart3, Plus, Send, CheckCircle2, ClipboardCheck, Wrench, Building2 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useState, useEffect } from "react";
 import heroImage from "@/assets/maintainproof/hero-maintenance.jpg";
 
-// 3D Animated Slides Data
-const heroSlides = [
-  {
-    icon: Camera,
-    title: "Photo Documentation",
-    description: "Every task captured with timestamped photos",
-    color: "#059669"
-  },
-  {
-    icon: ClipboardCheck,
-    title: "Digital Checklists",
-    description: "Standardized procedures for consistency",
-    color: "#10b981"
-  },
-  {
-    icon: AlertTriangle,
-    title: "Issue Tracking",
-    description: "Flag problems before they escalate",
-    color: "#f59e0b"
-  }
-];
-
 const MaintenanceLanding = () => {
-  const [activeSlide, setActiveSlide] = useState(0);
-
-  // Auto-rotate slides
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveSlide((prev) => (prev + 1) % heroSlides.length);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
 
   return (
     <MarketingLayout>
@@ -66,116 +34,40 @@ const MaintenanceLanding = () => {
         </div>
 
         <div className="relative max-w-7xl mx-auto px-6 lg:px-10 w-full pt-24 pb-20">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-            {/* Left content */}
-            <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 text-[0.65rem] font-bold text-[#059669] bg-[#059669]/[0.12] px-4 py-2 rounded-full mb-10 tracking-[0.12em] uppercase border border-[#059669]/20 backdrop-blur-sm">
-                <Shield className="w-3.5 h-3.5" />
-                Operational Risk Control
-              </div>
-
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold leading-[1.05] tracking-tight mb-6">
-                <span className="text-white">Maintenance without proof</span>
-                <br />
-                <span className="text-[#059669]">becomes liability.</span>
-              </h1>
-
-              <p className="text-lg sm:text-xl text-white/70 max-w-xl mb-14 leading-relaxed">
-                Control every task. Document every action.
-                <br className="hidden sm:block" />
-                Protect your operation.
-              </p>
-
-              <div className="flex flex-col sm:flex-row items-start gap-4">
-                <Link to="/contact">
-                  <button className="relative overflow-hidden h-14 px-10 text-base font-semibold rounded-xl backdrop-blur-md bg-[#059669]/90 hover:bg-[#059669] text-white border border-[#059669]/60 shadow-2xl shadow-[#059669]/40 hover:shadow-[#059669]/60 transition-all duration-300 hover:-translate-y-1 hover:scale-105">
-                    <div className="absolute inset-0 bg-gradient-to-b from-white/25 to-transparent pointer-events-none" />
-                    <span className="relative flex items-center gap-2">
-                      Start Free Trial
-                      <ArrowRight className="w-5 h-5" />
-                    </span>
-                  </button>
-                </Link>
-                <Link to="/contact">
-                  <button className="relative overflow-hidden h-14 px-9 text-base font-medium rounded-xl backdrop-blur-xl bg-white/10 hover:bg-white/20 text-white border border-white/30 hover:border-white/50 shadow-lg shadow-black/20 transition-all duration-300 hover:-translate-y-1">
-                    <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
-                    <span className="relative">Request Demo</span>
-                  </button>
-                </Link>
-              </div>
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 text-[0.65rem] font-bold text-[#059669] bg-[#059669]/[0.12] px-4 py-2 rounded-full mb-10 tracking-[0.12em] uppercase border border-[#059669]/20 backdrop-blur-sm">
+              <Shield className="w-3.5 h-3.5" />
+              Operational Risk Control
             </div>
 
-            {/* Right side - 3D Animated Slides */}
-            <div className="hidden lg:block relative" style={{ perspective: "1500px" }}>
-              <div className="relative w-full h-[400px]">
-                {heroSlides.map((slide, index) => {
-                  const isActive = index === activeSlide;
-                  const isPrev = index === (activeSlide - 1 + heroSlides.length) % heroSlides.length;
-                  const isNext = index === (activeSlide + 1) % heroSlides.length;
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold leading-[1.05] tracking-tight mb-6">
+              <span className="text-white">Maintenance without proof</span>
+              <br />
+              <span className="text-[#059669]">becomes liability.</span>
+            </h1>
 
-                  return (
-                    <div
-                      key={index}
-                      className="absolute inset-0 transition-all duration-700 ease-out"
-                      style={{
-                        transform: isActive
-                          ? "rotateY(0deg) translateZ(0px) scale(1)"
-                          : isPrev
-                          ? "rotateY(-35deg) translateX(-60%) translateZ(-100px) scale(0.85)"
-                          : isNext
-                          ? "rotateY(35deg) translateX(60%) translateZ(-100px) scale(0.85)"
-                          : "rotateY(0deg) translateZ(-200px) scale(0.7)",
-                        opacity: isActive ? 1 : isPrev || isNext ? 0.5 : 0,
-                        zIndex: isActive ? 30 : isPrev || isNext ? 20 : 10,
-                        transformStyle: "preserve-3d",
-                      }}
-                    >
-                      {/* Glowing background */}
-                      <div
-                        className="absolute -inset-4 rounded-3xl blur-2xl transition-opacity duration-700"
-                        style={{
-                          background: `linear-gradient(135deg, ${slide.color}40, ${slide.color}20)`,
-                          opacity: isActive ? 1 : 0.3
-                        }}
-                      />
+            <p className="text-lg sm:text-xl text-white/70 max-w-xl mb-14 leading-relaxed">
+              Control every task. Document every action.
+              <br className="hidden sm:block" />
+              Protect your operation.
+            </p>
 
-                      {/* Glass card */}
-                      <div className="relative h-full backdrop-blur-xl bg-gradient-to-br from-white/15 via-white/10 to-white/5 rounded-3xl border border-white/20 p-10 shadow-2xl">
-                        <div className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-white/10 via-transparent to-transparent pointer-events-none" />
-
-                        {/* Icon */}
-                        <div
-                          className="w-20 h-20 rounded-2xl flex items-center justify-center mb-8 shadow-lg"
-                          style={{
-                            background: `linear-gradient(135deg, ${slide.color}, ${slide.color}90)`,
-                            boxShadow: `0 20px 40px ${slide.color}40`
-                          }}
-                        >
-                          <slide.icon className="w-10 h-10 text-white" />
-                        </div>
-
-                        <h3 className="text-2xl font-bold text-white mb-4">{slide.title}</h3>
-                        <p className="text-white/70 text-lg leading-relaxed">{slide.description}</p>
-
-                        {/* Decorative elements */}
-                        <div className="absolute bottom-8 right-8 flex gap-2">
-                          {heroSlides.map((_, i) => (
-                            <button
-                              key={i}
-                              onClick={() => setActiveSlide(i)}
-                              className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                                i === activeSlide
-                                  ? "bg-[#059669] w-8"
-                                  : "bg-white/30 hover:bg-white/50"
-                              }`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+            <div className="flex flex-col sm:flex-row items-start gap-4">
+              <Link to="/contact">
+                <button className="relative overflow-hidden h-14 px-10 text-base font-semibold rounded-xl backdrop-blur-md bg-[#059669]/90 hover:bg-[#059669] text-white border border-[#059669]/60 shadow-2xl shadow-[#059669]/40 hover:shadow-[#059669]/60 transition-all duration-300 hover:-translate-y-1 hover:scale-105">
+                  <div className="absolute inset-0 bg-gradient-to-b from-white/25 to-transparent pointer-events-none" />
+                  <span className="relative flex items-center gap-2">
+                    Start Free Trial
+                    <ArrowRight className="w-5 h-5" />
+                  </span>
+                </button>
+              </Link>
+              <Link to="/contact">
+                <button className="relative overflow-hidden h-14 px-9 text-base font-medium rounded-xl backdrop-blur-xl bg-white/10 hover:bg-white/20 text-white border border-white/30 hover:border-white/50 shadow-lg shadow-black/20 transition-all duration-300 hover:-translate-y-1">
+                  <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
+                  <span className="relative">Request Demo</span>
+                </button>
+              </Link>
             </div>
           </div>
         </div>
