@@ -1,6 +1,6 @@
 import MarketingLayout from "@/components/marketing/MarketingLayout";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Check, Shield, FileCheck, Users, Clock, Eye, BarChart3 } from "lucide-react";
+import { ArrowRight, Check, Shield, FileCheck, Users, Clock, Eye, BarChart3, Plus, Send, CheckCircle2, ClipboardCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import heroImage from "@/assets/maintainproof/hero-maintenance.jpg";
 
@@ -54,22 +54,26 @@ const MaintenanceLanding = () => {
 
             <div className="flex flex-col sm:flex-row items-start gap-4">
               <Link to="/contact">
-                <Button size="lg" className="h-14 px-10 text-base font-semibold shadow-2xl shadow-[#059669]/40 hover:shadow-[#059669]/50 rounded-lg bg-[#059669] hover:bg-[#059669]/90">
-                  Start Free Trial
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
+                <button className="relative overflow-hidden h-14 px-10 text-base font-semibold rounded-xl backdrop-blur-md bg-[#059669]/85 hover:bg-[#059669]/95 text-white border border-[#059669]/60 shadow-2xl shadow-[#059669]/40 hover:shadow-[#059669]/50 transition-all duration-300 hover:-translate-y-0.5">
+                  <div className="absolute inset-0 bg-gradient-to-b from-white/25 to-transparent pointer-events-none" />
+                  <span className="relative flex items-center gap-2">
+                    Start Free Trial
+                    <ArrowRight className="w-5 h-5" />
+                  </span>
+                </button>
               </Link>
               <Link to="/contact">
-                <Button variant="outline" size="lg" className="h-14 px-9 text-base font-medium border-white/20 text-white/70 hover:text-white hover:bg-white/10 hover:border-white/30 rounded-lg bg-transparent">
-                  Request Demo
-                </Button>
+                <button className="relative overflow-hidden h-14 px-9 text-base font-medium rounded-xl backdrop-blur-md bg-white/10 hover:bg-white/20 text-white/80 hover:text-white border border-white/20 hover:border-white/40 shadow-lg shadow-black/20 transition-all duration-300 hover:-translate-y-0.5">
+                  <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
+                  <span className="relative">Request Demo</span>
+                </button>
               </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Problem vs Solution — High contrast split */}
+      {/* Problem vs Solution — High contrast split with 3D cards */}
       <section className="py-24 lg:py-32 px-6 bg-gradient-to-b from-[hsl(220,15%,96%)] to-[hsl(220,14%,94%)]">
         <div className="max-w-7xl mx-auto lg:px-4">
           <div className="text-center mb-16 lg:mb-20">
@@ -84,17 +88,26 @@ const MaintenanceLanding = () => {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6 lg:gap-8">
-            {/* Risk - Dark card with gradient */}
-            <div className="relative group">
-              {/* Subtle gradient glow behind */}
-              <div className="absolute -inset-1 bg-gradient-to-br from-red-500/10 via-orange-500/5 to-transparent rounded-2xl blur-lg opacity-50 group-hover:opacity-75 transition-opacity" />
+          <div className="grid md:grid-cols-2 gap-8 lg:gap-12" style={{ perspective: "1200px" }}>
+            {/* Risk - Dark 3D card */}
+            <div className="relative group" style={{ transformStyle: "preserve-3d" }}>
+              {/* Animated gradient glow */}
+              <div className="absolute -inset-2 bg-gradient-to-br from-red-500/20 via-orange-500/10 to-red-500/5 rounded-3xl blur-xl opacity-40 group-hover:opacity-70 transition-all duration-500 animate-pulse" />
 
-              <div className="relative bg-gradient-to-br from-[hsl(220,15%,15%)] to-[hsl(220,15%,20%)] p-10 lg:p-12 rounded-2xl shadow-2xl border border-white/5">
-                <div className="inline-flex items-center gap-2 text-[0.65rem] font-bold text-red-400/70 bg-red-500/10 px-3 py-1.5 rounded-full mb-10 tracking-[0.14em] uppercase border border-red-500/20">
+              <div
+                className="relative bg-gradient-to-br from-[hsl(220,15%,12%)] via-[hsl(220,15%,15%)] to-[hsl(220,15%,18%)] p-10 lg:p-12 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.4)] border border-white/5 transition-all duration-500 group-hover:shadow-[0_30px_60px_rgba(0,0,0,0.5)] group-hover:-translate-y-2"
+                style={{
+                  transform: "rotateY(-2deg) rotateX(2deg)",
+                  transformStyle: "preserve-3d"
+                }}
+              >
+                {/* Inner glow effect */}
+                <div className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-white/[0.03] via-transparent to-transparent pointer-events-none" />
+
+                <div className="inline-flex items-center gap-2 text-[0.65rem] font-bold text-red-400 bg-red-500/15 px-4 py-2 rounded-full mb-10 tracking-[0.14em] uppercase border border-red-500/30 shadow-lg shadow-red-500/10">
                   WITHOUT A SYSTEM
                 </div>
-                <ul className="space-y-5">
+                <ul className="space-y-6">
                   {[
                     "Tasks completed — but no evidence attached",
                     "Contractors blamed — but no audit trail",
@@ -102,8 +115,15 @@ const MaintenanceLanding = () => {
                     "Owners requesting records you don't have",
                     "Disputes escalate with no defensible proof",
                   ].map((item, i) => (
-                    <li key={i} className="flex items-start gap-4 text-white/60 text-base leading-relaxed group/item hover:text-white/80 transition-colors">
-                      <span className="w-2 h-2 rounded-full bg-red-500/30 mt-2 shrink-0 group-hover/item:bg-red-500/50 transition-colors" />
+                    <li
+                      key={i}
+                      className="flex items-start gap-4 text-white/70 text-base leading-relaxed group/item hover:text-white transition-all duration-300"
+                      style={{
+                        transform: `translateZ(${10 + i * 5}px)`,
+                        animationDelay: `${i * 100}ms`
+                      }}
+                    >
+                      <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-red-500/50 to-red-600/30 mt-2 shrink-0 group-hover/item:from-red-500 group-hover/item:to-red-600 transition-all duration-300 shadow-lg shadow-red-500/20" />
                       {item}
                     </li>
                   ))}
@@ -111,17 +131,26 @@ const MaintenanceLanding = () => {
               </div>
             </div>
 
-            {/* Control - Light card with green accent */}
-            <div className="relative group">
-              {/* Green glow behind */}
-              <div className="absolute -inset-1 bg-gradient-to-br from-[#059669]/20 via-[#059669]/10 to-transparent rounded-2xl blur-xl opacity-50 group-hover:opacity-100 transition-opacity" />
+            {/* Control - Light 3D card with green accent */}
+            <div className="relative group" style={{ transformStyle: "preserve-3d" }}>
+              {/* Animated green glow */}
+              <div className="absolute -inset-2 bg-gradient-to-br from-[#059669]/30 via-[#059669]/15 to-emerald-500/10 rounded-3xl blur-xl opacity-50 group-hover:opacity-90 transition-all duration-500" />
 
-              <div className="relative bg-gradient-to-br from-white to-[#059669]/[0.02] p-10 lg:p-12 rounded-2xl shadow-2xl border-2 border-[#059669]/20">
-                <div className="inline-flex items-center gap-2 text-[0.65rem] font-bold text-[#059669] bg-[#059669]/10 px-3 py-1.5 rounded-full mb-10 tracking-[0.14em] uppercase border border-[#059669]/30">
-                  <Check className="w-3 h-3" />
+              <div
+                className="relative bg-gradient-to-br from-white via-white to-[#059669]/[0.03] p-10 lg:p-12 rounded-3xl shadow-[0_20px_50px_rgba(5,150,105,0.15)] border-2 border-[#059669]/25 transition-all duration-500 group-hover:shadow-[0_30px_60px_rgba(5,150,105,0.25)] group-hover:-translate-y-2"
+                style={{
+                  transform: "rotateY(2deg) rotateX(2deg)",
+                  transformStyle: "preserve-3d"
+                }}
+              >
+                {/* Inner shine effect */}
+                <div className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-[#059669]/[0.03] via-transparent to-transparent pointer-events-none" />
+
+                <div className="inline-flex items-center gap-2 text-[0.65rem] font-bold text-[#059669] bg-[#059669]/10 px-4 py-2 rounded-full mb-10 tracking-[0.14em] uppercase border border-[#059669]/30 shadow-lg shadow-[#059669]/10">
+                  <Check className="w-3.5 h-3.5" />
                   WITH MAINTAINPROOF
                 </div>
-                <ul className="space-y-5">
+                <ul className="space-y-6">
                   {[
                     "Every task logged with timestamped evidence",
                     "Photo and checklist proof attached to each job",
@@ -129,8 +158,15 @@ const MaintenanceLanding = () => {
                     "Complete audit trail for every property",
                     "Defensible records ready when you need them",
                   ].map((item, i) => (
-                    <li key={i} className="flex items-start gap-4 text-foreground text-base leading-relaxed group/item">
-                      <div className="w-5 h-5 rounded-full bg-[#059669]/10 flex items-center justify-center mt-0.5 shrink-0 group-hover/item:bg-[#059669]/20 transition-colors">
+                    <li
+                      key={i}
+                      className="flex items-start gap-4 text-foreground text-base leading-relaxed group/item hover:translate-x-1 transition-all duration-300"
+                      style={{
+                        transform: `translateZ(${10 + i * 5}px)`,
+                        animationDelay: `${i * 100}ms`
+                      }}
+                    >
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#059669]/20 to-[#059669]/10 flex items-center justify-center mt-0.5 shrink-0 group-hover/item:from-[#059669]/30 group-hover/item:to-[#059669]/20 transition-all duration-300 shadow-md shadow-[#059669]/10">
                         <Check className="w-3.5 h-3.5 text-[#059669]" />
                       </div>
                       <span className="font-medium">{item}</span>
@@ -143,8 +179,8 @@ const MaintenanceLanding = () => {
         </div>
       </section>
 
-      {/* How It Works — Procedural, structured */}
-      <section className="py-24 lg:py-32 px-6 bg-white">
+      {/* How It Works — 3D cards with icons */}
+      <section className="py-24 lg:py-32 px-6 bg-gradient-to-b from-white via-[hsl(220,14%,98%)] to-white">
         <div className="max-w-7xl mx-auto lg:px-4">
           <div className="text-center mb-16 lg:mb-20">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground tracking-tight mb-5">
@@ -155,60 +191,88 @@ const MaintenanceLanding = () => {
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-0 border border-border rounded-xl overflow-hidden">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6" style={{ perspective: "1200px" }}>
             {[
-              { step: "01", title: "Create", description: "Log a work order with location, priority, and deadline." },
-              { step: "02", title: "Assign", description: "Assign to technicians. They see it instantly." },
-              {
-                step: "03",
-                title: "Complete",
-                description: "Technician uploads photos and marks complete.",
-              },
-              {
-                step: "04",
-                title: "Verify",
-                description: "Review proof. Close with documented confidence.",
-              },
+              { step: "01", title: "Create", description: "Log a work order with location, priority, and deadline.", icon: Plus },
+              { step: "02", title: "Assign", description: "Assign to technicians. They see it instantly.", icon: Send },
+              { step: "03", title: "Complete", description: "Technician uploads photos and marks complete.", icon: ClipboardCheck },
+              { step: "04", title: "Verify", description: "Review proof. Close with documented confidence.", icon: CheckCircle2 },
             ].map((item, i) => (
               <div
                 key={i}
-                className={`relative p-8 lg:p-9 border-r border-b border-border last:border-r-0 sm:[&:nth-child(2)]:border-r-0 lg:[&:nth-child(2)]:border-r transition-colors duration-150 ${
-                  item.step === "04" ? "bg-[#059669]/[0.04]" : "bg-white hover:bg-[hsl(220,14%,98%)]"
-                }`}
+                className="group relative"
+                style={{ transformStyle: "preserve-3d" }}
               >
-                <p className={`text-3xl font-bold mb-5 ${item.step === "04" ? "text-[#059669]/60" : "text-border"}`}>
-                  {item.step}
-                </p>
-                <h3
-                  className={`text-lg font-bold mb-2.5 ${item.step === "04" ? "text-[#059669]" : "text-foreground"}`}
+                {/* Glow effect */}
+                <div className={`absolute -inset-1 rounded-2xl blur-lg transition-all duration-500 ${
+                  item.step === "04"
+                    ? "bg-[#059669]/20 group-hover:bg-[#059669]/30"
+                    : "bg-gradient-to-br from-slate-200/50 to-slate-300/30 group-hover:from-slate-300/60 group-hover:to-slate-400/40"
+                }`} />
+
+                <div
+                  className={`relative p-8 lg:p-9 rounded-2xl border transition-all duration-500 group-hover:-translate-y-3 group-hover:shadow-2xl ${
+                    item.step === "04"
+                      ? "bg-gradient-to-br from-[#059669]/10 via-[#059669]/5 to-white border-[#059669]/30 shadow-lg shadow-[#059669]/10"
+                      : "bg-white border-border/60 shadow-lg hover:border-border"
+                  }`}
+                  style={{
+                    transform: `rotateX(${2 - i * 0.5}deg)`,
+                    transformStyle: "preserve-3d"
+                  }}
                 >
-                  {item.title}
-                </h3>
-                <p className="text-muted-foreground text-sm leading-relaxed">{item.description}</p>
-                {item.step === "04" && (
-                  <div className="absolute top-8 right-8 w-8 h-8 rounded-full bg-[#059669]/10 flex items-center justify-center">
-                    <Shield className="w-4 h-4 text-[#059669]" />
+                  {/* Inner shine */}
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/80 via-transparent to-transparent pointer-events-none" />
+
+                  {/* Icon badge */}
+                  <div className={`relative w-12 h-12 rounded-xl flex items-center justify-center mb-6 transition-all duration-300 group-hover:scale-110 ${
+                    item.step === "04"
+                      ? "bg-gradient-to-br from-[#059669] to-[#059669]/80 shadow-lg shadow-[#059669]/30"
+                      : "bg-gradient-to-br from-slate-100 to-slate-200 group-hover:from-[#059669]/10 group-hover:to-[#059669]/5"
+                  }`}>
+                    <item.icon className={`w-5 h-5 transition-colors duration-300 ${
+                      item.step === "04"
+                        ? "text-white"
+                        : "text-slate-500 group-hover:text-[#059669]"
+                    }`} />
                   </div>
-                )}
+
+                  <p className={`text-3xl font-bold mb-4 transition-colors duration-300 ${
+                    item.step === "04" ? "text-[#059669]" : "text-slate-200 group-hover:text-slate-300"
+                  }`}>
+                    {item.step}
+                  </p>
+                  <h3 className={`text-xl font-bold mb-3 transition-colors duration-300 ${
+                    item.step === "04" ? "text-[#059669]" : "text-foreground"
+                  }`}>
+                    {item.title}
+                  </h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed relative z-10">{item.description}</p>
+
+                  {/* Decorative corner accent */}
+                  {item.step === "04" && (
+                    <div className="absolute top-4 right-4 w-16 h-16 bg-gradient-to-bl from-[#059669]/10 to-transparent rounded-full blur-xl" />
+                  )}
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Operational Protection — Dark accent section */}
-      <section className="py-24 lg:py-32 px-6 bg-[hsl(195,30%,10%)]">
+      {/* Operational Protection — Glass cards with improved readability */}
+      <section className="py-24 lg:py-32 px-6 bg-gradient-to-b from-[hsl(195,30%,8%)] via-[hsl(195,28%,10%)] to-[hsl(195,30%,8%)]">
         <div className="max-w-7xl mx-auto lg:px-4">
           <div className="text-center mb-16 lg:mb-20">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white tracking-tight mb-5">
               Operational Protection
             </h2>
-            <p className="text-white/40 text-lg max-w-2xl mx-auto leading-relaxed">
+            <p className="text-white/60 text-lg max-w-2xl mx-auto leading-relaxed">
               Not features. Safeguards that protect your operation.
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-white/[0.06] rounded-xl overflow-hidden">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6">
             {[
               {
                 icon: FileCheck,
@@ -249,19 +313,49 @@ const MaintenanceLanding = () => {
             ].map((item, i) => (
               <div
                 key={i}
-                className="bg-[hsl(195,28%,13%)] p-8 lg:p-9 transition-colors duration-150 hover:bg-[hsl(195,28%,15%)]"
+                className="group relative"
               >
-                <item.icon className="w-5 h-5 text-[#059669]/60 mb-5" />
-                <h3 className="text-sm font-bold text-white uppercase tracking-[0.06em] mb-3">{item.title}</h3>
-                <p className="text-white/40 text-sm leading-relaxed">{item.description}</p>
+                {/* Glow effect on hover */}
+                <div className="absolute -inset-0.5 bg-gradient-to-br from-[#059669]/20 via-transparent to-[#059669]/10 rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition-all duration-500" />
+
+                {/* Glass card */}
+                <div className="relative backdrop-blur-md bg-gradient-to-br from-white/[0.08] via-white/[0.04] to-white/[0.02] p-8 lg:p-10 rounded-2xl border border-white/10 transition-all duration-500 group-hover:border-[#059669]/30 group-hover:-translate-y-1 group-hover:shadow-2xl group-hover:shadow-[#059669]/10">
+                  {/* Inner glass shine */}
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/[0.05] via-transparent to-transparent pointer-events-none" />
+
+                  {/* Icon with glass background */}
+                  <div className="relative w-12 h-12 rounded-xl backdrop-blur-sm bg-gradient-to-br from-[#059669]/20 to-[#059669]/10 border border-[#059669]/20 flex items-center justify-center mb-6 transition-all duration-300 group-hover:scale-110 group-hover:border-[#059669]/40 group-hover:shadow-lg group-hover:shadow-[#059669]/20">
+                    <item.icon className="w-5 h-5 text-[#059669] transition-all duration-300 group-hover:text-[#10b981]" />
+                  </div>
+
+                  <h3 className="text-base font-bold text-white uppercase tracking-[0.04em] mb-4 group-hover:text-[#10b981] transition-colors duration-300">
+                    {item.title}
+                  </h3>
+                  <p className="text-white/70 text-sm leading-relaxed group-hover:text-white/80 transition-colors duration-300">
+                    {item.description}
+                  </p>
+                </div>
               </div>
             ))}
+          </div>
+
+          {/* Glass CTA button */}
+          <div className="text-center mt-16">
+            <Link to="/contact">
+              <button className="relative overflow-hidden backdrop-blur-md bg-[#059669]/80 hover:bg-[#059669]/90 text-white px-10 py-4 rounded-xl font-semibold border border-[#059669]/50 shadow-lg shadow-[#059669]/25 hover:shadow-xl hover:shadow-[#059669]/30 transition-all duration-300 hover:-translate-y-0.5 text-base">
+                <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
+                <span className="relative flex items-center gap-2">
+                  Start Protecting Your Operations
+                  <ArrowRight className="w-5 h-5" />
+                </span>
+              </button>
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* Built for operators */}
-      <section className="py-24 lg:py-32 px-6 bg-gradient-to-b from-[hsl(220,14%,94%)] to-[hsl(220,15%,96%)]">
+      {/* Built for operators — 3D cards */}
+      <section className="py-24 lg:py-32 px-6 bg-gradient-to-b from-[hsl(220,14%,94%)] via-[hsl(220,15%,96%)] to-[hsl(220,14%,94%)]">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16 lg:mb-20">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground tracking-tight mb-5">
@@ -272,33 +366,61 @@ const MaintenanceLanding = () => {
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="grid sm:grid-cols-2 gap-5" style={{ perspective: "1000px" }}>
             {[
               {
                 title: "Property Management Companies",
                 description:
                   "Managing residential or commercial buildings with in-house or contracted maintenance teams.",
+                icon: "🏢"
               },
               {
                 title: "Facilities Managers",
                 description:
                   "Responsible for building operations, vendor coordination, and maintenance scheduling.",
+                icon: "🔧"
               },
               {
                 title: "Real Estate Operators",
                 description:
                   "Owners and operators who need visibility into property maintenance across portfolios.",
+                icon: "📊"
               },
               {
                 title: "Maintenance Supervisors",
                 description: "Leading technician teams and needing accountability for work completion.",
+                icon: "👷"
               },
             ].map((item, i) => (
-              <div key={i} className="flex gap-4 p-7 bg-white rounded-lg border border-border/60 shadow-sm">
-                <div className="w-2 h-2 rounded-full bg-[#059669] mt-2 shrink-0" />
-                <div>
-                  <h3 className="font-bold text-foreground mb-1.5">{item.title}</h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed">{item.description}</p>
+              <div
+                key={i}
+                className="group relative"
+                style={{ transformStyle: "preserve-3d" }}
+              >
+                {/* Subtle glow */}
+                <div className="absolute -inset-1 bg-gradient-to-br from-[#059669]/10 via-transparent to-transparent rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition-all duration-500" />
+
+                <div
+                  className="relative flex gap-5 p-8 bg-white rounded-2xl border border-border/40 shadow-lg transition-all duration-500 group-hover:-translate-y-2 group-hover:shadow-xl group-hover:border-[#059669]/20"
+                  style={{
+                    transform: `rotateX(${1 - i * 0.3}deg)`,
+                  }}
+                >
+                  {/* Inner shine */}
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white via-transparent to-transparent pointer-events-none" />
+
+                  {/* Accent dot with glow */}
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-[#059669]/30 rounded-full blur-md group-hover:bg-[#059669]/50 transition-all duration-300" />
+                    <div className="relative w-3 h-3 rounded-full bg-gradient-to-br from-[#059669] to-[#10b981] mt-1.5 shrink-0 shadow-md shadow-[#059669]/30" />
+                  </div>
+
+                  <div className="relative">
+                    <h3 className="font-bold text-foreground mb-2 text-lg group-hover:text-[#059669] transition-colors duration-300">
+                      {item.title}
+                    </h3>
+                    <p className="text-muted-foreground text-sm leading-relaxed">{item.description}</p>
+                  </div>
                 </div>
               </div>
             ))}
@@ -332,26 +454,35 @@ const MaintenanceLanding = () => {
         </div>
       </section>
 
-      {/* Final CTA — Dark */}
-      <section className="py-24 lg:py-32 px-6 bg-[hsl(195,30%,10%)]">
-        <div className="max-w-3xl mx-auto text-center">
+      {/* Final CTA — Dark with glass elements */}
+      <section className="py-24 lg:py-32 px-6 bg-gradient-to-b from-[hsl(195,30%,8%)] via-[hsl(195,28%,10%)] to-[hsl(195,30%,8%)] relative overflow-hidden">
+        {/* Decorative glow */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#059669]/10 rounded-full blur-[120px]" />
+        </div>
+
+        <div className="max-w-3xl mx-auto text-center relative">
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white tracking-tight mb-6">
             Ready to take control?
           </h2>
-          <p className="text-white/40 text-lg max-w-xl mx-auto mb-14 leading-relaxed">
+          <p className="text-white/60 text-lg max-w-xl mx-auto mb-14 leading-relaxed">
             Start a free trial or schedule a call to see how MaintainProof protects your operation.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link to="/contact">
-              <Button size="lg" className="h-14 px-10 text-base font-semibold shadow-2xl shadow-[#059669]/40 hover:shadow-[#059669]/50 rounded-lg bg-[#059669] hover:bg-[#059669]/90">
-                Start Free Trial
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
+              <button className="relative overflow-hidden h-14 px-10 text-base font-semibold rounded-xl backdrop-blur-md bg-[#059669]/85 hover:bg-[#059669]/95 text-white border border-[#059669]/60 shadow-2xl shadow-[#059669]/40 hover:shadow-[#059669]/50 transition-all duration-300 hover:-translate-y-0.5">
+                <div className="absolute inset-0 bg-gradient-to-b from-white/25 to-transparent pointer-events-none" />
+                <span className="relative flex items-center gap-2">
+                  Start Free Trial
+                  <ArrowRight className="w-5 h-5" />
+                </span>
+              </button>
             </Link>
             <Link to="/contact">
-              <Button variant="outline" size="lg" className="h-14 px-9 text-base font-medium border-white/20 text-white/70 hover:text-white hover:bg-white/10 hover:border-white/30 rounded-lg bg-transparent">
-                Schedule a Demo
-              </Button>
+              <button className="relative overflow-hidden h-14 px-9 text-base font-medium rounded-xl backdrop-blur-md bg-white/10 hover:bg-white/20 text-white/80 hover:text-white border border-white/20 hover:border-white/40 shadow-lg shadow-black/20 transition-all duration-300 hover:-translate-y-0.5">
+                <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
+                <span className="relative">Schedule a Demo</span>
+              </button>
             </Link>
           </div>
         </div>
