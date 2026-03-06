@@ -1,10 +1,42 @@
 import MarketingLayout from "@/components/marketing/MarketingLayout";
-import { Button } from "@/components/ui/button";
-import { ArrowRight, Check, Shield, FileCheck, Users, Clock, Eye, BarChart3, Plus, Send, CheckCircle2, ClipboardCheck } from "lucide-react";
+import { ArrowRight, Check, Shield, FileCheck, Users, Clock, Eye, BarChart3, Plus, Send, CheckCircle2, ClipboardCheck, Wrench, Building2, Camera, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
 import heroImage from "@/assets/maintainproof/hero-maintenance.jpg";
 
+// 3D Animated Slides Data
+const heroSlides = [
+  {
+    icon: Camera,
+    title: "Photo Documentation",
+    description: "Every task captured with timestamped photos",
+    color: "#059669"
+  },
+  {
+    icon: ClipboardCheck,
+    title: "Digital Checklists",
+    description: "Standardized procedures for consistency",
+    color: "#10b981"
+  },
+  {
+    icon: AlertTriangle,
+    title: "Issue Tracking",
+    description: "Flag problems before they escalate",
+    color: "#f59e0b"
+  }
+];
+
 const MaintenanceLanding = () => {
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  // Auto-rotate slides
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % heroSlides.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <MarketingLayout>
       {/* Platform badge */}
@@ -24,7 +56,7 @@ const MaintenanceLanding = () => {
         </div>
       </div>
 
-      {/* Hero — Dark, commanding */}
+      {/* Hero — Dark with 3D animated slides */}
       <section className="relative min-h-[85vh] flex items-center overflow-hidden">
         {/* Background image */}
         <div className="absolute inset-0">
@@ -34,40 +66,116 @@ const MaintenanceLanding = () => {
         </div>
 
         <div className="relative max-w-7xl mx-auto px-6 lg:px-10 w-full pt-24 pb-20">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 text-[0.65rem] font-bold text-[#059669] bg-[#059669]/[0.12] px-4 py-2 rounded-full mb-10 tracking-[0.12em] uppercase border border-[#059669]/20">
-              <Shield className="w-3.5 h-3.5" />
-              Operational Risk Control
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+            {/* Left content */}
+            <div className="max-w-2xl">
+              <div className="inline-flex items-center gap-2 text-[0.65rem] font-bold text-[#059669] bg-[#059669]/[0.12] px-4 py-2 rounded-full mb-10 tracking-[0.12em] uppercase border border-[#059669]/20 backdrop-blur-sm">
+                <Shield className="w-3.5 h-3.5" />
+                Operational Risk Control
+              </div>
+
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold leading-[1.05] tracking-tight mb-6">
+                <span className="text-white">Maintenance without proof</span>
+                <br />
+                <span className="text-[#059669]">becomes liability.</span>
+              </h1>
+
+              <p className="text-lg sm:text-xl text-white/70 max-w-xl mb-14 leading-relaxed">
+                Control every task. Document every action.
+                <br className="hidden sm:block" />
+                Protect your operation.
+              </p>
+
+              <div className="flex flex-col sm:flex-row items-start gap-4">
+                <Link to="/contact">
+                  <button className="relative overflow-hidden h-14 px-10 text-base font-semibold rounded-xl backdrop-blur-md bg-[#059669]/90 hover:bg-[#059669] text-white border border-[#059669]/60 shadow-2xl shadow-[#059669]/40 hover:shadow-[#059669]/60 transition-all duration-300 hover:-translate-y-1 hover:scale-105">
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/25 to-transparent pointer-events-none" />
+                    <span className="relative flex items-center gap-2">
+                      Start Free Trial
+                      <ArrowRight className="w-5 h-5" />
+                    </span>
+                  </button>
+                </Link>
+                <Link to="/contact">
+                  <button className="relative overflow-hidden h-14 px-9 text-base font-medium rounded-xl backdrop-blur-xl bg-white/10 hover:bg-white/20 text-white border border-white/30 hover:border-white/50 shadow-lg shadow-black/20 transition-all duration-300 hover:-translate-y-1">
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
+                    <span className="relative">Request Demo</span>
+                  </button>
+                </Link>
+              </div>
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold leading-[1.05] tracking-tight mb-6">
-              <span className="text-gray-300">Maintenance without proof</span>
-              <br />
-              <span className="text-white/70">becomes liability.</span>
-            </h1>
+            {/* Right side - 3D Animated Slides */}
+            <div className="hidden lg:block relative" style={{ perspective: "1500px" }}>
+              <div className="relative w-full h-[400px]">
+                {heroSlides.map((slide, index) => {
+                  const isActive = index === activeSlide;
+                  const isPrev = index === (activeSlide - 1 + heroSlides.length) % heroSlides.length;
+                  const isNext = index === (activeSlide + 1) % heroSlides.length;
 
-            <p className="text-lg sm:text-xl text-white/50 max-w-xl mb-14 leading-relaxed">
-              Control every task. Document every action.
-              <br className="hidden sm:block" />
-              Protect your operation.
-            </p>
+                  return (
+                    <div
+                      key={index}
+                      className="absolute inset-0 transition-all duration-700 ease-out"
+                      style={{
+                        transform: isActive
+                          ? "rotateY(0deg) translateZ(0px) scale(1)"
+                          : isPrev
+                          ? "rotateY(-35deg) translateX(-60%) translateZ(-100px) scale(0.85)"
+                          : isNext
+                          ? "rotateY(35deg) translateX(60%) translateZ(-100px) scale(0.85)"
+                          : "rotateY(0deg) translateZ(-200px) scale(0.7)",
+                        opacity: isActive ? 1 : isPrev || isNext ? 0.5 : 0,
+                        zIndex: isActive ? 30 : isPrev || isNext ? 20 : 10,
+                        transformStyle: "preserve-3d",
+                      }}
+                    >
+                      {/* Glowing background */}
+                      <div
+                        className="absolute -inset-4 rounded-3xl blur-2xl transition-opacity duration-700"
+                        style={{
+                          background: `linear-gradient(135deg, ${slide.color}40, ${slide.color}20)`,
+                          opacity: isActive ? 1 : 0.3
+                        }}
+                      />
 
-            <div className="flex flex-col sm:flex-row items-start gap-4">
-              <Link to="/contact">
-                <button className="relative overflow-hidden h-14 px-10 text-base font-semibold rounded-xl backdrop-blur-md bg-[#059669]/85 hover:bg-[#059669]/95 text-white border border-[#059669]/60 shadow-2xl shadow-[#059669]/40 hover:shadow-[#059669]/50 transition-all duration-300 hover:-translate-y-0.5">
-                  <div className="absolute inset-0 bg-gradient-to-b from-white/25 to-transparent pointer-events-none" />
-                  <span className="relative flex items-center gap-2">
-                    Start Free Trial
-                    <ArrowRight className="w-5 h-5" />
-                  </span>
-                </button>
-              </Link>
-              <Link to="/contact">
-                <button className="relative overflow-hidden h-14 px-9 text-base font-medium rounded-xl backdrop-blur-md bg-white/10 hover:bg-white/20 text-white/80 hover:text-white border border-white/20 hover:border-white/40 shadow-lg shadow-black/20 transition-all duration-300 hover:-translate-y-0.5">
-                  <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
-                  <span className="relative">Request Demo</span>
-                </button>
-              </Link>
+                      {/* Glass card */}
+                      <div className="relative h-full backdrop-blur-xl bg-gradient-to-br from-white/15 via-white/10 to-white/5 rounded-3xl border border-white/20 p-10 shadow-2xl">
+                        <div className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-white/10 via-transparent to-transparent pointer-events-none" />
+
+                        {/* Icon */}
+                        <div
+                          className="w-20 h-20 rounded-2xl flex items-center justify-center mb-8 shadow-lg"
+                          style={{
+                            background: `linear-gradient(135deg, ${slide.color}, ${slide.color}90)`,
+                            boxShadow: `0 20px 40px ${slide.color}40`
+                          }}
+                        >
+                          <slide.icon className="w-10 h-10 text-white" />
+                        </div>
+
+                        <h3 className="text-2xl font-bold text-white mb-4">{slide.title}</h3>
+                        <p className="text-white/70 text-lg leading-relaxed">{slide.description}</p>
+
+                        {/* Decorative elements */}
+                        <div className="absolute bottom-8 right-8 flex gap-2">
+                          {heroSlides.map((_, i) => (
+                            <button
+                              key={i}
+                              onClick={() => setActiveSlide(i)}
+                              className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                                i === activeSlide
+                                  ? "bg-[#059669] w-8"
+                                  : "bg-white/30 hover:bg-white/50"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
@@ -179,10 +287,20 @@ const MaintenanceLanding = () => {
         </div>
       </section>
 
-      {/* How It Works — 3D cards with icons */}
-      <section className="py-24 lg:py-32 px-6 bg-gradient-to-b from-white via-[hsl(220,14%,98%)] to-white">
-        <div className="max-w-7xl mx-auto lg:px-4">
-          <div className="text-center mb-16 lg:mb-20">
+      {/* How It Works — 3D glass cards with icons */}
+      <section className="py-28 lg:py-36 px-6 bg-gradient-to-b from-white via-[hsl(220,14%,97%)] to-white relative overflow-hidden">
+        {/* Decorative elements */}
+        <div className="absolute inset-0">
+          <div className="absolute top-20 right-1/4 w-72 h-72 bg-[#059669]/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-20 left-1/4 w-72 h-72 bg-[#10b981]/5 rounded-full blur-3xl" />
+        </div>
+
+        <div className="max-w-7xl mx-auto lg:px-4 relative">
+          <div className="text-center mb-20 lg:mb-24">
+            <div className="inline-flex items-center gap-2 text-[0.65rem] font-bold text-[#059669] bg-[#059669]/10 px-4 py-2 rounded-full mb-6 tracking-[0.14em] uppercase border border-[#059669]/20">
+              <ClipboardCheck className="w-3.5 h-3.5" />
+              Process
+            </div>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground tracking-tight mb-5">
               How it works
             </h2>
@@ -191,12 +309,12 @@ const MaintenanceLanding = () => {
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6" style={{ perspective: "1200px" }}>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8" style={{ perspective: "1200px" }}>
             {[
-              { step: "01", title: "Create", description: "Log a work order with location, priority, and deadline.", icon: Plus },
-              { step: "02", title: "Assign", description: "Assign to technicians. They see it instantly.", icon: Send },
-              { step: "03", title: "Complete", description: "Technician uploads photos and marks complete.", icon: ClipboardCheck },
-              { step: "04", title: "Verify", description: "Review proof. Close with documented confidence.", icon: CheckCircle2 },
+              { step: "01", title: "Create", description: "Log a work order with location, priority, and deadline.", icon: Plus, color: "#059669" },
+              { step: "02", title: "Assign", description: "Assign to technicians. They see it instantly.", icon: Send, color: "#10b981" },
+              { step: "03", title: "Complete", description: "Technician uploads photos and marks complete.", icon: ClipboardCheck, color: "#059669" },
+              { step: "04", title: "Verify", description: "Review proof. Close with documented confidence.", icon: CheckCircle2, color: "#059669" },
             ].map((item, i) => (
               <div
                 key={i}
@@ -204,54 +322,63 @@ const MaintenanceLanding = () => {
                 style={{ transformStyle: "preserve-3d" }}
               >
                 {/* Glow effect */}
-                <div className={`absolute -inset-1 rounded-2xl blur-lg transition-all duration-500 ${
-                  item.step === "04"
-                    ? "bg-[#059669]/20 group-hover:bg-[#059669]/30"
-                    : "bg-gradient-to-br from-slate-200/50 to-slate-300/30 group-hover:from-slate-300/60 group-hover:to-slate-400/40"
-                }`} />
+                <div
+                  className="absolute -inset-2 rounded-3xl blur-xl opacity-40 group-hover:opacity-70 transition-all duration-500"
+                  style={{ background: `linear-gradient(135deg, ${item.color}25, transparent, ${item.color}15)` }}
+                />
 
                 <div
-                  className={`relative p-8 lg:p-9 rounded-2xl border transition-all duration-500 group-hover:-translate-y-3 group-hover:shadow-2xl ${
+                  className={`relative p-8 lg:p-10 rounded-3xl border transition-all duration-500 group-hover:-translate-y-4 group-hover:shadow-2xl h-full ${
                     item.step === "04"
-                      ? "bg-gradient-to-br from-[#059669]/10 via-[#059669]/5 to-white border-[#059669]/30 shadow-lg shadow-[#059669]/10"
-                      : "bg-white border-border/60 shadow-lg hover:border-border"
+                      ? "bg-gradient-to-br from-[#059669]/15 via-[#059669]/10 to-white border-[#059669]/30"
+                      : "bg-white border-border/50 hover:border-[#059669]/30"
                   }`}
                   style={{
-                    transform: `rotateX(${2 - i * 0.5}deg)`,
-                    transformStyle: "preserve-3d"
+                    transform: `rotateX(${3 - i * 0.8}deg) rotateY(${(i - 1.5) * 2}deg)`,
+                    transformStyle: "preserve-3d",
+                    boxShadow: item.step === "04"
+                      ? "0 25px 50px -12px rgba(5,150,105,0.25), inset 0 1px 1px rgba(255,255,255,0.5)"
+                      : "0 20px 40px -12px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,0.5)"
                   }}
                 >
                   {/* Inner shine */}
-                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/80 via-transparent to-transparent pointer-events-none" />
+                  <div className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-white/80 via-transparent to-transparent pointer-events-none" />
+                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#059669]/20 to-transparent" />
 
                   {/* Icon badge */}
-                  <div className={`relative w-12 h-12 rounded-xl flex items-center justify-center mb-6 transition-all duration-300 group-hover:scale-110 ${
-                    item.step === "04"
-                      ? "bg-gradient-to-br from-[#059669] to-[#059669]/80 shadow-lg shadow-[#059669]/30"
-                      : "bg-gradient-to-br from-slate-100 to-slate-200 group-hover:from-[#059669]/10 group-hover:to-[#059669]/5"
-                  }`}>
-                    <item.icon className={`w-5 h-5 transition-colors duration-300 ${
-                      item.step === "04"
-                        ? "text-white"
-                        : "text-slate-500 group-hover:text-[#059669]"
-                    }`} />
+                  <div
+                    className="relative w-16 h-16 rounded-2xl flex items-center justify-center mb-8 transition-all duration-300 group-hover:scale-110"
+                    style={{
+                      background: item.step === "04"
+                        ? `linear-gradient(135deg, ${item.color}, ${item.color}90)`
+                        : `linear-gradient(135deg, ${item.color}20, ${item.color}10)`,
+                      border: `1px solid ${item.color}40`,
+                      boxShadow: item.step === "04"
+                        ? `0 12px 30px ${item.color}40`
+                        : `0 8px 20px ${item.color}15`
+                    }}
+                  >
+                    <item.icon className={`w-7 h-7 transition-colors duration-300 ${
+                      item.step === "04" ? "text-white" : ""
+                    }`} style={{ color: item.step === "04" ? "white" : item.color }} />
                   </div>
 
-                  <p className={`text-3xl font-bold mb-4 transition-colors duration-300 ${
-                    item.step === "04" ? "text-[#059669]" : "text-slate-200 group-hover:text-slate-300"
-                  }`}>
+                  <p
+                    className="text-4xl font-bold mb-4 transition-colors duration-300"
+                    style={{ color: item.step === "04" ? item.color : `${item.color}30` }}
+                  >
                     {item.step}
                   </p>
                   <h3 className={`text-xl font-bold mb-3 transition-colors duration-300 ${
-                    item.step === "04" ? "text-[#059669]" : "text-foreground"
+                    item.step === "04" ? "text-[#059669]" : "text-foreground group-hover:text-[#059669]"
                   }`}>
                     {item.title}
                   </h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed relative z-10">{item.description}</p>
+                  <p className="text-muted-foreground text-base leading-relaxed relative z-10">{item.description}</p>
 
                   {/* Decorative corner accent */}
                   {item.step === "04" && (
-                    <div className="absolute top-4 right-4 w-16 h-16 bg-gradient-to-bl from-[#059669]/10 to-transparent rounded-full blur-xl" />
+                    <div className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-bl from-[#059669]/15 to-transparent rounded-full blur-xl" />
                   )}
                 </div>
               </div>
@@ -260,78 +387,113 @@ const MaintenanceLanding = () => {
         </div>
       </section>
 
-      {/* Operational Protection — Glass cards with improved readability */}
-      <section className="py-24 lg:py-32 px-6 bg-gradient-to-b from-[hsl(195,30%,8%)] via-[hsl(195,28%,10%)] to-[hsl(195,30%,8%)]">
-        <div className="max-w-7xl mx-auto lg:px-4">
-          <div className="text-center mb-16 lg:mb-20">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white tracking-tight mb-5">
+      {/* Operational Protection — 3D Glass cards with improved readability */}
+      <section className="py-28 lg:py-36 px-6 bg-gradient-to-b from-[hsl(220,25%,12%)] via-[hsl(220,22%,15%)] to-[hsl(220,25%,12%)] relative overflow-hidden">
+        {/* Decorative background elements */}
+        <div className="absolute inset-0">
+          <div className="absolute top-20 left-20 w-96 h-96 bg-[#059669]/10 rounded-full blur-[120px]" />
+          <div className="absolute bottom-20 right-20 w-80 h-80 bg-[#059669]/8 rounded-full blur-[100px]" />
+        </div>
+
+        <div className="max-w-7xl mx-auto lg:px-4 relative">
+          <div className="text-center mb-20 lg:mb-24">
+            <div className="inline-flex items-center gap-2 text-[0.65rem] font-bold text-[#059669] bg-[#059669]/10 px-4 py-2 rounded-full mb-8 tracking-[0.14em] uppercase border border-[#059669]/20 backdrop-blur-sm">
+              <Shield className="w-3.5 h-3.5" />
+              Core Benefits
+            </div>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white tracking-tight mb-6">
               Operational Protection
             </h2>
-            <p className="text-white/60 text-lg max-w-2xl mx-auto leading-relaxed">
+            <p className="text-white/70 text-lg max-w-2xl mx-auto leading-relaxed">
               Not features. Safeguards that protect your operation.
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10" style={{ perspective: "1200px" }}>
             {[
               {
                 icon: FileCheck,
-                title: "Proof of work",
+                title: "Proof of Work",
                 description:
                   "Every job documented with photos and timestamps. Answer owners with evidence, not excuses.",
+                color: "#059669"
               },
               {
                 icon: Users,
-                title: "Clear accountability",
+                title: "Clear Accountability",
                 description:
                   "Know exactly who is responsible for what, and when it was due. No more ambiguity.",
+                color: "#10b981"
               },
               {
                 icon: Eye,
-                title: "Complete audit trail",
+                title: "Complete Audit Trail",
                 description:
                   "Full maintenance record for every property and asset. See what was done and when.",
+                color: "#059669"
               },
               {
                 icon: Clock,
-                title: "Faster response",
+                title: "Faster Response",
                 description:
                   "Urgent issues get flagged and assigned immediately. Nothing sits unattended.",
+                color: "#f59e0b"
               },
               {
                 icon: Shield,
-                title: "Owner confidence",
+                title: "Owner Confidence",
                 description:
                   "Share reports that show work completed. Build trust through documented transparency.",
+                color: "#10b981"
               },
               {
                 icon: BarChart3,
-                title: "Operational control",
+                title: "Operational Control",
                 description:
                   "See all open work at a glance. Know your team's workload. Stay ahead of exposure.",
+                color: "#059669"
               },
             ].map((item, i) => (
               <div
                 key={i}
                 className="group relative"
+                style={{ transformStyle: "preserve-3d" }}
               >
-                {/* Glow effect on hover */}
-                <div className="absolute -inset-0.5 bg-gradient-to-br from-[#059669]/20 via-transparent to-[#059669]/10 rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition-all duration-500" />
+                {/* Glow effect */}
+                <div
+                  className="absolute -inset-2 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-all duration-500"
+                  style={{ background: `linear-gradient(135deg, ${item.color}30, transparent, ${item.color}20)` }}
+                />
 
-                {/* Glass card */}
-                <div className="relative backdrop-blur-md bg-gradient-to-br from-white/[0.08] via-white/[0.04] to-white/[0.02] p-8 lg:p-10 rounded-2xl border border-white/10 transition-all duration-500 group-hover:border-[#059669]/30 group-hover:-translate-y-1 group-hover:shadow-2xl group-hover:shadow-[#059669]/10">
+                {/* 3D Glass card */}
+                <div
+                  className="relative backdrop-blur-xl bg-gradient-to-br from-white/[0.12] via-white/[0.08] to-white/[0.04] p-10 lg:p-12 rounded-3xl border border-white/15 transition-all duration-500 group-hover:border-[#059669]/40 group-hover:-translate-y-3 group-hover:shadow-2xl h-full"
+                  style={{
+                    transform: `rotateX(${2 - (i % 3) * 0.5}deg) rotateY(${(i % 3 - 1) * 2}deg)`,
+                    transformStyle: "preserve-3d",
+                    boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.1)"
+                  }}
+                >
                   {/* Inner glass shine */}
-                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/[0.05] via-transparent to-transparent pointer-events-none" />
+                  <div className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-white/[0.08] via-transparent to-transparent pointer-events-none" />
+                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
-                  {/* Icon with glass background */}
-                  <div className="relative w-12 h-12 rounded-xl backdrop-blur-sm bg-gradient-to-br from-[#059669]/20 to-[#059669]/10 border border-[#059669]/20 flex items-center justify-center mb-6 transition-all duration-300 group-hover:scale-110 group-hover:border-[#059669]/40 group-hover:shadow-lg group-hover:shadow-[#059669]/20">
-                    <item.icon className="w-5 h-5 text-[#059669] transition-all duration-300 group-hover:text-[#10b981]" />
+                  {/* Icon with 3D effect */}
+                  <div
+                    className="relative w-16 h-16 rounded-2xl flex items-center justify-center mb-8 transition-all duration-300 group-hover:scale-110 shadow-xl"
+                    style={{
+                      background: `linear-gradient(135deg, ${item.color}30, ${item.color}10)`,
+                      border: `1px solid ${item.color}40`,
+                      boxShadow: `0 10px 30px ${item.color}30, inset 0 1px 1px rgba(255,255,255,0.2)`
+                    }}
+                  >
+                    <item.icon className="w-7 h-7" style={{ color: item.color }} />
                   </div>
 
-                  <h3 className="text-base font-bold text-white uppercase tracking-[0.04em] mb-4 group-hover:text-[#10b981] transition-colors duration-300">
+                  <h3 className="text-xl font-bold text-white mb-4 group-hover:text-[#10b981] transition-colors duration-300">
                     {item.title}
                   </h3>
-                  <p className="text-white/70 text-sm leading-relaxed group-hover:text-white/80 transition-colors duration-300">
+                  <p className="text-white/80 text-base leading-relaxed group-hover:text-white/90 transition-colors duration-300">
                     {item.description}
                   </p>
                 </div>
@@ -340,11 +502,12 @@ const MaintenanceLanding = () => {
           </div>
 
           {/* Glass CTA button */}
-          <div className="text-center mt-16">
+          <div className="text-center mt-20">
             <Link to="/contact">
-              <button className="relative overflow-hidden backdrop-blur-md bg-[#059669]/80 hover:bg-[#059669]/90 text-white px-10 py-4 rounded-xl font-semibold border border-[#059669]/50 shadow-lg shadow-[#059669]/25 hover:shadow-xl hover:shadow-[#059669]/30 transition-all duration-300 hover:-translate-y-0.5 text-base">
-                <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
-                <span className="relative flex items-center gap-2">
+              <button className="relative overflow-hidden backdrop-blur-xl bg-[#059669]/90 hover:bg-[#059669] text-white px-12 py-5 rounded-2xl font-semibold border border-[#059669]/50 shadow-2xl shadow-[#059669]/30 hover:shadow-[#059669]/50 transition-all duration-300 hover:-translate-y-1 hover:scale-105 text-lg">
+                <div className="absolute inset-0 bg-gradient-to-b from-white/25 to-transparent pointer-events-none" />
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+                <span className="relative flex items-center gap-3">
                   Start Protecting Your Operations
                   <ArrowRight className="w-5 h-5" />
                 </span>
@@ -354,10 +517,14 @@ const MaintenanceLanding = () => {
         </div>
       </section>
 
-      {/* Built for operators — 3D cards */}
-      <section className="py-24 lg:py-32 px-6 bg-gradient-to-b from-[hsl(220,14%,94%)] via-[hsl(220,15%,96%)] to-[hsl(220,14%,94%)]">
-        <div className="max-w-5xl mx-auto">
+      {/* Built for operators — 3D cards with icons */}
+      <section className="py-28 lg:py-36 px-6 bg-gradient-to-b from-[hsl(220,14%,94%)] via-[hsl(220,15%,96%)] to-[hsl(220,14%,94%)]">
+        <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16 lg:mb-20">
+            <div className="inline-flex items-center gap-2 text-[0.65rem] font-bold text-[#059669] bg-[#059669]/10 px-4 py-2 rounded-full mb-6 tracking-[0.14em] uppercase border border-[#059669]/20">
+              <Users className="w-3.5 h-3.5" />
+              Target Audience
+            </div>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground tracking-tight mb-5">
               Built for operators
             </h2>
@@ -366,30 +533,34 @@ const MaintenanceLanding = () => {
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-5" style={{ perspective: "1000px" }}>
+          <div className="grid sm:grid-cols-2 gap-8" style={{ perspective: "1000px" }}>
             {[
               {
                 title: "Property Management Companies",
                 description:
                   "Managing residential or commercial buildings with in-house or contracted maintenance teams.",
-                icon: "🏢"
+                icon: Building2,
+                color: "#059669"
               },
               {
                 title: "Facilities Managers",
                 description:
                   "Responsible for building operations, vendor coordination, and maintenance scheduling.",
-                icon: "🔧"
+                icon: Wrench,
+                color: "#10b981"
               },
               {
                 title: "Real Estate Operators",
                 description:
                   "Owners and operators who need visibility into property maintenance across portfolios.",
-                icon: "📊"
+                icon: BarChart3,
+                color: "#059669"
               },
               {
                 title: "Maintenance Supervisors",
                 description: "Leading technician teams and needing accountability for work completion.",
-                icon: "👷"
+                icon: Users,
+                color: "#10b981"
               },
             ].map((item, i) => (
               <div
@@ -397,56 +568,83 @@ const MaintenanceLanding = () => {
                 className="group relative"
                 style={{ transformStyle: "preserve-3d" }}
               >
-                {/* Subtle glow */}
-                <div className="absolute -inset-1 bg-gradient-to-br from-[#059669]/10 via-transparent to-transparent rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition-all duration-500" />
+                {/* Glow effect */}
+                <div className="absolute -inset-2 bg-gradient-to-br from-[#059669]/15 via-transparent to-[#059669]/10 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-all duration-500" />
 
                 <div
-                  className="relative flex gap-5 p-8 bg-white rounded-2xl border border-border/40 shadow-lg transition-all duration-500 group-hover:-translate-y-2 group-hover:shadow-xl group-hover:border-[#059669]/20"
+                  className="relative flex items-start gap-6 p-8 lg:p-10 bg-white rounded-3xl border border-border/40 shadow-xl transition-all duration-500 group-hover:-translate-y-3 group-hover:shadow-2xl group-hover:border-[#059669]/30"
                   style={{
-                    transform: `rotateX(${1 - i * 0.3}deg)`,
+                    transform: `rotateX(${2 - i * 0.5}deg) rotateY(${(i % 2 - 0.5) * 3}deg)`,
+                    boxShadow: "0 20px 40px -12px rgba(0,0,0,0.15)"
                   }}
                 >
                   {/* Inner shine */}
-                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white via-transparent to-transparent pointer-events-none" />
+                  <div className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-white via-transparent to-transparent pointer-events-none" />
+                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#059669]/20 to-transparent" />
 
-                  {/* Accent dot with glow */}
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-[#059669]/30 rounded-full blur-md group-hover:bg-[#059669]/50 transition-all duration-300" />
-                    <div className="relative w-3 h-3 rounded-full bg-gradient-to-br from-[#059669] to-[#10b981] mt-1.5 shrink-0 shadow-md shadow-[#059669]/30" />
+                  {/* Icon with 3D effect */}
+                  <div
+                    className="relative w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110"
+                    style={{
+                      background: `linear-gradient(135deg, ${item.color}20, ${item.color}10)`,
+                      border: `1px solid ${item.color}30`,
+                      boxShadow: `0 8px 24px ${item.color}20`
+                    }}
+                  >
+                    <item.icon className="w-6 h-6" style={{ color: item.color }} />
                   </div>
 
                   <div className="relative">
-                    <h3 className="font-bold text-foreground mb-2 text-lg group-hover:text-[#059669] transition-colors duration-300">
+                    <h3 className="font-bold text-foreground mb-3 text-xl group-hover:text-[#059669] transition-colors duration-300">
                       {item.title}
                     </h3>
-                    <p className="text-muted-foreground text-sm leading-relaxed">{item.description}</p>
+                    <p className="text-muted-foreground text-base leading-relaxed">{item.description}</p>
                   </div>
                 </div>
               </div>
             ))}
           </div>
+
+          {/* Glass CTA button */}
+          <div className="text-center mt-16">
+            <Link to="/contact">
+              <button className="relative overflow-hidden backdrop-blur-md bg-[#059669]/90 hover:bg-[#059669] text-white px-10 py-4 rounded-xl font-semibold border border-[#059669]/50 shadow-xl shadow-[#059669]/20 hover:shadow-2xl hover:shadow-[#059669]/30 transition-all duration-300 hover:-translate-y-1 hover:scale-105 text-base">
+                <div className="absolute inset-0 bg-gradient-to-b from-white/25 to-transparent pointer-events-none" />
+                <span className="relative flex items-center gap-2">
+                  See If It's Right For You
+                  <ArrowRight className="w-5 h-5" />
+                </span>
+              </button>
+            </Link>
+          </div>
         </div>
       </section>
 
       {/* Trust bar */}
-      <section className="py-20 px-6 bg-white border-y border-border/40">
-        <div className="max-w-5xl mx-auto text-center">
-          <h2 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight mb-4">
+      <section className="py-24 px-6 bg-white border-y border-border/40 relative overflow-hidden">
+        {/* Subtle background pattern */}
+        <div className="absolute inset-0 opacity-30">
+          <div className="absolute top-0 left-1/4 w-64 h-64 bg-[#059669]/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-[#059669]/5 rounded-full blur-3xl" />
+        </div>
+
+        <div className="max-w-5xl mx-auto text-center relative">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground tracking-tight mb-5">
             Simple. Reliable. Built for the UAE market.
           </h2>
-          <p className="text-muted-foreground text-base max-w-2xl mx-auto mb-12 leading-relaxed">
+          <p className="text-muted-foreground text-base lg:text-lg max-w-2xl mx-auto mb-14 leading-relaxed">
             We understand property operations in this region. No unnecessary complexity. No enterprise pricing. Just
             the tools you need to run maintenance properly.
           </p>
 
-          <div className="inline-flex flex-wrap justify-center gap-x-10 gap-y-5 text-sm text-muted-foreground">
+          <div className="grid grid-cols-2 md:flex md:flex-wrap justify-center gap-6 md:gap-x-12 md:gap-y-6 text-sm">
             {["UAE-based support", "Mobile-ready for field teams", "No long-term contracts", "Free onboarding"].map(
               (item, i) => (
-                <div key={i} className="flex items-center gap-2.5">
-                  <div className="w-5 h-5 rounded-full bg-[#059669]/10 flex items-center justify-center">
-                    <Check className="w-3 h-3 text-[#059669]" />
+                <div key={i} className="flex items-center gap-3 bg-[#059669]/5 px-5 py-3 rounded-xl border border-[#059669]/10">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#059669] to-[#10b981] flex items-center justify-center shadow-md shadow-[#059669]/20">
+                    <Check className="w-3.5 h-3.5 text-white" />
                   </div>
-                  <span className="font-medium">{item}</span>
+                  <span className="font-semibold text-foreground">{item}</span>
                 </div>
               )
             )}
@@ -455,32 +653,42 @@ const MaintenanceLanding = () => {
       </section>
 
       {/* Final CTA — Dark with glass elements */}
-      <section className="py-24 lg:py-32 px-6 bg-gradient-to-b from-[hsl(195,30%,8%)] via-[hsl(195,28%,10%)] to-[hsl(195,30%,8%)] relative overflow-hidden">
-        {/* Decorative glow */}
+      <section className="py-28 lg:py-36 px-6 bg-gradient-to-b from-[hsl(220,25%,10%)] via-[hsl(220,22%,13%)] to-[hsl(220,25%,10%)] relative overflow-hidden">
+        {/* Decorative glows */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#059669]/10 rounded-full blur-[120px]" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-[#059669]/15 rounded-full blur-[150px]" />
+          <div className="absolute top-20 left-20 w-64 h-64 bg-[#059669]/10 rounded-full blur-[80px]" />
+          <div className="absolute bottom-20 right-20 w-64 h-64 bg-[#10b981]/10 rounded-full blur-[80px]" />
         </div>
 
-        <div className="max-w-3xl mx-auto text-center relative">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white tracking-tight mb-6">
+        <div className="max-w-4xl mx-auto text-center relative">
+          <div className="inline-flex items-center gap-2 text-[0.65rem] font-bold text-[#059669] bg-[#059669]/10 px-4 py-2 rounded-full mb-8 tracking-[0.14em] uppercase border border-[#059669]/20 backdrop-blur-sm">
+            <ArrowRight className="w-3.5 h-3.5" />
+            Get Started Today
+          </div>
+
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-white tracking-tight mb-8">
             Ready to take control?
           </h2>
-          <p className="text-white/60 text-lg max-w-xl mx-auto mb-14 leading-relaxed">
+          <p className="text-white/70 text-lg lg:text-xl max-w-2xl mx-auto mb-16 leading-relaxed">
             Start a free trial or schedule a call to see how MaintainProof protects your operation.
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
             <Link to="/contact">
-              <button className="relative overflow-hidden h-14 px-10 text-base font-semibold rounded-xl backdrop-blur-md bg-[#059669]/85 hover:bg-[#059669]/95 text-white border border-[#059669]/60 shadow-2xl shadow-[#059669]/40 hover:shadow-[#059669]/50 transition-all duration-300 hover:-translate-y-0.5">
-                <div className="absolute inset-0 bg-gradient-to-b from-white/25 to-transparent pointer-events-none" />
-                <span className="relative flex items-center gap-2">
+              <button className="relative overflow-hidden h-16 px-12 text-lg font-semibold rounded-2xl backdrop-blur-xl bg-[#059669]/90 hover:bg-[#059669] text-white border border-[#059669]/60 shadow-2xl shadow-[#059669]/40 hover:shadow-[#059669]/60 transition-all duration-300 hover:-translate-y-1 hover:scale-105">
+                <div className="absolute inset-0 bg-gradient-to-b from-white/30 to-transparent pointer-events-none" />
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+                <span className="relative flex items-center gap-3">
                   Start Free Trial
                   <ArrowRight className="w-5 h-5" />
                 </span>
               </button>
             </Link>
             <Link to="/contact">
-              <button className="relative overflow-hidden h-14 px-9 text-base font-medium rounded-xl backdrop-blur-md bg-white/10 hover:bg-white/20 text-white/80 hover:text-white border border-white/20 hover:border-white/40 shadow-lg shadow-black/20 transition-all duration-300 hover:-translate-y-0.5">
-                <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
+              <button className="relative overflow-hidden h-16 px-10 text-lg font-medium rounded-2xl backdrop-blur-xl bg-white/10 hover:bg-white/20 text-white border border-white/30 hover:border-white/50 shadow-xl shadow-black/20 transition-all duration-300 hover:-translate-y-1">
+                <div className="absolute inset-0 bg-gradient-to-b from-white/15 to-transparent pointer-events-none" />
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
                 <span className="relative">Schedule a Demo</span>
               </button>
             </Link>
