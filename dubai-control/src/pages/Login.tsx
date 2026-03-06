@@ -698,11 +698,11 @@ export default function Login() {
 
                   <p className="text-[11.5px] text-[#9CA3B0] text-center mt-3.5 leading-relaxed">
                     By creating an account you agree to our{" "}
-                    <a href="#" className="text-[#2563EB] font-medium hover:text-[#1D4FD7] hover:underline">
+                    <a href="/terms" className="text-[#2563EB] font-medium hover:text-[#1D4FD7] hover:underline">
                       Terms
                     </a>{" "}
                     and{" "}
-                    <a href="#" className="text-[#2563EB] font-medium hover:text-[#1D4FD7] hover:underline">
+                    <a href="/privacy" className="text-[#2563EB] font-medium hover:text-[#1D4FD7] hover:underline">
                       Privacy Policy
                     </a>
                   </p>
@@ -812,12 +812,16 @@ export default function Login() {
       {/* Footer */}
       <div className="fixed bottom-3.5 left-0 right-0 text-center text-[11.5px] text-[#9CA3B0]">
         © 2026 Proof Platform ·{" "}
-        <a href="#" className="text-[#6C7281] hover:underline">
+        <a href="/privacy" className="text-[#6C7281] hover:underline">
           Privacy
         </a>
         {" · "}
-        <a href="#" className="text-[#6C7281] hover:underline">
+        <a href="/terms" className="text-[#6C7281] hover:underline">
           Terms
+        </a>
+        {" · "}
+        <a href="/refund" className="text-[#6C7281] hover:underline">
+          Refund
         </a>
       </div>
 
