@@ -40,8 +40,8 @@ const MaintenanceLanding = () => {
               Operational Risk Control
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold text-white leading-[1.05] tracking-tight mb-6">
-              Maintenance without proof
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold leading-[1.05] tracking-tight mb-6">
+              <span className="text-gray-300">Maintenance without proof</span>
               <br />
               <span className="text-white/70">becomes liability.</span>
             </h1>
