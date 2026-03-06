@@ -729,3 +729,12 @@ Status: ✅ enforced
 - Affected: views_reports.py (3 views), analytics_views.py (8 functions)
 - Impact: Cleaning reports/analytics no longer include Maintenance jobs
 - Phase 5: Added pagination to History/Locations, retry buttons to Dashboard/Analytics
+
+## Platform Landing & Deployment (2026-03-06)
+
+- Production URL: https://proofplatform.vercel.app
+- Old domain: cleaning-saas-seven.vercel.app → 307 redirect to new
+- Landing page: PlatformLanding on / (MarketingLayout)
+- Vercel project renamed: cleaning-saas → proofplatform
+- SPA routing: vercel.json with rewrites
+- All marketing pages live: /, /products, /products/cleaning, /products/maintenance, /pricing, /contact, /login

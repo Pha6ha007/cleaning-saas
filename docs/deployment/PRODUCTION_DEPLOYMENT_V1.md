@@ -2,7 +2,18 @@
 
 > **Target:** Ubuntu 22.04 VPS with Nginx + Gunicorn + PostgreSQL + HTTPS
 > **Domain:** app.cleanproof.com
-> **Last Updated:** 2026-02-13
+> **Last Updated:** 2026-03-06
+
+---
+
+## Frontend (Vercel)
+
+- Production: https://proofplatform.vercel.app
+- Vercel project: proofplatform
+- Branch: main (auto-deploy)
+- Framework: Vite + React
+- SPA routing: vercel.json rewrites to index.html
+- Old domain: cleaning-saas-seven.vercel.app (307 redirect)
 
 ---
 
