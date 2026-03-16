@@ -15,13 +15,13 @@
 
 ## Tasks
 
-- [ ] **T01: Install simplejwt, configure settings, add blacklist app**
+- [x] **T01: Install simplejwt, configure settings, add blacklist app**
   Install djangorestframework-simplejwt, add to INSTALLED_APPS with blacklist app, configure SIMPLE_JWT settings (30d access, 90d refresh, rotation, blacklisting), add JWTAuthentication alongside TokenAuthentication in DRF settings. Run migrations for blacklist tables.
 
-- [ ] **T02: Custom JWT serializer, login/refresh/logout views, URL routing**
+- [x] **T02: Custom JWT serializer, login/refresh/logout views, URL routing**
   Create custom TokenObtainPairSerializer with role + company_id claims. Create JWTLoginView (wraps token obtain + returns user profile data), JWTRefreshView, JWTLogoutView. Wire URL routes under /api/manager/auth/jwt/. Manager-only login validation (role check).
 
-- [ ] **T03: Tests — JWT endpoints + Token coexistence**
+- [x] **T03: Tests — JWT endpoints + Token coexistence**
   Write Django tests: JWT login returns correct claims, refresh rotates tokens, logout blacklists, blacklisted token rejected, Token auth still works on existing endpoints, invalid credentials rejected, non-manager roles rejected on manager JWT login.
 
 ## Files Likely Touched

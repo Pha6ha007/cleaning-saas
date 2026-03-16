@@ -6,6 +6,7 @@ from django.db import connection
 from apps.marketing.views import DemoRequestCreateView, ContactMessageCreateView
 from . import analytics_views
 from . import views
+from .views_jwt import JWTManagerLoginView, JWTRefreshView, JWTLogoutView
 
 # NOTE:
 # apps.api.views is a thin entry point that re-exports public API views
@@ -61,6 +62,25 @@ urlpatterns = [
         "auth/signup/",
         api_views.ManagerSignupView.as_view(),
         name="api-auth-signup",
+    ),
+
+    # =====================
+    # JWT Auth (M001-sijc46: manager portal)
+    # =====================
+    path(
+        "manager/auth/jwt/login/",
+        JWTManagerLoginView.as_view(),
+        name="api-jwt-login",
+    ),
+    path(
+        "manager/auth/jwt/refresh/",
+        JWTRefreshView.as_view(),
+        name="api-jwt-refresh",
+    ),
+    path(
+        "manager/auth/jwt/logout/",
+        JWTLogoutView.as_view(),
+        name="api-jwt-logout",
     ),
 
     # =====================

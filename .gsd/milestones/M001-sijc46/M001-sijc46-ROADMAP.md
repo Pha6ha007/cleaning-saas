@@ -56,7 +56,7 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: JWT Auth Backend** `risk:high` `depends:[]`
+- [x] **S01: JWT Auth Backend** `risk:high` `depends:[]`
   > After this: Login endpoint returns JWT access+refresh token pair; refresh endpoint rotates tokens; blacklisted tokens are rejected; existing Token auth still works for mobile.
 
 - [ ] **S02: Manager Portal JWT Migration** `risk:medium` `depends:[S01]`
