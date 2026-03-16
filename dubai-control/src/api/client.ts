@@ -239,25 +239,114 @@ const auth: AuthState = {
   token: null,
 };
 
-// хелпер: подтянуть токен из localStorage, если он есть
+// JWT localStorage key constants
+const STORAGE_KEYS = {
+  ACCESS: "access_token",
+  REFRESH: "refresh_token",
+  // Legacy keys kept for backward compatibility during transition
+  AUTH_TOKEN: "authToken",
+  AUTH_TOKEN_ALT: "auth_token",
+} as const;
+
+// Deduplicates concurrent refresh calls — only one refresh fires at a time
+let _refreshPromise: Promise<void> | null = null;
+
+// хелпер: подтянуть токен из localStorage
+// Prefers JWT access_token; falls back to legacy Token for existing sessions
 function syncTokenFromStorage(): string | null {
   if (typeof window === "undefined") {
     return auth.token;
   }
 
-  const stored =
-    localStorage.getItem("authToken") || localStorage.getItem("auth_token");
+  // Prefer JWT access token
+  const jwtAccess = localStorage.getItem(STORAGE_KEYS.ACCESS);
+  if (jwtAccess) {
+    if (jwtAccess !== auth.token) {
+      auth.token = jwtAccess;
+    }
+    return auth.token;
+  }
 
-  if (stored && stored !== auth.token) {
-    auth.token = stored;
+  // Fall back to legacy Token auth (existing sessions, mobile compatibility)
+  const legacyToken =
+    localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN) ||
+    localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN_ALT);
+
+  if (legacyToken && legacyToken !== auth.token) {
+    auth.token = legacyToken;
   }
 
   return auth.token;
 }
 
+// Clear all auth state and redirect to login
+function _clearAuthAndRedirect(): void {
+  auth.token = null;
+  if (typeof window !== "undefined") {
+    [
+      STORAGE_KEYS.ACCESS,
+      STORAGE_KEYS.REFRESH,
+      STORAGE_KEYS.AUTH_TOKEN,
+      STORAGE_KEYS.AUTH_TOKEN_ALT,
+      "authUserRole",
+      "authUserEmail",
+    ].forEach((k) => localStorage.removeItem(k));
+    console.warn("[auth] Session expired — redirecting to login");
+    window.location.href = "/login";
+  }
+}
+
+// Refresh JWT tokens. Deduplicates concurrent calls via _refreshPromise.
+async function _refreshTokens(): Promise<void> {
+  if (_refreshPromise) {
+    return _refreshPromise;
+  }
+
+  _refreshPromise = (async () => {
+    const refreshToken =
+      typeof window !== "undefined"
+        ? localStorage.getItem(STORAGE_KEYS.REFRESH)
+        : null;
+
+    if (!refreshToken) {
+      throw new Error("No refresh token available");
+    }
+
+    const resp = await fetch(`${API_BASE_URL}/api/manager/auth/jwt/refresh/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh: refreshToken }),
+    });
+
+    if (!resp.ok) {
+      throw new Error(`Refresh failed: ${resp.status}`);
+    }
+
+    const data = await resp.json();
+    auth.token = data.access;
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem(STORAGE_KEYS.ACCESS, data.access);
+      if (data.refresh) {
+        localStorage.setItem(STORAGE_KEYS.REFRESH, data.refresh);
+      }
+    }
+
+    console.warn("[auth] Token refreshed successfully");
+  })().finally(() => {
+    _refreshPromise = null;
+  });
+
+  return _refreshPromise;
+}
+
 // ---------- Low-level fetch helpers ----------
 
-async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function apiFetch<T>(
+  path: string,
+  options: RequestInit = {},
+  _retried = false
+): Promise<T> {
   const url = `${API_BASE_URL}${path}`;
 
   const headers: HeadersInit = {
@@ -265,17 +354,29 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
     ...(options.headers || {}),
   };
 
-  // перед каждым запросом синкаемся с localStorage
+  // Sync token before every request
   const currentToken = syncTokenFromStorage();
 
   if (currentToken && !("Authorization" in headers)) {
-    headers["Authorization"] = `Token ${currentToken}`;
+    headers["Authorization"] = `Bearer ${currentToken}`;
   }
 
   const resp = await fetch(url, {
     ...options,
     headers,
   });
+
+  // 401: attempt silent token refresh and retry once
+  if (resp.status === 401 && !_retried) {
+    try {
+      await _refreshTokens();
+    } catch {
+      console.error("[auth] refresh failed, redirecting to login");
+      _clearAuthAndRedirect();
+      throw new Error("Session expired");
+    }
+    return apiFetch<T>(path, options, true);
+  }
 
   if (!resp.ok) {
     const text = await resp.text();
@@ -319,7 +420,7 @@ async function apiFetchBlob(
   const currentToken = syncTokenFromStorage();
 
   if (currentToken && !("Authorization" in headers)) {
-    headers["Authorization"] = `Token ${currentToken}`;
+    headers["Authorization"] = `Bearer ${currentToken}`;
   }
 
   const resp = await fetch(url, {
@@ -341,47 +442,61 @@ async function apiFetchBlob(
 // ---------- Auth ----------
 
 export async function loginManager(): Promise<void> {
-  // 1) Всегда сначала смотрим в localStorage (новый login flow)
-  const storedToken = syncTokenFromStorage();
-  if (storedToken) {
+  // 1) JWT access token in localStorage — already authenticated
+  const storedAccess = typeof window !== "undefined"
+    ? localStorage.getItem(STORAGE_KEYS.ACCESS)
+    : null;
+  if (storedAccess) {
+    auth.token = storedAccess;
     return;
   }
 
-  // 2) Если токена в storage нет, но уже есть в памяти — тоже ок
+  // 2) Legacy Token still in localStorage (existing session, backward compat)
+  const legacyToken =
+    typeof window !== "undefined"
+      ? localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN) ||
+        localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN_ALT)
+      : null;
+  if (legacyToken) {
+    auth.token = legacyToken;
+    return;
+  }
+
+  // 3) Token already in memory
   if (auth.token) {
     return;
   }
 
-  // 3) Fallback: dev-логин через ENV / дефолтные креды
+  // 4) Dev fallback: auto-login via JWT endpoint using ENV / default creds
   const payload = {
     email: DEV_MANAGER_EMAIL,
     password: DEV_MANAGER_PASSWORD,
   };
 
   const data = await apiFetch<{
-    token: string;
+    access: string;
+    refresh: string;
     user_id: number;
     email: string;
     full_name?: string;
     role?: string;
-  }>("/api/manager/auth/login/", {
+  }>("/api/manager/auth/jwt/login/", {
     method: "POST",
     body: JSON.stringify(payload),
   });
 
-  auth.token = data.token;
+  auth.token = data.access;
 
-  // кладём токен и в localStorage, чтобы всё было единообразно
   if (typeof window !== "undefined") {
-    localStorage.setItem("authToken", data.token);
-    localStorage.setItem("auth_token", data.token);
+    localStorage.setItem(STORAGE_KEYS.ACCESS, data.access);
+    localStorage.setItem(STORAGE_KEYS.REFRESH, data.refresh);
     localStorage.setItem("authUserEmail", data.email);
     if (data.role) {
       localStorage.setItem("authUserRole", data.role);
     }
   }
 
-  console.log("[api] Logged in as manager (dev fallback)", data.email);
+  console.log("[api] Logged in as manager (dev fallback JWT)", data.email);
 }
 
 // ---------- Helpers ----------
@@ -990,7 +1105,7 @@ export async function uploadCompanyLogo(file: File): Promise<{ logo_url: string 
   const headers: HeadersInit = {};
   const currentToken = syncTokenFromStorage();
   if (currentToken) {
-    headers["Authorization"] = `Token ${currentToken}`;
+    headers["Authorization"] = `Bearer ${currentToken}`;
   }
 
   const resp = await fetch(url, {
@@ -1917,7 +2032,25 @@ export async function downloadInvoice(invoiceId: number): Promise<Blob> {
   });
 }
 
-// ---------- Service Visits API (Maintenance Context V1) ----------
+// ---------- Paddle Subscription API (M001-sijc46 S04) ----------
+
+export interface SubscriptionData {
+  plan: string;
+  plan_tier: PlanTier;
+  is_trial: boolean;
+  is_trial_active: boolean;
+  is_trial_expired: boolean;
+  trial_expires_at: string | null;
+  has_subscription: boolean;
+  status: "active" | "canceled" | "past_due" | "paused" | null;
+  current_period_end: string | null;
+  paddle_update_url: string;
+  paddle_subscription_id: string;
+}
+
+export async function getSubscription(): Promise<SubscriptionData> {
+  return apiFetch<SubscriptionData>("/api/billing/subscription/");
+}
 // Service Visits use the same Jobs API endpoints but with maintenance terminology
 
 export type CreateServiceVisitInput = {
@@ -2447,11 +2580,11 @@ export async function uploadAssetDocument(
   if (input.document_type) formData.append("document_type", input.document_type);
   if (input.description) formData.append("description", input.description);
 
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem(STORAGE_KEYS.ACCESS);
   const response = await fetch(`${API_BASE_URL}/api/maintenance/assets/${assetId}/documents/`, {
     method: "POST",
     headers: {
-      Authorization: `Token ${token}`,
+      Authorization: `Bearer ${token}`,
     },
     body: formData,
   });
@@ -2501,10 +2634,10 @@ export interface ImportResult {
 
 export async function exportAssets(format: ExportFormat = "csv"): Promise<Blob> {
   await loginManager();
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem(STORAGE_KEYS.ACCESS);
   const response = await fetch(`${API_BASE_URL}/api/maintenance/assets/export/?format=${format}`, {
     headers: {
-      Authorization: `Token ${token}`,
+      Authorization: `Bearer ${token}`,
     },
   });
 
@@ -2521,11 +2654,11 @@ export async function importAssets(file: File): Promise<ImportResult> {
   const formData = new FormData();
   formData.append("file", file);
 
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem(STORAGE_KEYS.ACCESS);
   const response = await fetch(`${API_BASE_URL}/api/maintenance/assets/import/`, {
     method: "POST",
     headers: {
-      Authorization: `Token ${token}`,
+      Authorization: `Bearer ${token}`,
     },
     body: formData,
   });
@@ -2540,10 +2673,10 @@ export async function importAssets(file: File): Promise<ImportResult> {
 
 export async function downloadAssetImportTemplate(format: ExportFormat = "csv"): Promise<Blob> {
   await loginManager();
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem(STORAGE_KEYS.ACCESS);
   const response = await fetch(`${API_BASE_URL}/api/maintenance/assets/import-template/?format=${format}`, {
     headers: {
-      Authorization: `Token ${token}`,
+      Authorization: `Bearer ${token}`,
     },
   });
 
@@ -2586,13 +2719,13 @@ export async function uploadVisitPhoto(
   formData.append("photo_type", input.photo_type);
   formData.append("file", input.file);
 
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem(STORAGE_KEYS.ACCESS);
   const response = await fetch(
     `${API_BASE_URL}/api/maintenance/visits/${visitId}/upload-photo/`,
     {
       method: "POST",
       headers: {
-        Authorization: `Token ${token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: formData,
     }
@@ -2625,13 +2758,13 @@ export async function deleteVisitPhoto(
   photoType: "before" | "after"
 ): Promise<void> {
   await loginManager();
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem(STORAGE_KEYS.ACCESS);
   const response = await fetch(
     `${API_BASE_URL}/api/maintenance/visits/${visitId}/photos/${photoType}/`,
     {
       method: "DELETE",
       headers: {
-        Authorization: `Token ${token}`,
+        Authorization: `Bearer ${token}`,
       },
     }
   );

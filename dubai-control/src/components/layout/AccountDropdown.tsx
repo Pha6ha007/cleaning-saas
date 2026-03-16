@@ -12,6 +12,7 @@ import {
   X,
 } from 'lucide-react';
 import { useUserRole, canAccessBilling } from '@/hooks/useUserRole';
+import { API_BASE_URL } from '@/api/client';
 
 interface AccountDropdownProps {
   userInitials?: string;
@@ -77,8 +78,34 @@ export function AccountDropdown({
     };
   }, [isOpen]);
 
-  const handleLogout = () => {
-    navigate('/');
+  const handleLogout = async () => {
+    // Blacklist the refresh token before clearing local state
+    const refreshToken = localStorage.getItem('refresh_token');
+    const accessToken = localStorage.getItem('access_token');
+    if (refreshToken) {
+      try {
+        await fetch(`${API_BASE_URL}/api/manager/auth/jwt/logout/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          },
+          body: JSON.stringify({ refresh: refreshToken }),
+        });
+      } catch {
+        // Best-effort — clear tokens regardless of network failure
+      }
+    }
+    // Clear all auth state
+    [
+      'access_token',
+      'refresh_token',
+      'authToken',
+      'auth_token',
+      'authUserRole',
+      'authUserEmail',
+    ].forEach((k) => localStorage.removeItem(k));
+    navigate('/login');
   };
 
   const toggleDropdown = () => {

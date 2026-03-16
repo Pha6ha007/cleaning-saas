@@ -10,6 +10,7 @@ from django.contrib.auth.hashers import make_password
 
 from rest_framework import status
 from rest_framework.authentication import TokenAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
@@ -27,7 +28,7 @@ class ManagerCompanyView(APIView):
     PATCH /api/manager/company/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def _ensure_manager(self, request):
@@ -97,7 +98,7 @@ class ManagerCompanyLogoUploadView(APIView):
     multipart/form-data, поле "file"
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
 
@@ -143,7 +144,7 @@ class ManagerCleanersListCreateView(APIView):
     POST /api/manager/cleaners/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def _ensure_manager(self, request):
@@ -301,7 +302,7 @@ class ManagerCleanerDetailView(APIView):
     (GET тоже будет работать при желании)
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def _get_cleaner(self, request, pk: int):
@@ -408,7 +409,7 @@ class ManagerCleanerResetPinView(APIView):
     POST /api/manager/cleaners/<id>/reset-pin/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def _get_cleaner(self, request, pk: int):

@@ -19,6 +19,7 @@ from django.shortcuts import get_object_or_404
 
 from rest_framework import status
 from rest_framework.authentication import TokenAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -88,6 +89,7 @@ class MaintenancePermissionMixin:
     def _check_write_access(self, request):
         """
         Check if user has write access (owner, manager only).
+        Also blocks writes for companies with expired trial or blocked plan.
         Returns (company, error_response).
         """
         user = request.user
@@ -96,7 +98,26 @@ class MaintenancePermissionMixin:
                 {"code": "FORBIDDEN", "message": "Only owner or manager can modify this resource."},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        return self._get_company(request)
+        company, err = self._get_company(request)
+        if err:
+            return None, err
+
+        # Plan enforcement: block writes for expired/blocked companies
+        if company.is_blocked():
+            code = "trial_expired" if company.is_trial_expired() else "company_blocked"
+            detail = (
+                "Your free trial has ended. You can still view existing records, "
+                "but creating or editing requires an active subscription."
+                if code == "trial_expired"
+                else "Your account is currently suspended. "
+                "Please upgrade your subscription to restore full access."
+            )
+            return None, Response(
+                {"code": code, "detail": detail},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        return company, None
 
 
 # =============================================================================
@@ -111,7 +132,7 @@ class AssetTypeListCreateView(MaintenancePermissionMixin, APIView):
     POST /api/manager/asset-types/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -215,7 +236,7 @@ class AssetTypeDetailView(MaintenancePermissionMixin, APIView):
     DELETE /api/manager/asset-types/<id>/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def _get_asset_type(self, company, pk):
@@ -344,7 +365,7 @@ class AssetListCreateView(MaintenancePermissionMixin, APIView):
     POST /api/manager/assets/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -490,7 +511,7 @@ class AssetDetailView(MaintenancePermissionMixin, APIView):
     DELETE /api/manager/assets/<id>/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def _get_asset(self, company, pk):
@@ -655,7 +676,7 @@ class MaintenanceCategoryListCreateView(MaintenancePermissionMixin, APIView):
     POST /api/manager/maintenance-categories/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -732,7 +753,7 @@ class MaintenanceCategoryDetailView(MaintenancePermissionMixin, APIView):
     DELETE /api/manager/maintenance-categories/<id>/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def _get_category(self, company, pk):
@@ -842,7 +863,7 @@ class ServiceVisitsListView(MaintenancePermissionMixin, APIView):
         - category_id: filter by maintenance_category
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -947,7 +968,7 @@ class AssetServiceHistoryView(MaintenancePermissionMixin, APIView):
     Returns all Jobs linked to this asset, ordered by date descending.
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
@@ -1043,7 +1064,7 @@ class ServiceVisitReportView(MaintenancePermissionMixin, APIView):
     - Maintenance category
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
@@ -1129,7 +1150,7 @@ class AssetHistoryReportView(MaintenancePermissionMixin, APIView):
     - Service history table with SLA, checklist %, photos count
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
@@ -1203,7 +1224,7 @@ class MaintenanceTechniciansListView(MaintenancePermissionMixin, APIView):
     RBAC: owner, manager, staff (read-only)
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -1391,7 +1412,7 @@ class MaintenanceAnalyticsSummaryView(MaintenancePermissionMixin, APIView):
     - *_delta: percentage change vs previous period
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -1438,7 +1459,7 @@ class MaintenanceAnalyticsVisitsTrendView(MaintenancePermissionMixin, APIView):
     ]
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -1495,7 +1516,7 @@ class MaintenanceAnalyticsSlaTrendView(MaintenancePermissionMixin, APIView):
     ]
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -1569,7 +1590,7 @@ class MaintenanceAnalyticsAssetsPerformanceView(MaintenancePermissionMixin, APIV
     ]
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -1648,7 +1669,7 @@ class MaintenanceAnalyticsTechniciansPerformanceView(MaintenancePermissionMixin,
     ]
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -1877,7 +1898,7 @@ class MaintenanceWeeklyReportView(MaintenancePermissionMixin, APIView):
     Returns weekly maintenance report (last 7 days).
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -1896,7 +1917,7 @@ class MaintenanceMonthlyReportView(MaintenancePermissionMixin, APIView):
     Returns monthly maintenance report (last 30 days).
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -1915,7 +1936,7 @@ class MaintenanceWeeklyReportPdfView(MaintenancePermissionMixin, APIView):
     Returns weekly maintenance report as PDF download.
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -1942,7 +1963,7 @@ class MaintenanceMonthlyReportPdfView(MaintenancePermissionMixin, APIView):
     Returns monthly maintenance report as PDF download.
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -2046,7 +2067,7 @@ class MaintenanceWeeklyReportEmailView(MaintenancePermissionMixin, APIView):
     Body (optional): { "email": "custom@example.com" }
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -2086,7 +2107,7 @@ class MaintenanceMonthlyReportEmailView(MaintenancePermissionMixin, APIView):
     Body (optional): { "email": "custom@example.com" }
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -2138,7 +2159,7 @@ class RecurringTemplateListCreateView(MaintenancePermissionMixin, APIView):
     - staff: read-only
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def _serialize_template(self, template):
@@ -2384,7 +2405,7 @@ class RecurringTemplateDetailView(MaintenancePermissionMixin, APIView):
     DELETE /api/maintenance/recurring-templates/<id>/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def _get_template(self, company, pk):
@@ -2673,7 +2694,7 @@ class RecurringTemplateGenerateView(MaintenancePermissionMixin, APIView):
     }
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
@@ -2824,7 +2845,7 @@ class ServiceContractListCreateView(MaintenancePermissionMixin, APIView):
         Create new service contract
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -2952,7 +2973,7 @@ class ServiceContractDetailView(MaintenancePermissionMixin, APIView):
     DELETE /api/maintenance/contracts/<id>/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
@@ -3097,7 +3118,7 @@ class ServiceVisitNotifyView(MaintenancePermissionMixin, APIView):
     Manager-triggered notifications are logged with triggered_by.
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     ALLOWED_KINDS = [
@@ -3188,7 +3209,7 @@ class MaintenanceNotificationLogListView(MaintenancePermissionMixin, APIView):
     - limit: max results (default 100)
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -3269,7 +3290,7 @@ class PartListCreateView(MaintenancePermissionMixin, APIView):
         Body: { name, sku?, description?, unit? }
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -3376,7 +3397,7 @@ class PartDetailView(MaintenancePermissionMixin, APIView):
     DELETE /api/maintenance/parts/{id}/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
@@ -3507,7 +3528,7 @@ class PartStockAdjustView(MaintenancePermissionMixin, APIView):
         }
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
@@ -3600,7 +3621,7 @@ class PartStockHistoryView(MaintenancePermissionMixin, APIView):
     GET /api/maintenance/parts/{id}/stock-history/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
@@ -3642,7 +3663,7 @@ class PartsLowStockView(MaintenancePermissionMixin, APIView):
     GET /api/maintenance/parts/low-stock/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -3687,7 +3708,7 @@ class VisitPartsListCreateView(MaintenancePermissionMixin, APIView):
         Body: { part_id, quantity?, notes? }
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
@@ -3805,7 +3826,7 @@ class VisitPartDeleteView(MaintenancePermissionMixin, APIView):
     DELETE /api/maintenance/visits/{visit_id}/parts/{part_id}/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def delete(self, request, visit_id, part_id):
@@ -3853,7 +3874,7 @@ class MaintenanceChecklistTemplatesView(MaintenancePermissionMixin, APIView):
     - staff: read-only
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def _serialize_template(self, template):
@@ -3969,7 +3990,7 @@ class MaintenanceChecklistTemplateDetailView(MaintenancePermissionMixin, APIView
     DELETE /api/maintenance/checklists/<id>/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def _get_template(self, company, pk):
@@ -4140,7 +4161,7 @@ class BulkAssignTechnicianView(MaintenancePermissionMixin, APIView):
     RBAC: owner, manager only
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -4252,7 +4273,7 @@ class BulkCancelVisitsView(MaintenancePermissionMixin, APIView):
     RBAC: owner, manager only
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -4346,7 +4367,7 @@ class RescheduleVisitView(MaintenancePermissionMixin, APIView):
     RBAC: owner, manager only
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def patch(self, request, pk):
@@ -4459,7 +4480,7 @@ class AssetDocumentListCreateView(MaintenancePermissionMixin, APIView):
     - staff: read-only
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
 
@@ -4572,7 +4593,7 @@ class AssetDocumentDetailView(MaintenancePermissionMixin, APIView):
     - staff: read-only
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def _get_document(self, company, pk):
@@ -4679,7 +4700,7 @@ class AssetExportView(MaintenancePermissionMixin, APIView):
     GET /api/maintenance/assets/export/?format=csv|xlsx
     """
     
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
     
     def get(self, request):
@@ -4773,7 +4794,7 @@ class AssetImportView(MaintenancePermissionMixin, APIView):
     Body: multipart/form-data with 'file' field
     """
     
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
     
@@ -4979,7 +5000,7 @@ class AssetImportTemplateView(MaintenancePermissionMixin, APIView):
     GET /api/maintenance/assets/import-template/?format=csv|xlsx
     """
     
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
     
     def get(self, request):
@@ -5065,7 +5086,7 @@ class VisitPhotoUploadView(APIView):
     - cleaner: no access (maintenance context)
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
 
@@ -5337,7 +5358,7 @@ class VisitPhotoDeleteView(APIView):
     - staff, cleaner: cannot delete
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def delete(self, request, pk: int, photo_type: str):

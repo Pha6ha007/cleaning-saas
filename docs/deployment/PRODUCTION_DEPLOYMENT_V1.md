@@ -202,6 +202,14 @@ DATABASE_URL=postgres://cleanproof:YOUR_DB_PASSWORD@localhost:5432/cleanproof
 
 # Email (Gmail SMTP)
 EMAIL_HOST_PASSWORD=<your-gmail-app-password>
+
+# Paddle Billing — see docs/deployment/JWT_PADDLE_SUPPLEMENT.md for setup guide
+PADDLE_ENVIRONMENT=production
+PADDLE_API_KEY=<from Paddle dashboard>
+PADDLE_CLIENT_TOKEN=<from Paddle dashboard>
+PADDLE_WEBHOOK_SECRET=<from Paddle notification destination>
+PADDLE_PRICE_ID_STANDARD=pri_xxxxx
+PADDLE_PRICE_ID_PRO=pri_xxxxx
 ```
 
 Set secure permissions:
@@ -595,7 +603,12 @@ psql -U cleanproof -h localhost -d cleanproof
 | Endpoint | Purpose |
 |----------|---------|
 | `GET /api/health/` | Health check (no auth, 200 OK) |
-| `POST /api/auth/login/` | User login |
+| `POST /api/auth/login/` | Legacy Token login (mobile cleaner app) |
+| `POST /api/manager/auth/login/` | JWT login → returns `access` + `refresh` tokens |
+| `POST /api/manager/auth/refresh/` | JWT refresh → rotates tokens, blacklists old refresh |
+| `POST /api/manager/auth/logout/` | JWT logout → blacklists refresh token |
+| `GET /api/billing/subscription/` | Paddle subscription status (Owner/Manager, JWT) |
+| `POST /api/billing/webhook/` | Paddle webhook receiver (no auth, HMAC-verified) |
 | `GET /api/settings/billing/` | Billing info (Owner/Manager) |
 
 ### Useful Commands
@@ -621,5 +634,6 @@ sudo -u cleanproof bash -c 'set -a && source .env.production && set +a && ./venv
 
 | Date | Change |
 |------|--------|
+| 2026-03-17 | v1.3: M001-sijc46 — Added JWT + Paddle env vars; updated Key Endpoints; see `JWT_PADDLE_SUPPLEMENT.md` |
 | 2026-02-13 | v1.1: Fixed health endpoint path, clarified paths, added frontend env |
 | 2026-02-13 | v1.0: Initial deployment guide |

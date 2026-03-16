@@ -18,6 +18,7 @@ from django.db.models import Q
 
 from rest_framework import status
 from rest_framework.authentication import TokenAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -77,7 +78,7 @@ class JobPdfReportView(APIView):
     - менеджеру (по job своей компании)
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk: int):
@@ -121,7 +122,7 @@ class ManagerJobPdfEmailView(APIView):
     Если email в body не передан — используем email текущего менеджера.
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk: int):
@@ -304,7 +305,7 @@ class ManagerJobReportEmailLogListView(APIView):
     GET /api/manager/jobs/<id>/report/emails/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk: int):
@@ -362,7 +363,7 @@ class ManagerJobsTodayView(APIView):
     GET /api/manager/jobs/today/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -428,7 +429,7 @@ class ManagerJobsActiveView(APIView):
     Остальной полный архив — через Job History.
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated, IsManager]
 
     def get(self, request):
@@ -508,7 +509,7 @@ class ManagerJobsActiveView(APIView):
 
 
 class ManagerJobsCreateView(APIView):
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -579,7 +580,7 @@ class ManagerJobDetailView(APIView):
     GET /api/manager/jobs/<id>/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk: int):
@@ -813,7 +814,7 @@ class ManagerJobForceCompleteView(APIView):
     - All audit metadata persisted
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk: int):
@@ -937,7 +938,7 @@ class ManagerPlanningJobsView(APIView):
     GET /api/manager/jobs/planning/?date=YYYY-MM-DD
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -1005,7 +1006,7 @@ class ManagerJobsHistoryView(APIView):
     }
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
     pagination_class = JobsHistoryPagination
 
@@ -1089,7 +1090,7 @@ class ManagerJobsExportView(APIView):
     for integration with other systems.
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated, IsManager]
 
     # SLA reason codes → human-readable labels

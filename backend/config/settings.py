@@ -244,6 +244,20 @@ SIMPLE_JWT = {
 
 
 # =============================================================================
+# Paddle Billing Configuration (M001-sijc46: Launch-Ready Billing & Auth)
+# All IDs from environment — no hardcoded Paddle identifiers (D005)
+# =============================================================================
+PADDLE_ENVIRONMENT = os.getenv("PADDLE_ENVIRONMENT", "sandbox")  # "sandbox" | "production"
+PADDLE_API_KEY = os.getenv("PADDLE_API_KEY", "")
+PADDLE_CLIENT_TOKEN = os.getenv("PADDLE_CLIENT_TOKEN", "")
+PADDLE_WEBHOOK_SECRET = os.getenv("PADDLE_WEBHOOK_SECRET", "")
+# Price IDs per tier — set in .env for each environment
+PADDLE_PRICE_ID_STANDARD = os.getenv("PADDLE_PRICE_ID_STANDARD", "")
+PADDLE_PRICE_ID_PRO = os.getenv("PADDLE_PRICE_ID_PRO", "")
+PADDLE_PRICE_ID_ENTERPRISE = os.getenv("PADDLE_PRICE_ID_ENTERPRISE", "")
+
+
+# =============================================================================
 # CORS Settings (Environment-driven)
 # =============================================================================
 #

@@ -185,7 +185,7 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/manager/auth/login/`, {
+      const response = await fetch(`${API_BASE_URL}/api/manager/auth/jwt/login/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -213,9 +213,11 @@ export default function Login() {
         throw new Error(detail);
       }
 
-      if (data?.token) {
-        localStorage.setItem("authToken", data.token);
-        localStorage.setItem("auth_token", data.token);
+      if (data?.access) {
+        localStorage.setItem("access_token", data.access);
+      }
+      if (data?.refresh) {
+        localStorage.setItem("refresh_token", data.refresh);
       }
       if (data?.role) {
         localStorage.setItem("authUserRole", data.role);
@@ -341,7 +343,7 @@ export default function Login() {
         throw new Error(message);
       }
 
-      const newLoginResponse = await fetch(`${API_BASE_URL}/api/manager/auth/login/`, {
+      const newLoginResponse = await fetch(`${API_BASE_URL}/api/manager/auth/jwt/login/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password: passwordChangeData.newPassword }),
@@ -353,9 +355,11 @@ export default function Login() {
         throw new Error("Password changed but auto-login failed. Please log in manually.");
       }
 
-      if (newLoginData?.token) {
-        localStorage.setItem("authToken", newLoginData.token);
-        localStorage.setItem("auth_token", newLoginData.token);
+      if (newLoginData?.access) {
+        localStorage.setItem("access_token", newLoginData.access);
+      }
+      if (newLoginData?.refresh) {
+        localStorage.setItem("refresh_token", newLoginData.refresh);
       }
       if (newLoginData?.role) {
         localStorage.setItem("authUserRole", newLoginData.role);

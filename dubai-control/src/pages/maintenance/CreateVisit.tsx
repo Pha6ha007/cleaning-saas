@@ -32,6 +32,7 @@ import {
   type ChecklistTemplate,
 } from "@/api/maintenance";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
+import { UpgradeDialog } from "@/components/maintenance/UpgradeDialog";
 
 // RBAC: Check if user can create visits (owner/manager/staff for testing)
 // TODO: Restore proper RBAC after testing
@@ -78,6 +79,8 @@ export default function CreateVisit() {
   const [prefillApplied, setPrefillApplied] = useState(false);
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
+  const [upgradeReason, setUpgradeReason] = useState<"trial_expired" | "company_blocked">("trial_expired");
 
   // Checklist expand state
   const [checklistExpanded, setChecklistExpanded] = useState(false);
@@ -234,6 +237,14 @@ export default function CreateVisit() {
     },
     onError: (error: any) => {
       const errorData = error?.response?.data;
+
+      // Handle plan enforcement (trial expired / company blocked)
+      const errorCode = errorData?.code || errorData?.detail?.code;
+      if (errorCode === "trial_expired" || errorCode === "company_blocked") {
+        setUpgradeReason(errorCode);
+        setUpgradeDialogOpen(true);
+        return;
+      }
 
       // Handle field-level validation errors
       if (errorData?.fields) {
@@ -652,6 +663,13 @@ export default function CreateVisit() {
           </div>
         </div>
       </form>
+
+      {/* Plan enforcement dialog — shown when backend returns trial_expired / company_blocked */}
+      <UpgradeDialog
+        open={upgradeDialogOpen}
+        onClose={() => setUpgradeDialogOpen(false)}
+        reason={upgradeReason}
+      />
     </div>
   );
 }

@@ -19,6 +19,7 @@ import logging
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.authentication import TokenAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -86,7 +87,7 @@ class SupportSessionListCreateView(SupportPermissionMixin, APIView):
     POST /api/support/sessions/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -154,7 +155,7 @@ class SupportSessionMessagesView(SupportPermissionMixin, APIView):
     GET /api/support/sessions/{id}/messages/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request, session_id):
@@ -194,7 +195,7 @@ class SupportSendMessageView(SupportPermissionMixin, APIView):
     Body: {"message": "How do I create a job?"}
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request, session_id):

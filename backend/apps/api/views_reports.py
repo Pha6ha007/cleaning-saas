@@ -12,6 +12,7 @@ from django.utils.dateparse import parse_date
 
 from rest_framework import status
 from rest_framework.authentication import TokenAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -235,7 +236,7 @@ class OwnerOverviewView(APIView):
     GET /api/owner/overview/?days=30
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -286,7 +287,7 @@ class ManagerPerformanceView(APIView):
     GET /api/manager/performance/?date_from=YYYY-MM-DD&date_to=YYYY-MM-DD
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -464,7 +465,7 @@ class ManagerViolationJobsView(APIView):
     &cleaner_id=...&location_id=...
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -641,7 +642,7 @@ class ManagerReportEmailLogListView(APIView):
     GET /api/manager/report-emails/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -823,7 +824,7 @@ class ManagerReportEmailLogListView(APIView):
 
 
 class ManagerWeeklyReportView(APIView):
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -847,7 +848,7 @@ class ManagerWeeklyReportView(APIView):
 
 
 class ManagerMonthlyReportView(APIView):
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -875,7 +876,7 @@ class ManagerWeeklyReportPdfView(APIView):
     PDF-снимок weekly-отчёта по SLA.
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -912,7 +913,7 @@ class ManagerMonthlyReportPdfView(APIView):
     PDF-снимок monthly-отчёта по SLA.
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -993,7 +994,7 @@ class MonthlyReportEmailView(APIView):
     POST /api/manager/reports/monthly/email/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -1076,7 +1077,7 @@ class WeeklyReportEmailView(APIView):
     POST /api/manager/reports/weekly/email/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request):

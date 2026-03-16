@@ -427,3 +427,138 @@ class User(AbstractBaseUser, PermissionsMixin):
             return list(self.customer_locations.values_list("id", flat=True))
         # Non-customers can access all company locations
         return list(self.company.locations.filter(is_active=True).values_list("id", flat=True))
+
+
+# =============================================================================
+# Paddle Billing Models (M001-sijc46: Launch-Ready Billing & Auth)
+# =============================================================================
+
+
+class PaddleSubscription(models.Model):
+    """
+    One per company. Tracks current Paddle subscription state.
+
+    Updated by webhook handlers when Paddle delivers subscription events.
+    Used by BillingSubscriptionView to show real subscription data.
+    """
+
+    STATUS_ACTIVE = "active"
+    STATUS_CANCELED = "canceled"
+    STATUS_PAST_DUE = "past_due"
+    STATUS_PAUSED = "paused"
+    STATUS_TRIALING = "trialing"
+
+    STATUS_CHOICES = [
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_CANCELED, "Canceled"),
+        (STATUS_PAST_DUE, "Past Due"),
+        (STATUS_PAUSED, "Paused"),
+        (STATUS_TRIALING, "Trialing"),
+    ]
+
+    company = models.OneToOneField(
+        Company,
+        on_delete=models.CASCADE,
+        related_name="paddle_subscription",
+    )
+    paddle_subscription_id = models.CharField(
+        max_length=100,
+        unique=True,
+        db_index=True,
+        help_text="Paddle subscription ID (sub_xxx)",
+    )
+    paddle_customer_id = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Paddle customer ID (ctm_xxx)",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_ACTIVE,
+    )
+    plan_tier = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text="Pricing tier derived from Paddle price ID: standard/pro/enterprise",
+    )
+    current_period_start = models.DateTimeField(null=True, blank=True)
+    current_period_end = models.DateTimeField(null=True, blank=True)
+    paddle_update_url = models.URLField(
+        blank=True,
+        help_text="URL for customer to update payment method",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "paddle_subscriptions"
+
+    def __str__(self) -> str:
+        return f"PaddleSubscription({self.company.name}, {self.paddle_subscription_id}, {self.status})"
+
+
+class PaddleWebhookEvent(models.Model):
+    """
+    Audit log of every Paddle webhook event received.
+
+    Every event is persisted before processing — provides full audit trail,
+    enables replay debugging, and is the basis for idempotency (dedup by event_id).
+    """
+
+    STATUS_PENDING = "pending"
+    STATUS_PROCESSED = "processed"
+    STATUS_SKIPPED = "skipped"    # Out-of-order event, not applied
+    STATUS_FAILED = "failed"       # Handler raised exception
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_PROCESSED, "Processed"),
+        (STATUS_SKIPPED, "Skipped"),
+        (STATUS_FAILED, "Failed"),
+    ]
+
+    event_id = models.CharField(
+        max_length=100,
+        unique=True,
+        db_index=True,
+        help_text="Paddle event ID (evt_xxx) — used for deduplication",
+    )
+    event_type = models.CharField(
+        max_length=100,
+        help_text="Paddle event type (e.g. subscription.activated)",
+    )
+    payload = models.JSONField(
+        help_text="Full raw Paddle webhook payload JSON",
+    )
+    occurred_at = models.DateTimeField(
+        help_text="When the event occurred (from Paddle payload)",
+    )
+    received_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When we received the webhook",
+    )
+    processed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When we finished processing the event",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+    )
+    error_message = models.TextField(
+        blank=True,
+        help_text="Exception text if status=failed",
+    )
+
+    class Meta:
+        db_table = "paddle_webhook_events"
+        indexes = [
+            models.Index(fields=["event_type", "status"]),
+            models.Index(fields=["occurred_at"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"PaddleWebhookEvent({self.event_type}, {self.event_id}, {self.status})"

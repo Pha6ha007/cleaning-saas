@@ -1,12 +1,13 @@
 // dubai-control/src/pages/settings/Billing.tsx
 
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, CreditCard, Download, Info, AlertCircle, Loader2, Clock } from "lucide-react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { ArrowLeft, CreditCard, Download, Info, AlertCircle, Loader2, Clock, ExternalLink, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { useUserRole, canAccessBilling, canModifyBilling } from "@/hooks/useUserRole";
-import { getBillingSummary, downloadInvoice, type BillingSummary } from "@/api/client";
+import { getBillingSummary, downloadInvoice, getSubscription, type BillingSummary, type SubscriptionData } from "@/api/client";
+import { usePaddle } from "@/hooks/usePaddle";
 import {
   extractAPIError,
   getErrorMessage,
@@ -40,6 +41,8 @@ export default function Billing() {
   const user = useUserRole();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { openCheckout, isReady: paddleReady } = usePaddle();
 
   const canAccess = canAccessBilling(user.role);
   const isOwner = canModifyBilling(user.role);
@@ -49,12 +52,30 @@ export default function Billing() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [billingData, setBillingData] = useState<BillingSummary | null>(null);
+  const [subscriptionData, setSubscriptionData] = useState<SubscriptionData | null>(null);
   const [downloadingInvoice, setDownloadingInvoice] = useState<number | null>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null); // priceId being opened
+
+  // Show checkout success toast if redirected from Paddle
+  useEffect(() => {
+    if (searchParams.get("checkout") === "success") {
+      toast({
+        title: "Payment successful",
+        description: "Your subscription is now active. Welcome!",
+      });
+      // Remove query param from URL without re-render
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("checkout");
+        return next;
+      }, { replace: true });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Show AccessRestricted for Staff/Cleaner users
   // No redirect - show the restriction screen inline
 
-  // Fetch billing data
+  // Fetch billing data (parallel: BillingSummary + Paddle SubscriptionData)
   useEffect(() => {
     let mounted = true;
 
@@ -65,10 +86,14 @@ export default function Billing() {
         setIsLoading(true);
         setLoadError(null);
 
-        const data = await getBillingSummary();
+        const [data, sub] = await Promise.all([
+          getBillingSummary(),
+          getSubscription().catch(() => null), // Non-fatal: subscription API may not exist in older envs
+        ]);
 
         if (!mounted) return;
         setBillingData(data);
+        setSubscriptionData(sub);
       } catch (error: any) {
         console.error("Failed to fetch billing data:", error);
 
@@ -103,6 +128,44 @@ export default function Billing() {
 
   // Check if company is paid (use API boolean flag)
   const isPaid = billingData?.is_paid ?? false;
+
+  // Paddle checkout handler — opens overlay with chosen price
+  const handleOpenCheckout = async (priceId: string) => {
+    if (!paddleReady) {
+      toast({
+        variant: "destructive",
+        title: "Checkout unavailable",
+        description: "Paddle checkout is not ready. Please refresh the page.",
+      });
+      return;
+    }
+    // company_id is available via billingData — the JWT user's company
+    // We use a stable user identifier; company_id comes from the JWT custom claims
+    // passed in localStorage as part of token, or we can fetch it from JWT payload.
+    // For now, use a placeholder — the webhook matches by custom_data.company_id.
+    // In production, company_id is stored in JWT token custom claims.
+    const companyId = user.companyId;
+    setCheckoutLoading(priceId);
+    try {
+      openCheckout(priceId, companyId);
+    } finally {
+      setCheckoutLoading(null);
+    }
+  };
+
+  // Derive subscription state from S03 endpoint data
+  const hasActiveSub = subscriptionData?.has_subscription === true && subscriptionData?.status === "active";
+  const paddleUpdateUrl = subscriptionData?.paddle_update_url || "";
+  const currentPeriodEnd = subscriptionData?.current_period_end
+    ? new Date(subscriptionData.current_period_end).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : null;
+
+  const PRICE_ID_STANDARD = import.meta.env.VITE_PADDLE_PRICE_ID_STANDARD as string;
+  const PRICE_ID_PRO = import.meta.env.VITE_PADDLE_PRICE_ID_PRO as string;
 
   // Trial countdown logic with consistent copy
   const getTrialStatus = (): { daysRemaining: number; expired: boolean; message: string } | null => {
@@ -538,16 +601,74 @@ export default function Billing() {
               </span>
             </div>
 
-            {/* Next Billing Date */}
-            <p className="text-sm text-muted-foreground">
-              Next billing date: {plan.nextBillingDate}
-            </p>
+            {/* Next Billing Date (from BillingSummary) or Period End (from Paddle) */}
+            {currentPeriodEnd ? (
+              <p className="text-sm text-muted-foreground">
+                Next billing date: {currentPeriodEnd}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Next billing date: {plan.nextBillingDate}
+              </p>
+            )}
 
-            {/* CTA Button - Owner Only, not shown for paid users */}
-            {isOwner && !isPaid && (
+            {/* Manage subscription link (for active Paddle subscribers) */}
+            {hasActiveSub && paddleUpdateUrl && isOwner && (
               <div className="pt-2">
-                <Button asChild className="bg-accent-primary text-white hover:bg-accent-primary/90">
-                  <Link to="/cleanproof/contact">{BILLING_COPY.ownerCta}</Link>
+                <Button variant="outline" asChild>
+                  <a href={paddleUpdateUrl} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Manage subscription
+                  </a>
+                </Button>
+              </div>
+            )}
+
+            {/* Paddle checkout CTAs (Owner only, no active Paddle sub) */}
+            {isOwner && !isPaid && !hasActiveSub && (
+              <div className="pt-2 flex flex-wrap gap-3">
+                {PRICE_ID_STANDARD && (
+                  <Button
+                    className="bg-accent-primary text-white hover:bg-accent-primary/90"
+                    disabled={checkoutLoading === PRICE_ID_STANDARD || !paddleReady}
+                    onClick={() => handleOpenCheckout(PRICE_ID_STANDARD)}
+                  >
+                    {checkoutLoading === PRICE_ID_STANDARD ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Zap className="mr-2 h-4 w-4" />
+                    )}
+                    Upgrade to Standard
+                  </Button>
+                )}
+                {PRICE_ID_PRO && (
+                  <Button
+                    variant="outline"
+                    disabled={checkoutLoading === PRICE_ID_PRO || !paddleReady}
+                    onClick={() => handleOpenCheckout(PRICE_ID_PRO)}
+                  >
+                    {checkoutLoading === PRICE_ID_PRO ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Zap className="mr-2 h-4 w-4" />
+                    )}
+                    Upgrade to Pro
+                  </Button>
+                )}
+                {/* Fallback: contact link if Paddle env vars not set */}
+                {!PRICE_ID_STANDARD && !PRICE_ID_PRO && (
+                  <Button asChild className="bg-accent-primary text-white hover:bg-accent-primary/90">
+                    <Link to="/cleanproof/contact">{BILLING_COPY.ownerCta}</Link>
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* Non-Paddle upgrade path for non-owner */}
+            {!isOwner && !isPaid && (
+              <div className="pt-2">
+                <Button asChild variant="outline">
+                  <Link to="/cleanproof/contact">{BILLING_COPY.viewPlans}</Link>
                 </Button>
               </div>
             )}
@@ -563,11 +684,29 @@ export default function Billing() {
                 <p key={index}>• {item}</p>
               ))}
             </div>
-            <div className="mt-4">
-              <Button asChild variant="outline">
-                <Link to="/cleanproof/contact">{BILLING_COPY.ownerCta}</Link>
-              </Button>
-            </div>
+            {isOwner && (
+              <div className="mt-4 flex flex-wrap gap-3">
+                {PRICE_ID_STANDARD && (
+                  <Button
+                    className="bg-accent-primary text-white hover:bg-accent-primary/90"
+                    disabled={checkoutLoading === PRICE_ID_STANDARD || !paddleReady}
+                    onClick={() => handleOpenCheckout(PRICE_ID_STANDARD)}
+                  >
+                    {checkoutLoading === PRICE_ID_STANDARD ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Zap className="mr-2 h-4 w-4" />
+                    )}
+                    Upgrade now
+                  </Button>
+                )}
+                {!PRICE_ID_STANDARD && (
+                  <Button asChild variant="outline">
+                    <Link to="/cleanproof/contact">{BILLING_COPY.ownerCta}</Link>
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         )}
 

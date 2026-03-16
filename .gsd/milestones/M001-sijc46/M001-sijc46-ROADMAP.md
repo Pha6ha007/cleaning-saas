@@ -59,19 +59,19 @@ This milestone is complete only when all are true:
 - [x] **S01: JWT Auth Backend** `risk:high` `depends:[]`
   > After this: Login endpoint returns JWT access+refresh token pair; refresh endpoint rotates tokens; blacklisted tokens are rejected; existing Token auth still works for mobile.
 
-- [ ] **S02: Manager Portal JWT Migration** `risk:medium` `depends:[S01]`
+- [x] **S02: Manager Portal JWT Migration** `risk:medium` `depends:[S01]`
   > After this: Manager portal authenticates with JWT Bearer tokens, auto-refreshes expired access tokens, handles 401 gracefully with refresh retry, login/logout flow uses JWT.
 
-- [ ] **S03: Paddle Billing Backend** `risk:high` `depends:[S01]`
+- [x] **S03: Paddle Billing Backend** `risk:high` `depends:[S01]`
   > After this: Webhook endpoint receives Paddle events with signature verification; subscription state syncs to Company model; raw payloads persisted; idempotent and order-safe processing proven with test fixtures.
 
-- [ ] **S04: Checkout & Billing Dashboard** `risk:medium` `depends:[S02,S03]`
+- [x] **S04: Checkout & Billing Dashboard** `risk:medium` `depends:[S02,S03]`
   > After this: Pricing page opens Paddle.js overlay checkout; after simulated payment, company plan updates to active; billing page shows real subscription data from local records.
 
-- [ ] **S05: Trial Enforcement & Upgrade Flow** `risk:medium` `depends:[S03,S04]`
+- [x] **S05: Trial Enforcement & Upgrade Flow** `risk:medium` `depends:[S03,S04]`
   > After this: Expired trial company sees read-only mode in manager portal; blocked actions show upgrade CTA; clicking upgrade opens Paddle checkout; after payment, full access restores.
 
-- [ ] **S06: Launch Polish & Deployment Docs** `risk:low` `depends:[S05]`
+- [x] **S06: Launch Polish & Deployment Docs** `risk:low` `depends:[S05]`
   > After this: Landing pages reviewed for launch readiness; Paddle sandbox setup guide complete; VPS deployment checklist covers JWT config, Paddle webhook URL, env vars, Nginx settings.
 
 ## Boundary Map

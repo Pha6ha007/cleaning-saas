@@ -15,6 +15,7 @@ from django.shortcuts import get_object_or_404
 
 from rest_framework import status
 from rest_framework.authentication import TokenAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
@@ -38,7 +39,7 @@ class CompanyView(APIView):
     PATCH /api/company
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def _ensure_company_admin(self, request):
@@ -139,7 +140,7 @@ class CompanyLogoUploadView(APIView):
     multipart/form-data, field "file"
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
 
@@ -217,7 +218,7 @@ class CompanyCleanersView(APIView):
     POST /api/company/cleaners
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def _ensure_company_admin(self, request):
@@ -393,7 +394,7 @@ class CompanyCleanerResetAccessView(APIView):
     POST /api/company/cleaners/{id}/reset-access/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
@@ -460,7 +461,7 @@ class CompanyCleanerAuditLogView(APIView):
     GET /api/company/cleaners/{id}/audit-log/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
@@ -530,7 +531,7 @@ class CompanyUsersView(APIView):
     RBAC: Owner/Manager can view, only Owner can invite
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def _ensure_company_admin(self, request):
@@ -680,7 +681,7 @@ class CompanyUserDetailView(APIView):
     - PATCH/DELETE: Only Owner can modify (except can't modify themselves or other owners)
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def _ensure_company_admin(self, request):
@@ -872,7 +873,7 @@ class CompanyUserResetPasswordView(APIView):
     RBAC: Only Owner can reset passwords
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):

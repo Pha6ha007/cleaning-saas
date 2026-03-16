@@ -22,6 +22,9 @@ from apps.accounts.api.views_settings import (
     InvoiceDownloadView,
 )
 
+# Paddle Billing (M001-sijc46)
+from apps.api.views_paddle import PaddleWebhookView, BillingSubscriptionView
+
 
 urlpatterns = [
     # CleanProof trial start (must be BEFORE generic api include)
@@ -70,6 +73,18 @@ urlpatterns = [
         "api/settings/billing/invoices/<int:invoice_id>/download/",
         InvoiceDownloadView.as_view(),
         name="api-invoice-download",
+    ),
+
+    # Paddle Billing (M001-sijc46)
+    path(
+        "api/paddle/webhook/",
+        PaddleWebhookView.as_view(),
+        name="paddle-webhook",
+    ),
+    path(
+        "api/billing/subscription/",
+        BillingSubscriptionView.as_view(),
+        name="billing-subscription",
     ),
 
     path("admin/", admin.site.urls),
