@@ -253,34 +253,30 @@ class TestJWTOnCompanyViews:
 
 
 @pytest.mark.django_db
-class TestCleanerViewsRemainTokenOnly:
+class TestCleanerViewsDualAuth:
     """
-    views_cleaner.py was NOT updated — cleaner endpoints should reject JWT.
+    views_cleaner.py was updated in M003/S01 to support both JWT and Token auth.
 
-    The cleaner app (mobile) uses Token auth only.
-    JWT should not be accepted on these views — they explicitly use [TokenAuthentication].
+    Cleaner endpoints now accept:
+    - Authorization: Bearer <jwt> (new — M003/S01)
+    - Authorization: Token <token> (legacy — backward compat)
     """
 
-    def test_cleaner_checkin_rejects_jwt(self, api_client, cleaner):
-        """A JWT Bearer token should not authenticate on cleaner-only endpoints."""
-        # First get a JWT for the cleaner user via the general login
-        # (Note: cleaner cannot use JWT manager login, so we create a token manually)
+    def test_cleaner_checkin_accepts_jwt(self, api_client, cleaner):
+        """A JWT Bearer token IS now accepted on cleaner endpoints (M003/S01)."""
         from rest_framework_simplejwt.tokens import AccessToken
 
-        # Manually create an access token for the cleaner (bypassing manager-only login check)
         token = AccessToken.for_user(cleaner)
         api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {str(token)}")
 
-        # The cleaner job list is a cleaner-only endpoint
         resp = api_client.get(reverse("jobs-today"))
-        # Should be 401 because the view only accepts TokenAuthentication
-        assert resp.status_code == 401, (
-            f"Cleaner view accepted JWT — it should only accept Token auth. "
-            f"Got {resp.status_code}: {resp.content}"
+        # 200 OK or 403 (wrong role) — both indicate authentication succeeded
+        assert resp.status_code in (200, 403), (
+            f"Cleaner view should accept JWT (M003/S01). Got {resp.status_code}: {resp.content}"
         )
 
     def test_cleaner_checkin_accepts_token(self, api_client, cleaner):
-        """Token auth still works on cleaner endpoints."""
+        """Token auth still works on cleaner endpoints (backward compat)."""
         token_key = _get_token(cleaner)
         api_client.credentials(HTTP_AUTHORIZATION=f"Token {token_key}")
         resp = api_client.get(reverse("jobs-today"))

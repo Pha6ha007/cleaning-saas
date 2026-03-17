@@ -4,11 +4,12 @@ JWT authentication views for Proof Platform.
 
 Provides:
 - JWTManagerLoginView: Login for manager portal (owner/manager/staff)
+- JWTCleanerLoginView: Login for mobile cleaner app (ROLE_CLEANER only) — M003/S01
 - JWTRefreshView: Token refresh with rotation
 - JWTLogoutView: Blacklist refresh token on logout
 
 These endpoints coexist alongside Token auth endpoints.
-Mobile app continues using Token auth; manager portal uses JWT.
+Backend accepts both JWT and Token auth on cleaner views (backward compatible).
 """
 
 from rest_framework import status
@@ -208,5 +209,97 @@ class JWTLogoutView(APIView):
 
         return Response(
             {"detail": "Successfully logged out."},
+            status=status.HTTP_200_OK,
+        )
+
+
+# =============================================================================
+# M003/S01: JWT Login for Mobile Cleaner App
+# =============================================================================
+
+@extend_schema(
+    tags=["auth"],
+    summary="JWT Login (mobile cleaner app)",
+    description=(
+        "Authenticate a cleaner. Returns access + refresh JWT tokens. "
+        "Manager/staff/owner accounts are rejected — use `/api/manager/auth/jwt/login/` instead. "
+        "Backend continues to accept Token auth on cleaner views (backward compatible with old app versions)."
+    ),
+    request=inline_serializer(
+        name="JWTCleanerLoginRequest",
+        fields={
+            "email": drf_serializers.EmailField(),
+            "password": drf_serializers.CharField(),
+        },
+    ),
+    responses={
+        200: OpenApiResponse(description="Login successful — returns access + refresh tokens"),
+        401: OpenApiResponse(description="Invalid credentials or non-cleaner account"),
+        403: OpenApiResponse(description="Account inactive"),
+    },
+    auth=[],
+)
+class JWTCleanerLoginView(APIView):
+    """
+    JWT Login for mobile cleaner app.
+
+    POST /api/auth/cleaner/jwt/login/
+    Body: {"email": "...", "password": "..."}
+    Returns: {
+        "access": "...",
+        "refresh": "...",
+        "user_id": 1,
+        "email": "...",
+        "full_name": "...",
+        "role": "cleaner"
+    }
+
+    Access token lifetime: 1 day (short, suitable for mobile).
+    Refresh token lifetime: 30 days (rotates on use).
+    """
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+    throttle_classes = [AnonRateThrottle]
+
+    def post(self, request):
+        email = (request.data.get("email") or "").strip().lower()
+        password = request.data.get("password") or ""
+
+        if not email or not password:
+            return Response(
+                {"detail": "Email and password are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            user = User.objects.get(
+                email__iexact=email,
+                role=User.ROLE_CLEANER,
+                is_active=True,
+            )
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "Invalid credentials."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        if not user.check_password(password):
+            return Response(
+                {"detail": "Invalid credentials."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        token = ProofTokenObtainPairSerializer.get_token(user)
+
+        return Response(
+            {
+                "access": str(token.access_token),
+                "refresh": str(token),
+                "user_id": user.id,
+                "email": user.email,
+                "full_name": user.full_name,
+                "role": user.role,
+            },
             status=status.HTTP_200_OK,
         )

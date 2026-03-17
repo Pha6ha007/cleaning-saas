@@ -175,12 +175,15 @@ def _get_company_logo_image(company, max_height=18 * mm):
   return img
 
 
-def _build_photo_cell(photo: Optional[JobPhoto], label: str, styles, max_w, max_h):
+def _build_photo_cell(photo: Optional[JobPhoto], label: str, styles, max_w, max_h, company=None):
   """
   Содержимое ячейки:
     - заголовок (Before/After)
     - картинка (если есть) или fallback
     - метаданные (EXIF) если есть
+
+  M003/S03: If company is provided, watermark is applied to a temp copy of the image
+  (company name + timestamp + GPS overlay). Original file is never modified.
   """
   meta_style = ParagraphStyle(
       name="PhotoMeta",
@@ -207,7 +210,17 @@ def _build_photo_cell(photo: Optional[JobPhoto], label: str, styles, max_w, max_
 
   # Рендер картинки (бережно, без падений)
   try:
-      reader = ImageReader(abs_path)
+      # M003/S03: Apply watermark overlay if company is provided
+      render_path = abs_path
+      if company is not None:
+          try:
+              from apps.jobs.watermark import apply_watermark_to_path
+              company_name = getattr(company, "name", "") or ""
+              render_path = apply_watermark_to_path(abs_path, photo=photo, company_name=company_name)
+          except Exception:
+              render_path = abs_path  # fallback: use original
+
+      reader = ImageReader(render_path)
       iw, ih = reader.getSize()
 
       # масштабирование с сохранением пропорций
@@ -215,7 +228,7 @@ def _build_photo_cell(photo: Optional[JobPhoto], label: str, styles, max_w, max_
       draw_w = float(iw) * scale
       draw_h = float(ih) * scale
 
-      img = Image(abs_path, width=draw_w, height=draw_h)
+      img = Image(render_path, width=draw_w, height=draw_h)
       flows.append(img)
 
   except Exception:
@@ -1074,8 +1087,8 @@ def generate_maintenance_visit_report_pdf(job: Job) -> bytes:
     img_max_w = cell_w
     img_max_h = 65 * mm
 
-    left_cell = _build_photo_cell(before, "Before", styles, img_max_w, img_max_h)
-    right_cell = _build_photo_cell(after, "After", styles, img_max_w, img_max_h)
+    left_cell = _build_photo_cell(before, "Before", styles, img_max_w, img_max_h, company=getattr(job, "company", None))
+    right_cell = _build_photo_cell(after, "After", styles, img_max_w, img_max_h, company=getattr(job, "company", None))
 
     photos_tbl = Table([[left_cell, right_cell]], colWidths=[cell_w, cell_w])
     photos_tbl.setStyle(

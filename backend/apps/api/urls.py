@@ -7,7 +7,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, Sp
 from apps.marketing.views import DemoRequestCreateView, ContactMessageCreateView
 from . import analytics_views
 from . import views
-from .views_jwt import JWTManagerLoginView, JWTRefreshView, JWTLogoutView
+from .views_jwt import JWTManagerLoginView, JWTCleanerLoginView, JWTRefreshView, JWTLogoutView
 
 # NOTE:
 # apps.api.views is a thin entry point that re-exports public API views
@@ -71,6 +71,12 @@ urlpatterns = [
         "auth/cleaner-login/",
         api_views.CleanerPinLoginView.as_view(),
         name="api-cleaner-login",
+    ),
+    # M003/S01: JWT login for mobile cleaner app
+    path(
+        "auth/cleaner/jwt/login/",
+        JWTCleanerLoginView.as_view(),
+        name="api-cleaner-jwt-login",
     ),
     path(
         "manager/auth/login/",

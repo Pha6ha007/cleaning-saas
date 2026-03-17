@@ -14,6 +14,7 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.authentication import JWTAuthentication  # M003/S01
 
 from apps.accounts.models import User
 from apps.jobs.image_utils import normalize_job_photo_to_jpeg
@@ -42,7 +43,7 @@ class TodayJobsView(APIView):
     Требует токен (Authorization: Token <ключ>).
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]  # M003/S01: JWT first, Token fallback
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -80,7 +81,7 @@ class JobDetailView(APIView):
     GET /api/jobs/<id>/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]  # M003/S01: JWT first, Token fallback
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk: int):
@@ -121,7 +122,7 @@ class JobCheckInView(APIView):
     Body: { "latitude": 25.2048, "longitude": 55.2708 }
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]  # M003/S01: JWT first, Token fallback
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk: int):
@@ -202,7 +203,7 @@ class JobCheckOutView(APIView):
     Body: { "latitude": 25.2048, "longitude": 55.2708 }
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]  # M003/S01: JWT first, Token fallback
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk: int):
@@ -295,7 +296,7 @@ class ChecklistItemToggleView(APIView):
     Body: { "is_completed": true/false }  (опционально, по умолчанию true)
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]  # M003/S01: JWT first, Token fallback
     permission_classes = [IsAuthenticated]
 
     def post(self, request, job_id: int, item_id: int):
@@ -341,7 +342,7 @@ class ChecklistBulkUpdateView(APIView):
     Bulk update чеклиста.
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]  # M003/S01: JWT first, Token fallback
     permission_classes = [IsAuthenticated]
 
     def post(self, request, job_id: int):
@@ -398,7 +399,7 @@ class JobPhotosView(APIView):
     GET /api/jobs/<id>/photos/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]  # M003/S01: JWT first, Token fallback
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk: int):
@@ -568,7 +569,7 @@ class JobPhotoDeleteView(APIView):
     DELETE /api/jobs/<id>/photos/<photo_type>/
     """
 
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]  # M003/S01: JWT first, Token fallback
     permission_classes = [IsAuthenticated]
 
     def delete(self, request, pk: int, photo_type: str):

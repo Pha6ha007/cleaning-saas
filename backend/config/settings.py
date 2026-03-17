@@ -70,6 +70,8 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",  # JWT token blacklisting
     "django_celery_beat",  # Stage 14: Periodic tasks
     "drf_spectacular",     # M002: OpenAPI 3.0 schema + Swagger UI
+    "import_export",       # M003/S02: Bulk CSV/XLSX import via Django Admin
+    "apps.webhooks",       # M003/S04: Outgoing webhooks
 
     # Our apps
     "apps.accounts",

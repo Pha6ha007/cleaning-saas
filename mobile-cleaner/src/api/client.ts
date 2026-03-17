@@ -1,22 +1,17 @@
 // mobile-cleaner/src/api/client.ts
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { resetToLogin } from "../navigation";
-
 /**
  * Mobile API client — Execution Core (Layer 1)
  *
- * Этот модуль — единственная точка общения мобильного приложения с backend
- * для:
- * - логина клинера;
- * - получения списка задач на сегодня;
- * - детальной информации по job;
- * - check-in / check-out;
- * - чек-листа;
- * - фото (before / after);
- * - PDF-отчёта.
+ * M003/S01: Migrated to JWT auth.
+ *   - loginCleaner() now hits /api/auth/cleaner/jwt/login/ → returns access + refresh tokens
+ *   - apiFetch() sends Authorization: Bearer <access>
+ *   - 401 → auto-refresh via /api/manager/auth/jwt/refresh/ (shared endpoint)
+ *   - Refresh fail → auto-logout (token cleared, resetToLogin())
+ *   - _refreshPromise dedup: concurrent 401s share one refresh, not N
+ *   - Backward compatible: old Token-auth sessions still handled (Token stored separately)
  *
  * ВАЖНО:
- * - Любое изменение формата payload’ов или URL может сломать:
+ * - Любое изменение формата payload'ов или URL может сломать:
  *   - backend-валидацию (Phase 9 photos, GPS, checklist),
  *   - Manager Portal (Job Details / Planning),
  *   - PDF-отчёты.
@@ -26,62 +21,119 @@ import { resetToLogin } from "../navigation";
  *   - прогонять полный флоу: Login → Today Jobs → Job Details → Check-in → Photos → Checklist → Check-out → PDF.
  */
 
-// Базовый URL API (IP твоего Mac + порт backend'а)
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { resetToLogin } from "../navigation";
+
+// Базовый URL API
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE_URL || "http://192.168.31.78:8000";
 
+// ─── Storage keys ────────────────────────────────────────────────────────────
 
-// ===== Auth token — memory + AsyncStorage =====
+const STORAGE_ACCESS_TOKEN  = "@jwt_access_token";
+const STORAGE_REFRESH_TOKEN = "@jwt_refresh_token";
+/** Legacy key — kept for backward compat read on first launch after upgrade */
+const STORAGE_LEGACY_TOKEN  = "@auth_token";
 
-const AUTH_TOKEN_KEY = "@auth_token";
+// ─── In-memory auth state ────────────────────────────────────────────────────
 
 type AuthState = {
-  token: string | null;
+  accessToken: string | null;
+  refreshToken: string | null;
 };
 
 const auth: AuthState = {
-  token: null,
+  accessToken: null,
+  refreshToken: null,
 };
 
-/**
- * setAuthToken — stores the token in memory AND persists it to AsyncStorage.
- * Pass null to clear (logout).
- */
-export function setAuthToken(token: string | null) {
-  auth.token = token;
-  if (token) {
-    AsyncStorage.setItem(AUTH_TOKEN_KEY, token).catch((err) => {
-      console.warn("[setAuthToken] AsyncStorage.setItem failed:", err);
-    });
-  } else {
-    AsyncStorage.removeItem(AUTH_TOKEN_KEY).catch((err) => {
-      console.warn("[setAuthToken] AsyncStorage.removeItem failed:", err);
-    });
-  }
+/** Dedup: only one refresh request in flight at a time across concurrent 401s */
+let _refreshPromise: Promise<string | null> | null = null;
+
+// ─── Token management ─────────────────────────────────────────────────────────
+
+export function getAccessToken(): string | null {
+  return auth.accessToken;
 }
 
-export function getAuthToken() {
-  return auth.token;
+export function getRefreshToken(): string | null {
+  return auth.refreshToken;
+}
+
+/** Store JWT pair in memory + AsyncStorage. */
+export async function setTokens(access: string, refresh: string): Promise<void> {
+  auth.accessToken = access;
+  auth.refreshToken = refresh;
+  await Promise.all([
+    AsyncStorage.setItem(STORAGE_ACCESS_TOKEN, access),
+    AsyncStorage.setItem(STORAGE_REFRESH_TOKEN, refresh),
+  ]).catch((err) => {
+    console.warn("[setTokens] AsyncStorage failed:", err);
+  });
+}
+
+/** Clear all tokens (logout). */
+export async function clearTokens(): Promise<void> {
+  auth.accessToken = null;
+  auth.refreshToken = null;
+  _refreshPromise = null;
+  await Promise.all([
+    AsyncStorage.removeItem(STORAGE_ACCESS_TOKEN),
+    AsyncStorage.removeItem(STORAGE_REFRESH_TOKEN),
+    AsyncStorage.removeItem(STORAGE_LEGACY_TOKEN),
+  ]).catch((err) => {
+    console.warn("[clearTokens] AsyncStorage failed:", err);
+  });
 }
 
 /**
- * loadStoredToken — called once at app startup to hydrate the in-memory token
- * from AsyncStorage. Returns the token if found, null otherwise.
+ * loadStoredTokens — called once at app startup to hydrate in-memory state.
+ * Handles migration: if only legacy Token is stored, treats it as access token
+ * (backward compat for users upgrading from pre-M003 app version).
  */
-export async function loadStoredToken(): Promise<string | null> {
+export async function loadStoredTokens(): Promise<void> {
   try {
-    const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
-    if (token) {
-      auth.token = token;
+    const [access, refresh, legacy] = await Promise.all([
+      AsyncStorage.getItem(STORAGE_ACCESS_TOKEN),
+      AsyncStorage.getItem(STORAGE_REFRESH_TOKEN),
+      AsyncStorage.getItem(STORAGE_LEGACY_TOKEN),
+    ]);
+
+    if (access) {
+      auth.accessToken = access;
+      auth.refreshToken = refresh ?? null;
+    } else if (legacy) {
+      // Pre-M003 session: load legacy token as access token.
+      // Next 401 will trigger refresh (or logout if no refresh token).
+      auth.accessToken = legacy;
+      auth.refreshToken = null;
+      if (__DEV__) console.log("[loadStoredTokens] Loaded legacy Token auth — will upgrade on next request");
     }
-    return token ?? null;
   } catch (err) {
-    console.warn("[loadStoredToken] AsyncStorage.getItem failed:", err);
-    return null;
+    console.warn("[loadStoredTokens] AsyncStorage failed:", err);
   }
 }
 
-// ===== Типы =====
+/**
+ * Backward-compat aliases used by pre-M003 code paths (e.g. fetchJobReportPdf).
+ */
+export function getAuthToken(): string | null {
+  return auth.accessToken;
+}
+export function setAuthToken(token: string | null): void {
+  auth.accessToken = token;
+  if (token) {
+    AsyncStorage.setItem(STORAGE_ACCESS_TOKEN, token).catch(() => {});
+  } else {
+    clearTokens().catch(() => {});
+  }
+}
+export async function loadStoredToken(): Promise<string | null> {
+  await loadStoredTokens();
+  return auth.accessToken;
+}
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export type CleanerJobSummary = {
   id: number;
@@ -89,11 +141,7 @@ export type CleanerJobSummary = {
   scheduled_date?: string | null;
   scheduled_start_time?: string | null;
   scheduled_end_time?: string | null;
-
-  // Текущий backend может отдавать так
   location__name?: string | null;
-
-  // На будущее: нормальный объект
   location?: {
     name?: string;
     address?: string;
@@ -134,27 +182,19 @@ export type JobDetail = {
   scheduled_end_time: string | null;
   actual_start_time: string | null;
   actual_end_time: string | null;
-
-  // Flat fields (canonical backend shape)
   location_name: string | null;
   manager_notes: string;
   cleaner_notes: string;
-
   checklist_items: JobChecklistItem[];
   check_events: JobCheckEvent[];
-
   before_photo_url: string | null;
   after_photo_url: string | null;
-
-  // Optional nested location object (some backend variants / future shape)
   location?: {
     name?: string | null;
     address?: string | null;
     latitude?: number | string | null;
     longitude?: number | string | null;
   } | null;
-
-  // Optional flat location detail fields (some backend variants)
   location_address?: string | null;
   location_latitude?: number | string | null;
   location_lat?: number | string | null;
@@ -162,24 +202,74 @@ export type JobDetail = {
   location_lng?: number | string | null;
 };
 
-// Чтобы старый код, где ожидается JobListItem, не ломался
 export type JobListItem = CleanerJobSummary;
 
-// ===== Низкоуровневый helper: читаем body один раз =====
+// ─── Error type ───────────────────────────────────────────────────────────────
 
 type ApiError = Error & {
   status?: number;
   details?: any;
 };
 
+// ─── Token refresh ────────────────────────────────────────────────────────────
+
+/**
+ * Refresh the access token using the stored refresh token.
+ * Uses module-level _refreshPromise to ensure only one in-flight refresh at a time.
+ * Returns new access token string, or null if refresh failed (caller should logout).
+ */
+async function _doRefresh(): Promise<string | null> {
+  const refresh = auth.refreshToken;
+  if (!refresh) return null;
+
+  try {
+    const resp = await fetch(`${API_BASE_URL}/api/manager/auth/jwt/refresh/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh }),
+    });
+
+    if (!resp.ok) return null;
+
+    const data = await resp.json();
+    const newAccess: string | null = data?.access ?? null;
+    const newRefresh: string | null = data?.refresh ?? null;
+
+    if (!newAccess) return null;
+
+    // Store new pair
+    auth.accessToken = newAccess;
+    if (newRefresh) auth.refreshToken = newRefresh;
+    await Promise.all([
+      AsyncStorage.setItem(STORAGE_ACCESS_TOKEN, newAccess),
+      newRefresh ? AsyncStorage.setItem(STORAGE_REFRESH_TOKEN, newRefresh) : Promise.resolve(),
+    ]).catch(() => {});
+
+    return newAccess;
+  } catch {
+    return null;
+  }
+}
+
+function _refreshOnce(): Promise<string | null> {
+  if (!_refreshPromise) {
+    _refreshPromise = _doRefresh().finally(() => {
+      _refreshPromise = null;
+    });
+  }
+  return _refreshPromise;
+}
+
+// ─── Core fetch ───────────────────────────────────────────────────────────────
+
 /**
  * apiFetch — единственный низкоуровневый helper для запросов.
  *
- * ВАЖНО:
- * - Отвечает за:
- *   - подстановку Authorization: Token <token>;
- *   - корректный Content-Type (JSON vs FormData);
- *   - единый формат ошибок (ApiError с .status и .details).
+ * M003/S01 changes:
+ * - Sends Authorization: Bearer <access> (JWT)
+ * - Legacy Token auth fallback: if access token looks like a DRF Token (no dots), sends Token header
+ * - On 401: attempts one silent token refresh, retries request
+ * - On refresh failure: clears tokens, calls resetToLogin()
  *
  * НЕЛЬЗЯ:
  * - Ставить Content-Type руками для FormData (ломает boundary);
@@ -195,7 +285,8 @@ type ApiError = Error & {
 
 async function apiFetch<T = any>(
   path: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  _retried = false
 ): Promise<T> {
   const url = `${API_BASE_URL}${path}`;
 
@@ -206,54 +297,54 @@ async function apiFetch<T = any>(
   const isFormData =
     typeof FormData !== "undefined" && options.body instanceof FormData;
 
-  // Для JSON руками ставим Content-Type, для FormData — никогда
   if (!isFormData && !headers["Content-Type"]) {
     headers["Content-Type"] = "application/json";
   }
 
-  const token = getAuthToken();
+  const token = auth.accessToken;
   if (token && !headers["Authorization"]) {
-    headers["Authorization"] = `Token ${token}`;
-  } else if (!token) {
-    if (__DEV__) console.log("[apiFetch] No auth token set for request:", path);
+    // Detect legacy DRF Token (no dots) vs JWT (two dots = three parts)
+    const isJwt = token.split(".").length === 3;
+    headers["Authorization"] = isJwt ? `Bearer ${token}` : `Token ${token}`;
   }
 
-  // B-1: 30-second request timeout
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 30_000);
 
   let resp: Response;
   try {
-    resp = await fetch(url, {
-      ...options,
-      headers,
-      signal: controller.signal,
-    });
+    resp = await fetch(url, { ...options, headers, signal: controller.signal });
   } catch (fetchErr: any) {
     const msg: string = fetchErr?.message ?? "";
-
-    // B-1: AbortController fired → timeout
     if (fetchErr?.name === "AbortError" || msg.includes("aborted")) {
-      throw new Error(
-        "Request timed out. Please check your connection and try again."
-      );
+      throw new Error("Request timed out. Please check your connection and try again.");
     }
-
-    // B-4: device has no network path to server
     if (
       msg.includes("Network request failed") ||
       msg.includes("Failed to fetch") ||
       msg.includes("Network Error")
     ) {
       if (__DEV__) console.warn("[apiFetch] network error:", fetchErr);
-      throw new Error(
-        "No internet connection. Please check your network and try again."
-      );
+      throw new Error("No internet connection. Please check your network and try again.");
     }
-
     throw fetchErr;
   } finally {
     clearTimeout(timeoutId);
+  }
+
+  // ─── 401: attempt silent refresh ──────────────────────────────────────────
+  if (resp.status === 401 && !_retried) {
+    const newAccess = await _refreshOnce();
+    if (newAccess) {
+      // Retry once with new token
+      return apiFetch<T>(path, options, true);
+    }
+    // Refresh failed — logout
+    await clearTokens();
+    resetToLogin();
+    const err: ApiError = new Error("Session expired. Please login again.");
+    err.status = 401;
+    throw err;
   }
 
   const raw = await resp.text();
@@ -262,20 +353,15 @@ async function apiFetch<T = any>(
   let data: any = null;
   if (raw) {
     if (contentType.includes("application/json")) {
-      try {
-        data = JSON.parse(raw);
-      } catch {
-        data = raw;
-      }
+      try { data = JSON.parse(raw); } catch { data = raw; }
     } else {
       data = raw;
     }
   }
 
-  // Handle 401 Unauthorized - clear token and redirect to login
+  // 401 on retry (or no refresh token) → logout
   if (resp.status === 401) {
-    await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
-    auth.token = null;
+    await clearTokens();
     resetToLogin();
     const err: ApiError = new Error("Session expired. Please login again.");
     err.status = 401;
@@ -286,10 +372,7 @@ async function apiFetch<T = any>(
     const msg =
       typeof data === "string"
         ? data
-        : data?.detail ||
-          data?.message ||
-          (data ? JSON.stringify(data) : `HTTP ${resp.status}`);
-
+        : data?.detail || data?.message || (data ? JSON.stringify(data) : `HTTP ${resp.status}`);
     const err: ApiError = new Error(msg);
     err.status = resp.status;
     err.details = data;
@@ -299,228 +382,102 @@ async function apiFetch<T = any>(
   return data as T;
 }
 
-// ===== Auth / login =====
+// ─── Auth / login ─────────────────────────────────────────────────────────────
 
 /**
  * loginCleaner
  *
- * POST /api/auth/login/
- * body: { email, password }
+ * M003/S01: POST /api/auth/cleaner/jwt/login/
+ * Returns access + refresh JWT tokens.
  *
- * Возвращает token и кладёт его в in-memory storage.
  * НЕЛЬЗЯ:
  * - менять URL без синхронизации с backend;
- * - менять формат { token } → это ломает весь login-flow.
+ * - менять формат ответа { access, refresh } — это ломает весь login-flow.
  */
-export async function loginCleaner(
-  email: string,
-  password: string
-): Promise<string> {
-  const data = await apiFetch<{ token: string }>("/api/auth/login/", {
+export async function loginCleaner(email: string, password: string): Promise<void> {
+  const data = await fetch(`${API_BASE_URL}/api/auth/cleaner/jwt/login/`, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
 
-  if (!data?.token) {
-    throw new Error("Login succeeded but token is missing in response");
+  if (!data.ok) {
+    const body = await data.json().catch(() => ({}));
+    throw new Error(body?.detail || "Login failed. Please check your credentials.");
   }
 
-  setAuthToken(data.token);
-  return data.token;
+  const json = await data.json();
+
+  if (!json?.access || !json?.refresh) {
+    throw new Error("Login succeeded but tokens are missing in response");
+  }
+
+  await setTokens(json.access, json.refresh);
 }
 
-// ===== Список задач на сегодня =====
+// ─── Jobs ─────────────────────────────────────────────────────────────────────
 
-/**
- * fetchCleanerTodayJobs
- *
- * GET /api/jobs/today/
- *
- * Возвращает плоский список задач, в том числе:
- * - id
- * - status
- * - scheduled_date / time
- * - location__name (плоское поле, на котором уже сидит UI).
- *
- * НЕЛЬЗЯ:
- * - придумывать здесь новый формат location;
- * - маппить в другой shape (UI знает про location__name).
- */
 export async function fetchCleanerTodayJobs(): Promise<CleanerJobSummary[]> {
-  const data = await apiFetch<CleanerJobSummary[]>("/api/jobs/today/", {
-    method: "GET",
-  });
+  const data = await apiFetch<CleanerJobSummary[]>("/api/jobs/today/", { method: "GET" });
   return data ?? [];
 }
 
-// алиас под старое имя (если где-то ещё используется)
 export async function fetchTodayJobs(): Promise<JobListItem[]> {
   return fetchCleanerTodayJobs();
 }
 
-// ===== Детали задачи =====
-
-/**
- * fetchJobDetail
- *
- * Основной источник правды для Job Details Screen.
- *
- * GET /api/jobs/<jobId>/
- *
- * Возвращает JobDetail с checklist_items, check_events и фото-URL.
- *
- * НЕЛЬЗЯ:
- * - менять URL без синхронизации с backend;
- * - маппить структуру ответа здесь (UI это делает сам).
- */
 export async function fetchJobDetail(jobId: number): Promise<JobDetail> {
   return apiFetch<JobDetail>(`/api/jobs/${jobId}/`, { method: "GET" });
 }
 
-// ===== Check-in / Check-out =====
+// ─── Check-in / Check-out ─────────────────────────────────────────────────────
 
-/**
- * checkInJob
- *
- * POST /api/jobs/<id>/check-in/
- * body: { latitude, longitude }
- *
- * Связан с:
- * - GPS-валидацией (≤ 100 м),
- * - сменой статуса scheduled → in_progress,
- * - созданием JobCheckEvent.
- *
- * НЕЛЬЗЯ:
- * - вызывать без координат,
- * - менять ключи в payload (latitude / longitude),
- * - переименовывать URL.
- */
-export async function checkInJob(
-  jobId: number,
-  latitude: number,
-  longitude: number
-): Promise<any> {
-  const payload = { latitude, longitude };
-
+export async function checkInJob(jobId: number, latitude: number, longitude: number): Promise<any> {
   const data = await apiFetch<any>(`/api/jobs/${jobId}/check-in/`, {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ latitude, longitude }),
   });
-
   if (__DEV__) console.log("[checkInJob] response:", data);
   return data;
 }
 
-/**
- * checkOutJob
- *
- * POST /api/jobs/<id>/check-out/
- * body: { latitude, longitude }
- *
- * Связан с:
- * - финализацией job (in_progress → completed),
- * - проверкой чек-листа и фото на backend,
- * - итоговым PDF-отчётом.
- *
- * НЕЛЬЗЯ:
- * - вызывать без координат,
- * - менять URL или структуру payload,
- * - пытаться "обойти" backend-валидацию через этот слой.
- */
-export async function checkOutJob(
-  jobId: number,
-  latitude: number,
-  longitude: number
-): Promise<any> {
-  const payload = { latitude, longitude };
-
+export async function checkOutJob(jobId: number, latitude: number, longitude: number): Promise<any> {
   const data = await apiFetch<any>(`/api/jobs/${jobId}/check-out/`, {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ latitude, longitude }),
   });
-
   if (__DEV__) console.log("[checkOutJob] response:", data);
   return data;
 }
 
-// ===== Checklist API =====
+// ─── Checklist ────────────────────────────────────────────────────────────────
 
-/**
- * Основной путь: bulk update
- * POST /api/jobs/<job_id>/checklist/bulk/
- * body: { items: [{id, is_completed}, ...] }
- *
- * Возвращаем массив JobChecklistItem[] если backend его явно отдаёт.
- * Если нет — возвращаем [], чтобы экран использовал локальный optimistic state.
- *
- * НЕЛЬЗЯ:
- * - менять структуру payload (id, is_completed),
- * - переименовывать поле items,
- * - интерпретировать ответ "как попало" (здесь уже все варианты учтены).
- */
 export async function updateJobChecklistBulk(
   jobId: number,
   items: { id: number; is_completed: boolean }[]
 ): Promise<JobChecklistItem[]> {
-  const payload = { items };
-
   const data = await apiFetch<any>(`/api/jobs/${jobId}/checklist/bulk/`, {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ items }),
   });
-
   if (__DEV__) console.log("[updateJobChecklistBulk] raw response:", data);
-
-  // backend может вернуть:
-  // - { items: [...] }
-  // - { checklist_items: [...] }
-  // - сразу массив [...]
-  const list =
-    data?.items ??
-    data?.checklist_items ??
-    (Array.isArray(data) ? data : null);
-
-  if (Array.isArray(list)) {
-    return list as JobChecklistItem[];
-  }
-
-  // Если формат не распознали — ничего не меняем на основе ответа
-  // и позволяем экрану оставить свой локальный `next`
-  return [];
+  const list = data?.items ?? data?.checklist_items ?? (Array.isArray(data) ? data : null);
+  return Array.isArray(list) ? (list as JobChecklistItem[]) : [];
 }
 
-/**
- * Fallback: toggle одного пункта
- * POST /api/jobs/<job_id>/checklist/<item_id>/toggle/
- *
- * Оставляем поддержку payload с is_completed (даже если backend его не требует).
- *
- * НЕЛЬЗЯ:
- * - менять URL-структуру;
- * - убирать поле is_completed из payload;
- * - менять ожидаемый формат ответа (id, job_id, is_completed).
- */
 export async function toggleJobChecklistItem(
   jobId: number,
   itemId: number,
   isCompleted: boolean
 ): Promise<{ id: number; job_id: number; is_completed: boolean }> {
-  const payload = { is_completed: isCompleted };
-
-  const data = await apiFetch<{
-    id: number;
-    job_id: number;
-    is_completed: boolean;
-  }>(`/api/jobs/${jobId}/checklist/${itemId}/toggle/`, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-
+  const data = await apiFetch<{ id: number; job_id: number; is_completed: boolean }>(
+    `/api/jobs/${jobId}/checklist/${itemId}/toggle/`,
+    { method: "POST", body: JSON.stringify({ is_completed: isCompleted }) }
+  );
   if (__DEV__) console.log("[toggleJobChecklistItem] response:", data);
   return data;
 }
 
-// backward-compatible export (чтобы старый импорт не ломался)
 export async function toggleChecklistItem(
   jobId: number,
   itemId: number,
@@ -529,121 +486,49 @@ export async function toggleChecklistItem(
   return toggleJobChecklistItem(jobId, itemId, isCompleted);
 }
 
-// ===== Фото before / after =====
+// ─── Photos ───────────────────────────────────────────────────────────────────
 
-/**
- * fetchJobPhotos
- *
- * GET /api/jobs/<job_id>/photos/
- *
- * Возвращает массив JobPhoto:
- * - photo_type ("before" | "after"),
- * - file_url / url,
- * - created_at.
- *
- * НЕЛЬЗЯ:
- * - менять URL;
- * - маппить структуру ответа (UI сам решает, что брать: file_url или url).
- */
 export async function fetchJobPhotos(jobId: number): Promise<JobPhoto[]> {
-  const data = await apiFetch<JobPhoto[]>(`/api/jobs/${jobId}/photos/`, {
-    method: "GET",
-  });
-
+  const data = await apiFetch<JobPhoto[]>(`/api/jobs/${jobId}/photos/`, { method: "GET" });
   return data ?? [];
 }
 
-/**
- * uploadJobPhoto
- *
- * Загрузка фото для job:
- *   jobId      — ID задачи
- *   photoType  — "before" | "after"
- *   uri        — file:// URI, который вернул ImagePicker
- *
- * Связано с backend Phase 9:
- * - exactly 2 photos (before / after),
- * - after нельзя без before,
- * - EXIF / GPS-валидация.
- *
- * НЕЛЬЗЯ:
- * - менять имена полей:
- *   - "photo_type"
- *   - "file"
- * - ставить Content-Type руками (ломает FormData);
- * - передавать что-то кроме file://-uri от ImagePicker.
- */
 export async function uploadJobPhoto(
   jobId: number,
   photoType: "before" | "after",
   uri: string
 ): Promise<any> {
-  if (!uri) {
-    if (__DEV__) console.log("[uploadJobPhoto] called with empty uri");
-    throw new Error("Internal error: photo URI is missing");
-  }
+  if (!uri) throw new Error("Internal error: photo URI is missing");
 
   const form = new FormData();
-
-  // тип фото — критичное поле
   form.append("photo_type", photoType);
 
-  // имя файла
   const name = uri.split("/").pop() || `${photoType}.jpg`;
   const ext = name.split(".").pop()?.toLowerCase();
-  const type =
-    ext === "png"
-      ? "image/png"
-      : ext === "heic"
-      ? "image/heic"
-      : "image/jpeg";
+  const type = ext === "png" ? "image/png" : ext === "heic" ? "image/heic" : "image/jpeg";
 
-  const fileObj: any = {
-    uri,
-    name,
-    type,
-  };
+  form.append("file", { uri, name, type } as any);
 
-  // Бэкенд ждёт файл в поле "file"
-  form.append("file", fileObj);
-
-  // ВАЖНО: не ставим Content-Type руками — apiFetch сам определит FormData
   if (__DEV__) console.log("[uploadJobPhoto] sending form", { jobId, photoType, uri, name, type });
 
-  const data = await apiFetch<any>(`/api/jobs/${jobId}/photos/`, {
-    method: "POST",
-    body: form,
-  });
-
+  const data = await apiFetch<any>(`/api/jobs/${jobId}/photos/`, { method: "POST", body: form });
   if (__DEV__) console.log("[uploadJobPhoto] response:", data);
   return data;
 }
 
-// ===== PDF report =====
+// ─── PDF report ───────────────────────────────────────────────────────────────
 
-/**
- * fetchJobReportPdf
- *
- * POST /api/jobs/<job_id>/report/pdf/
- *
- * Возвращает бинарный PDF как ArrayBuffer (для дальнейшего сохранения / шаринга).
- *
- * НЕЛЬЗЯ:
- * - менять метод (POST → GET) без синхронизации с backend;
- * - пытаться парсить JSON здесь — этот вызов всегда должен возвращать бинарь;
- * - завязывать сюда бизнес-логику (валидации делаются до генерации отчёта).
- */
 export async function fetchJobReportPdf(jobId: number): Promise<ArrayBuffer> {
   const url = `${API_BASE_URL}/api/jobs/${jobId}/report/pdf/`;
 
+  const token = auth.accessToken;
   const headers: Record<string, string> = {};
-  const token = getAuthToken();
-  if (token) headers["Authorization"] = `Token ${token}`;
+  if (token) {
+    const isJwt = token.split(".").length === 3;
+    headers["Authorization"] = isJwt ? `Bearer ${token}` : `Token ${token}`;
+  }
 
-  const resp = await fetch(url, {
-    method: "POST",
-    headers,
-  });
+  const resp = await fetch(url, { method: "POST", headers });
 
   if (!resp.ok) {
     const raw = await resp.text().catch(() => "");

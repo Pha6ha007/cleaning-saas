@@ -3,7 +3,7 @@
 Custom JWT serializers for Proof Platform.
 
 Adds role and company_id claims to the JWT access token.
-Used by JWTManagerLoginView for manager portal authentication.
+Used by JWTManagerLoginView (manager portal) and JWTCleanerLoginView (mobile app).
 """
 
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer

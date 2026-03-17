@@ -81,7 +81,7 @@ export default function LoginScreen({ navigation }: Props) {
               autoCapitalize="none"
               autoCorrect={false}
               keyboardType="email-address"
-              placeholder="cleaner@test.com"
+              placeholder="you@example.com"
               placeholderTextColor={colors.textMuted}
               style={styles.input}
             />
