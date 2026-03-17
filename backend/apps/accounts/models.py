@@ -562,3 +562,86 @@ class PaddleWebhookEvent(models.Model):
 
     def __str__(self) -> str:
         return f"PaddleWebhookEvent({self.event_type}, {self.event_id}, {self.status})"
+
+
+# =============================================================================
+# M004/S02: Email Verification Token
+# =============================================================================
+
+import uuid as _uuid
+
+
+class EmailVerificationToken(models.Model):
+    """
+    Single-use email verification token for new signups.
+
+    Created when a new owner registers via ManagerSignupView.
+    Verified via GET /api/auth/verify-email/?token=<uuid>.
+
+    On successful verification:
+    - user.is_active is set to True (was False until verified)
+    - company.plan is set to "trial" with trial_started_at/expires_at set to 7 days
+
+    Token expires after 24 hours. Single-use: deleted after successful verification.
+    """
+
+    TOKEN_TTL_HOURS = 24
+    TRIAL_DAYS = 7
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="email_verification_token",
+    )
+    token = models.UUIDField(default=_uuid.uuid4, unique=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "email_verification_tokens"
+        verbose_name = "Email Verification Token"
+        verbose_name_plural = "Email Verification Tokens"
+
+    def __str__(self):
+        return f"VerifyToken({self.user.email}, {'expired' if self.is_expired else 'valid'})"
+
+    @property
+    def is_expired(self) -> bool:
+        from django.utils import timezone as tz
+        from datetime import timedelta
+        return tz.now() > self.created_at + timedelta(hours=self.TOKEN_TTL_HOURS)
+
+    def verify(self) -> bool:
+        """
+        Verify the token: activate user, start trial, delete token.
+        Returns True on success, False if already expired.
+        """
+        from django.utils import timezone as tz
+        from datetime import timedelta
+
+        if self.is_expired:
+            return False
+
+        user = self.user
+        company = user.company
+
+        # Activate user
+        user.is_active = True
+        user.save(update_fields=["is_active"])
+
+        # Start 7-day trial
+        now = tz.now()
+        company.plan = Company.PLAN_TRIAL
+        company.trial_started_at = now
+        company.trial_expires_at = now + timedelta(days=self.TRIAL_DAYS)
+        company.save(update_fields=["plan", "trial_started_at", "trial_expires_at"])
+
+        # Seed default data (checklists etc.)
+        try:
+            from apps.api.seed_helpers import seed_default_checklists
+            seed_default_checklists(company)
+        except Exception:
+            pass  # Non-fatal — company still activated
+
+        # Delete token (single-use)
+        self.delete()
+        return True

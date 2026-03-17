@@ -277,7 +277,18 @@ class ManagerSignupView(APIView):
         owner.set_password(password)
         owner.save(update_fields=["password"])
 
+        # M004/S02: Create email verification token and send verification email
+        # User starts inactive — activated only after email verification
+        owner.is_active = False
+        owner.save(update_fields=["is_active"])
+
+        from apps.accounts.models import EmailVerificationToken
+        verification = EmailVerificationToken.objects.create(user=owner)
+        _send_verification_email(owner, company, str(verification.token))
+
         data = {
+            "status": "verification_pending",
+            "message": "Account created. Please check your email to verify your address and activate your account.",
             "company": {
                 "id": company.id,
                 "name": company.name,
@@ -290,3 +301,115 @@ class ManagerSignupView(APIView):
             },
         }
         return Response(data, status=status.HTTP_201_CREATED)
+
+
+def _send_verification_email(user, company, token: str) -> None:
+    """Send verification email to newly registered owner. Non-fatal."""
+    from django.core.mail import send_mail
+    from django.conf import settings
+    import logging
+
+    logger = logging.getLogger(__name__)
+    try:
+        base_url = getattr(settings, "FRONTEND_URL", "http://localhost:5173")
+        verify_url = f"{base_url}/verify-email?token={token}"
+        subject = "Verify your MaintainProof account"
+        body = (
+            f"Hello {user.full_name},\n\n"
+            f"Welcome to MaintainProof! Please verify your email address to activate "
+            f"your account and start your 7-day free trial.\n\n"
+            f"Click here to verify:\n{verify_url}\n\n"
+            f"This link expires in 24 hours.\n\n"
+            f"— The MaintainProof Team"
+        )
+        from_email = getattr(settings, "EMAIL_HOST_USER", "noreply@maintainproof.com")
+        send_mail(subject, body, from_email, [user.email], fail_silently=True)
+        logger.info("Verification email sent to %s", user.email)
+    except Exception as exc:
+        logger.error("Failed to send verification email to %s: %s", user.email, exc)
+
+
+class EmailVerifyView(APIView):
+    """
+    Email verification endpoint.
+
+    GET /api/auth/verify-email/?token=<uuid>
+
+    On success:
+    - User is activated (is_active = True)
+    - Company trial starts (7-day, plan = "trial")
+    - Token is deleted (single-use)
+    - Returns 200 with user + company data
+
+    On failure:
+    - 400 if token is missing, invalid, or expired
+    """
+
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request, *args, **kwargs):
+        token_str = request.query_params.get("token", "").strip()
+
+        if not token_str:
+            return Response(
+                {"code": "TOKEN_MISSING", "message": "Verification token is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Validate UUID format
+        import uuid
+        try:
+            token_uuid = uuid.UUID(token_str)
+        except ValueError:
+            return Response(
+                {"code": "TOKEN_INVALID", "message": "Invalid verification token."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        from apps.accounts.models import EmailVerificationToken
+        try:
+            verification = EmailVerificationToken.objects.select_related(
+                "user", "user__company"
+            ).get(token=token_uuid)
+        except EmailVerificationToken.DoesNotExist:
+            return Response(
+                {"code": "TOKEN_INVALID", "message": "Invalid or already used verification token."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if verification.is_expired:
+            verification.delete()
+            return Response(
+                {
+                    "code": "TOKEN_EXPIRED",
+                    "message": "Verification link has expired. Please sign up again.",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = verification.user
+        company = user.company
+
+        # Verify and activate
+        verification.verify()
+
+        return Response(
+            {
+                "status": "verified",
+                "message": "Email verified successfully. Your 7-day trial has started.",
+                "company": {
+                    "id": company.id,
+                    "name": company.name,
+                    "plan": Company.PLAN_TRIAL,
+                    "trial_days": EmailVerificationToken.TRIAL_DAYS,
+                },
+                "user": {
+                    "id": user.id,
+                    "email": user.email,
+                    "full_name": user.full_name,
+                    "role": user.role,
+                },
+            },
+            status=status.HTTP_200_OK,
+        )

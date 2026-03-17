@@ -6,6 +6,8 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, Sp
 
 from apps.marketing.views import DemoRequestCreateView, ContactMessageCreateView
 from . import analytics_views
+from .views_analytics_live import LiveAnalyticsView
+from .views_user_prefs import NotificationPreferencesView
 from . import views
 from .views_jwt import JWTManagerLoginView, JWTCleanerLoginView, JWTRefreshView, JWTLogoutView
 
@@ -87,6 +89,12 @@ urlpatterns = [
         "auth/signup/",
         api_views.ManagerSignupView.as_view(),
         name="api-auth-signup",
+    ),
+    # M004/S02: Email verification
+    path(
+        "auth/verify-email/",
+        api_views.EmailVerifyView.as_view(),
+        name="api-auth-verify-email",
     ),
 
     # =====================
@@ -341,6 +349,18 @@ urlpatterns = [
         analytics_views.analytics_summary,
         name="manager-analytics-summary",
     ),
+    # M004/S03: Live KPI polling
+    path(
+        "analytics/live/",
+        LiveAnalyticsView.as_view(),
+        name="analytics-live",
+    ),
+    # M004/S04: User notification preferences
+    path(
+        "user/notification-preferences/",
+        NotificationPreferencesView.as_view(),
+        name="user-notification-preferences",
+    ),
     path(  # без слэша в конце
         "manager/analytics/summary",
         analytics_views.analytics_summary,
@@ -526,6 +546,12 @@ urlpatterns = [
         "maintenance/visits/<int:pk>/report/",
         api_views.ServiceVisitReportView.as_view(),
         name="maintenance-visit-report",
+    ),
+    # M004/S01: Bilingual Arabic/English Visit PDF Report
+    path(
+        "maintenance/visits/<int:pk>/report/bilingual/",
+        api_views.ServiceVisitBilingualReportView.as_view(),
+        name="maintenance-visit-bilingual-report",
     ),
     # Asset History PDF Report (P6)
     path(

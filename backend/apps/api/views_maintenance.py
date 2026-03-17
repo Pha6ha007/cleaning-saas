@@ -1124,6 +1124,79 @@ class ServiceVisitReportView(MaintenancePermissionMixin, APIView):
 
 
 # =============================================================================
+# M004/S01: Bilingual Arabic/English Visit PDF Report
+# =============================================================================
+
+class ServiceVisitBilingualReportView(MaintenancePermissionMixin, APIView):
+    """
+    Generate a bilingual Arabic/English PDF for a maintenance service visit.
+
+    GET /api/maintenance/visits/<id>/report/bilingual/
+
+    Returns: application/pdf
+
+    Uses fpdf2 + Amiri Arabic font + arabic_reshaper for proper RTL rendering.
+    Falls back to English-only if Arabic font is unavailable.
+
+    Requirements:
+    - Visit must be maintenance context
+    - Visit must be completed
+    - User must have read access to the visit's company
+    """
+
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        from django.http import HttpResponse
+        from apps.api.bilingual_pdf import generate_bilingual_visit_report_pdf
+
+        company, error = self._check_read_access(request)
+        if error:
+            return error
+
+        try:
+            visit = Job.objects.select_related(
+                "location",
+                "cleaner",
+                "asset__asset_type",
+                "maintenance_category",
+                "company",
+            ).prefetch_related(
+                "photos__file",
+                "checklist_items",
+            ).get(pk=pk)
+        except Job.DoesNotExist:
+            return Response(
+                {"code": "NOT_FOUND", "message": "Service visit not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if visit.company_id != company.id:
+            return Response(
+                {"code": "NOT_FOUND", "message": "Service visit not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if visit.context != Job.CONTEXT_MAINTENANCE:
+            return Response(
+                {"code": "INVALID_CONTEXT", "message": "This endpoint is for maintenance visits only."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if visit.status != Job.STATUS_COMPLETED:
+            return Response(
+                {"code": "INVALID_STATUS", "message": "Bilingual PDF can only be generated for completed visits."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        pdf_bytes = generate_bilingual_visit_report_pdf(visit)
+        response = HttpResponse(pdf_bytes, content_type="application/pdf")
+        response["Content-Disposition"] = f'attachment; filename="maintenance_visit_{visit.id}_bilingual.pdf"'
+        return response
+
+
+# =============================================================================
 # Asset History PDF Report (P6)
 # =============================================================================
 

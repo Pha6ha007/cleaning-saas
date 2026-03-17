@@ -25,17 +25,25 @@ def send_maintenance_notification(
     """
     Send a maintenance email notification and log it.
 
-    Args:
-        company: Company instance
-        kind: Notification type (visit_reminder, sla_warning, assignment, completion)
-        job: Job instance for the notification
-        to_email: Recipient email address
-        recipient_user: Optional User instance for the recipient
-        triggered_by: Optional User instance who triggered the notification
+    M004/S04: Respects recipient_user's notification preferences:
+    - email_enabled: if False, skip email silently
+    - quiet_hours: if currently in quiet hours, skip email silently
 
     Returns:
-        True if sent successfully, False otherwise.
+        True if sent successfully, False otherwise (including skipped).
     """
+    # M004/S04: Check notification preferences
+    if recipient_user is not None:
+        try:
+            from apps.api.views_user_prefs import get_notification_preferences, is_in_quiet_hours
+            prefs = get_notification_preferences(recipient_user)
+            if not prefs.get("email_enabled", True):
+                return False
+            if is_in_quiet_hours(recipient_user):
+                return False
+        except Exception:
+            pass  # Non-fatal — proceed with sending
+
     subject, body = _build_email_content(kind, job)
 
     try:

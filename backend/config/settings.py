@@ -353,6 +353,9 @@ else:
 # Recipient for system emails (demo requests, contact messages, job reports)
 FOUNDER_DEMO_EMAIL = os.getenv("FOUNDER_DEMO_EMAIL", "photobp2019@gmail.com")
 
+# M004/S02: Frontend URL for email verification links
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
 # Email backend: SMTP in production, console in dev if not configured
 _email_password = os.environ.get("EMAIL_HOST_PASSWORD")
 if _email_password or not DEBUG:

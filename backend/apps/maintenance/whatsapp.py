@@ -110,6 +110,18 @@ def send_whatsapp_notification(
         # WhatsApp not configured — skip silently, do not log
         return False
 
+    # M004/S04: Check notification preferences
+    if recipient_user is not None:
+        try:
+            from apps.api.views_user_prefs import get_notification_preferences, is_in_quiet_hours
+            prefs = get_notification_preferences(recipient_user)
+            if not prefs.get("whatsapp_enabled", False):
+                return False
+            if is_in_quiet_hours(recipient_user):
+                return False
+        except Exception:
+            pass  # Non-fatal
+
     phone = _normalise_phone(to_phone)
     if not phone:
         logger.warning("send_whatsapp_notification: empty phone for job #%s kind=%s", job.id, kind)
