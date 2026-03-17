@@ -8,6 +8,10 @@ from apps.marketing.views import DemoRequestCreateView, ContactMessageCreateView
 from . import analytics_views
 from .views_analytics_live import LiveAnalyticsView
 from .views_user_prefs import NotificationPreferencesView
+from .views_branches import BranchListCreateView, BranchDetailView, BranchAnalyticsView
+from .views_recurring_jobs import RecurringJobListCreateView, RecurringJobDetailView
+from .views_sla_policies import SLAPolicyListCreateView, SLAPolicyDetailView, EffectiveSLAPolicyView
+from .views_audit_log import AuditLogView, AuditLogExportView
 from . import views
 from .views_jwt import JWTManagerLoginView, JWTCleanerLoginView, JWTRefreshView, JWTLogoutView
 
@@ -360,6 +364,60 @@ urlpatterns = [
         "user/notification-preferences/",
         NotificationPreferencesView.as_view(),
         name="user-notification-preferences",
+    ),
+    # M005/S01: Branch management
+    path(
+        "branches/",
+        BranchListCreateView.as_view(),
+        name="branch-list-create",
+    ),
+    path(
+        "branches/<int:pk>/",
+        BranchDetailView.as_view(),
+        name="branch-detail",
+    ),
+    path(
+        "branches/<int:pk>/analytics/",
+        BranchAnalyticsView.as_view(),
+        name="branch-analytics",
+    ),
+    # M005/S02: Recurring job templates
+    path(
+        "jobs/recurring/",
+        RecurringJobListCreateView.as_view(),
+        name="recurring-job-list-create",
+    ),
+    path(
+        "jobs/recurring/<int:pk>/",
+        RecurringJobDetailView.as_view(),
+        name="recurring-job-detail",
+    ),
+    # M005/S03: SLA Policies
+    path(
+        "sla-policies/",
+        SLAPolicyListCreateView.as_view(),
+        name="sla-policy-list-create",
+    ),
+    path(
+        "sla-policies/<int:pk>/",
+        SLAPolicyDetailView.as_view(),
+        name="sla-policy-detail",
+    ),
+    path(
+        "jobs/<int:job_pk>/effective-sla-policy/",
+        EffectiveSLAPolicyView.as_view(),
+        name="job-effective-sla-policy",
+    ),
+    # M005/S04: Audit Log
+    path(
+        "jobs/audit-log/",
+        AuditLogView.as_view(),
+        name="audit-log",
+    ),
+    path(
+        "jobs/audit-log/export/",
+        AuditLogExportView.as_view(),
+        name="audit-log-export",
     ),
     path(  # без слэша в конце
         "manager/analytics/summary",

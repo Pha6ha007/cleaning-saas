@@ -55,6 +55,19 @@ class Command(BaseCommand):
                 "timezone": "Asia/Dubai",
             },
         },
+        {
+            "name": "generate-recurring-cleaning-jobs-daily",
+            "task": "apps.jobs.generate_recurring_jobs",
+            "description": "M005/S02: Daily generation of CleanProof jobs from recurring templates (05:00 Dubai time)",
+            "crontab": {
+                "minute": "0",
+                "hour": "5",
+                "day_of_week": "*",
+                "day_of_month": "*",
+                "month_of_year": "*",
+                "timezone": "Asia/Dubai",
+            },
+        },
     ]
 
     def handle(self, *args, **options):

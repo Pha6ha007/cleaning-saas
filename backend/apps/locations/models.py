@@ -15,6 +15,24 @@ class Location(models.Model):
         related_name="locations",
     )
 
+    # M005/S01: Optional branch assignment
+    branch = models.ForeignKey(
+        "apps_accounts.Branch",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="locations",
+    )
+
+    # M005/S03: Optional SLA policy override for this location
+    sla_policy = models.ForeignKey(
+        "apps_jobs.SLAPolicy",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="locations",
+    )
+
     name = models.CharField(max_length=100)   # название локации
     address = models.TextField(blank=True)    # адрес как простой текст
     notes = models.TextField(blank=True)      # любые заметки менеджера
@@ -33,6 +51,23 @@ class Location(models.Model):
 
     def __str__(self) -> str:
         return f"{self.name} ({self.company.name})"
+
+    @property
+    def effective_gps_radius_m(self) -> int:
+        """
+        M005/S03: Return GPS radius for this location's SLA policy.
+        Falls back to the platform default (100m) if no policy is set.
+        """
+        if self.sla_policy_id and self.sla_policy:
+            return self.sla_policy.gps_radius_m
+        # Lazy import to avoid circular dependency
+        from apps.jobs.models import SLAPolicy
+        default = SLAPolicy.objects.filter(
+            company=self.company, is_default=True
+        ).first()
+        if default:
+            return default.gps_radius_m
+        return SLAPolicy.DEFAULT_GPS_RADIUS_M
 
 
 

@@ -245,6 +245,53 @@ class Company(models.Model):
         self.save(update_fields=["is_active", "suspended_at", "suspended_reason"])
 
 
+class Branch(models.Model):
+    """
+    M005/S01: Branch within a Company.
+
+    Hierarchy: Company → Branch → Location → Job
+
+    Enterprise-only feature: companies on TIER_ENTERPRISE can have multiple
+    branches. Standard/Pro companies can have exactly one branch (or none).
+
+    A branch has an optional manager (User with ROLE_MANAGER) who is scoped
+    to see only locations and jobs belonging to their branch.
+    """
+
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        related_name="branches",
+    )
+
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+
+    # Optional branch manager — scoped access to this branch only
+    # SET_NULL so deleting a user doesn't cascade-delete the branch
+    manager = models.ForeignKey(
+        "apps_accounts.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="managed_branches",
+    )
+
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        app_label = "apps_accounts"
+        db_table = "branches"
+        unique_together = [("company", "name")]
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.company.name})"
+
+
 class UserManager(BaseUserManager):
     """
     Кастомный менеджер для users.
@@ -315,6 +362,15 @@ class User(AbstractBaseUser, PermissionsMixin):
     company = models.ForeignKey(
         Company,
         on_delete=models.CASCADE,
+        related_name="users",
+    )
+
+    # M005/S01: Optional branch assignment — used for branch-scoped manager access
+    branch = models.ForeignKey(
+        "apps_accounts.Branch",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
         related_name="users",
     )
 

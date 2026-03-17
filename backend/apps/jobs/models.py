@@ -123,6 +123,16 @@ class Job(models.Model):
         help_text="Deadline for SLA compliance. Visual timer shows time remaining.",
     )
 
+    # M005/S03: Per-job SLA policy override
+    sla_policy_override = models.ForeignKey(
+        "apps_jobs.SLAPolicy",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="job_overrides",
+        help_text="Override SLA policy for this specific job. Falls back to location → company default.",
+    )
+
     scheduled_date = models.DateField(db_index=True)
     scheduled_start_time = models.TimeField(null=True, blank=True)
     scheduled_end_time = models.TimeField(null=True, blank=True)
@@ -650,3 +660,249 @@ class JobPhoto(models.Model):
 
         # Owner has unlimited replacements
         return 999
+
+
+
+class SLAPolicy(models.Model):
+    """
+    M005/S03: SLA policy for a company or location.
+
+    Defines:
+    - GPS check-in radius (metres)
+    - Check-in / check-out time windows (minutes buffer)
+    - Required proof elements (photo, checklist, signature)
+
+    Hierarchy for policy lookup (get_effective_sla_policy):
+        Job.sla_policy_override  →  Location.sla_policy  →  company default
+
+    One policy per company may be flagged is_default=True. If no default
+    exists, a synthetic fallback with platform defaults is returned.
+    """
+
+    DEFAULT_GPS_RADIUS_M = 100
+    DEFAULT_CHECKIN_WINDOW_MINUTES = 30
+    DEFAULT_CHECKOUT_WINDOW_MINUTES = 30
+
+    company = models.ForeignKey(
+        Company, on_delete=models.CASCADE, related_name="sla_policies",
+    )
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+
+    # GPS radius for check-in validation (metres)
+    gps_radius_m = models.PositiveIntegerField(
+        default=DEFAULT_GPS_RADIUS_M,
+        help_text="Allowed distance from location for check-in/check-out (metres)",
+    )
+
+    # Time window buffers (minutes before/after scheduled time)
+    check_in_window_minutes = models.PositiveIntegerField(
+        default=DEFAULT_CHECKIN_WINDOW_MINUTES,
+        help_text="Minutes before scheduled start that check-in is allowed",
+    )
+    check_out_window_minutes = models.PositiveIntegerField(
+        default=DEFAULT_CHECKOUT_WINDOW_MINUTES,
+        help_text="Minutes after scheduled end before SLA is considered breached",
+    )
+
+    # Required proof elements
+    required_proof_photo = models.BooleanField(
+        default=True,
+        help_text="At least one photo required for job completion",
+    )
+    required_proof_checklist = models.BooleanField(
+        default=False,
+        help_text="All checklist items must be completed",
+    )
+    required_proof_signature = models.BooleanField(
+        default=False,
+        help_text="Customer signature required",
+    )
+
+    # One default policy per company
+    is_default = models.BooleanField(
+        default=False,
+        help_text="Use this policy when no location-specific policy is set",
+    )
+
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        app_label = "apps_jobs"
+        db_table = "sla_policies"
+        ordering = ["-is_default", "name"]
+
+    def __str__(self) -> str:
+        suffix = " [default]" if self.is_default else ""
+        return f"{self.name}{suffix} ({self.company.name})"
+
+    def save(self, *args, **kwargs):
+        """Enforce single default per company: unset other defaults when is_default=True."""
+        if self.is_default and self.pk:
+            SLAPolicy.objects.filter(
+                company=self.company, is_default=True
+            ).exclude(pk=self.pk).update(is_default=False)
+        elif self.is_default and not self.pk:
+            # New object — will clear after save
+            super().save(*args, **kwargs)
+            SLAPolicy.objects.filter(
+                company=self.company, is_default=True
+            ).exclude(pk=self.pk).update(is_default=False)
+            return
+        super().save(*args, **kwargs)
+
+
+def get_effective_sla_policy(job) -> "SLAPolicy":
+    """
+    Return the effective SLAPolicy for a job, following the inheritance chain:
+        1. job.sla_policy_override  (explicit job override)
+        2. job.location.sla_policy  (location-level policy)
+        3. company default policy   (is_default=True)
+        4. synthetic fallback       (platform defaults, no DB record)
+
+    Always returns a SLAPolicy-like object (never None).
+    """
+    # 1. Job override
+    if hasattr(job, "sla_policy_override") and job.sla_policy_override_id:
+        return job.sla_policy_override
+
+    # 2. Location policy
+    location = getattr(job, "location", None)
+    if location and hasattr(location, "sla_policy") and location.sla_policy_id:
+        return location.sla_policy
+
+    # 3. Company default
+    default = SLAPolicy.objects.filter(
+        company=job.company, is_default=True
+    ).first()
+    if default:
+        return default
+
+    # 4. Synthetic fallback
+    fallback = SLAPolicy(
+        company=job.company,
+        name="Platform Default",
+        gps_radius_m=SLAPolicy.DEFAULT_GPS_RADIUS_M,
+        check_in_window_minutes=SLAPolicy.DEFAULT_CHECKIN_WINDOW_MINUTES,
+        check_out_window_minutes=SLAPolicy.DEFAULT_CHECKOUT_WINDOW_MINUTES,
+        required_proof_photo=True,
+        required_proof_checklist=False,
+        required_proof_signature=False,
+        is_default=True,
+    )
+    return fallback
+
+
+class RecurringJobTemplate(models.Model):
+    """
+    M005/S02: Template for auto-generating recurring CleanProof jobs.
+
+    Celery Beat task runs daily and creates Job instances for each
+    active template whose should_run_on(today) returns True.
+    """
+
+    FREQUENCY_DAILY = "daily"
+    FREQUENCY_WEEKLY = "weekly"
+    FREQUENCY_MONTHLY = "monthly"
+
+    FREQUENCY_CHOICES = [
+        (FREQUENCY_DAILY, "Daily"),
+        (FREQUENCY_WEEKLY, "Weekly"),
+        (FREQUENCY_MONTHLY, "Monthly"),
+    ]
+
+    DOW_CHOICES = [
+        (0, "Monday"), (1, "Tuesday"), (2, "Wednesday"),
+        (3, "Thursday"), (4, "Friday"), (5, "Saturday"), (6, "Sunday"),
+    ]
+
+    company = models.ForeignKey(
+        Company, on_delete=models.CASCADE, related_name="recurring_job_templates",
+    )
+    location = models.ForeignKey(
+        Location, on_delete=models.CASCADE, related_name="recurring_job_templates",
+    )
+    cleaner = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="recurring_job_templates",
+        limit_choices_to={"role": User.ROLE_CLEANER},
+    )
+    checklist_template = models.ForeignKey(
+        ChecklistTemplate, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="recurring_job_templates",
+    )
+
+    name = models.CharField(max_length=100)
+    frequency = models.CharField(max_length=20, choices=FREQUENCY_CHOICES, default=FREQUENCY_WEEKLY)
+    day_of_week = models.PositiveSmallIntegerField(
+        null=True, blank=True, choices=DOW_CHOICES,
+        help_text="WEEKLY: 0=Mon, 6=Sun",
+    )
+    day_of_month = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        help_text="MONTHLY: 1-28",
+    )
+    scheduled_start_time = models.TimeField(null=True, blank=True)
+    scheduled_end_time = models.TimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    last_generated_at = models.DateField(null=True, blank=True)
+    created_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="created_recurring_job_templates",
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        app_label = "apps_jobs"
+        db_table = "recurring_job_templates"
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.frequency}) - {self.location}"
+
+    def should_run_on(self, target_date) -> bool:
+        """Return True if a job should be generated on target_date."""
+        if not self.is_active:
+            return False
+        if self.frequency == self.FREQUENCY_DAILY:
+            return True
+        if self.frequency == self.FREQUENCY_WEEKLY:
+            return self.day_of_week is not None and target_date.weekday() == self.day_of_week
+        if self.frequency == self.FREQUENCY_MONTHLY:
+            return self.day_of_month is not None and target_date.day == self.day_of_month
+        return False
+
+    def generate_job_for_date(self, target_date) -> "Job":
+        """Create a Job for target_date from this template."""
+
+        assigned_cleaner = self.cleaner
+        if assigned_cleaner is None:
+            assigned_cleaner = User.objects.filter(
+                company=self.company, role=User.ROLE_CLEANER, is_active=True
+            ).first()
+            if assigned_cleaner is None:
+                raise ValueError(
+                    f"No active cleaner for company {self.company_id}. "
+                    "Assign a cleaner to the template."
+                )
+
+        job = Job.objects.create(
+            company=self.company,
+            location=self.location,
+            cleaner=assigned_cleaner,
+            checklist_template=self.checklist_template,
+            context=Job.CONTEXT_CLEANING,
+            status=Job.STATUS_SCHEDULED,
+            scheduled_date=target_date,
+            scheduled_start_time=self.scheduled_start_time,
+            scheduled_end_time=self.scheduled_end_time,
+            manager_notes=f"Auto-generated from schedule: {self.name}",
+        )
+        # Note: Job.save() auto-copies checklist items from checklist_template
+        # No need to copy here — would create duplicates.
+
+        self.last_generated_at = target_date
+        self.save(update_fields=["last_generated_at", "updated_at"])
+        return job

@@ -2775,3 +2775,277 @@ export async function deleteVisitPhoto(
     throw new Error(errorMessage);
   }
 }
+
+// =============================================================================
+// M005: Multi-Branch, Recurring Jobs, SLA Policies, Audit Log
+// =============================================================================
+
+// --- Branches ---
+
+export interface Branch {
+  id: number;
+  name: string;
+  description: string;
+  manager: { id: number; full_name: string; email: string } | null;
+  is_active: boolean;
+  location_count: number;
+  user_count: number;
+  created_at: string;
+}
+
+export interface BranchAnalytics {
+  branch_id: number;
+  branch_name: string;
+  jobs_total: number;
+  jobs_completed: number;
+  jobs_cancelled: number;
+  jobs_in_progress: number;
+  sla_breaches: number;
+  completion_rate: number;
+  period_days: number;
+}
+
+export async function listBranches(): Promise<Branch[]> {
+  await loginManager();
+  return apiFetch<Branch[]>("/api/branches/");
+}
+
+export async function createBranch(data: {
+  name: string;
+  description?: string;
+  manager_id?: number | null;
+}): Promise<Branch> {
+  await loginManager();
+  return apiFetch<Branch>("/api/branches/", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateBranch(
+  id: number,
+  data: Partial<{ name: string; description: string; manager_id: number | null; is_active: boolean }>
+): Promise<Branch> {
+  await loginManager();
+  return apiFetch<Branch>(`/api/branches/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteBranch(id: number): Promise<void> {
+  await loginManager();
+  const token = localStorage.getItem(STORAGE_KEYS.ACCESS);
+  const response = await fetch(`${API_BASE_URL}/api/branches/${id}/`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || `Delete failed: ${response.status}`);
+  }
+}
+
+export async function getBranchAnalytics(
+  id: number,
+  params?: { days?: number }
+): Promise<BranchAnalytics> {
+  await loginManager();
+  const qs = params?.days ? `?days=${params.days}` : "";
+  return apiFetch<BranchAnalytics>(`/api/branches/${id}/analytics/${qs}`);
+}
+
+// --- Recurring Job Templates ---
+
+export type RecurringFrequency = "daily" | "weekly" | "monthly";
+
+export interface RecurringJobTemplate {
+  id: number;
+  name: string;
+  location: { id: number; name: string };
+  cleaner: { id: number; full_name: string } | null;
+  checklist_template: { id: number; name: string } | null;
+  frequency: RecurringFrequency;
+  day_of_week: number | null;
+  day_of_month: number | null;
+  scheduled_start_time: string | null;
+  scheduled_end_time: string | null;
+  is_active: boolean;
+  last_generated_at: string | null;
+  created_at: string;
+}
+
+export async function listRecurringTemplates(): Promise<RecurringJobTemplate[]> {
+  await loginManager();
+  return apiFetch<RecurringJobTemplate[]>("/api/jobs/recurring/");
+}
+
+export async function createRecurringTemplate(data: {
+  name: string;
+  location_id: number;
+  frequency: RecurringFrequency;
+  cleaner_id?: number | null;
+  checklist_template_id?: number | null;
+  day_of_week?: number | null;
+  day_of_month?: number | null;
+  scheduled_start_time?: string | null;
+  scheduled_end_time?: string | null;
+}): Promise<RecurringJobTemplate> {
+  await loginManager();
+  return apiFetch<RecurringJobTemplate>("/api/jobs/recurring/", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateRecurringTemplate(
+  id: number,
+  data: Partial<RecurringJobTemplate & { location_id: number; cleaner_id: number | null; checklist_template_id: number | null }>
+): Promise<RecurringJobTemplate> {
+  await loginManager();
+  return apiFetch<RecurringJobTemplate>(`/api/jobs/recurring/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteRecurringTemplate(id: number): Promise<void> {
+  await loginManager();
+  const token = localStorage.getItem(STORAGE_KEYS.ACCESS);
+  const response = await fetch(`${API_BASE_URL}/api/jobs/recurring/${id}/`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || `Delete failed: ${response.status}`);
+  }
+}
+
+// --- SLA Policies ---
+
+export interface SLAPolicy {
+  id: number;
+  name: string;
+  gps_radius_m: number;
+  check_in_window_minutes: number;
+  check_out_window_minutes: number;
+  required_proof_photo: boolean;
+  required_proof_checklist: boolean;
+  required_proof_signature: boolean;
+  is_default: boolean;
+  location_count: number;
+  created_at: string;
+}
+
+export async function listSLAPolicies(): Promise<SLAPolicy[]> {
+  await loginManager();
+  return apiFetch<SLAPolicy[]>("/api/sla-policies/");
+}
+
+export async function createSLAPolicy(data: {
+  name: string;
+  gps_radius_m?: number;
+  check_in_window_minutes?: number;
+  check_out_window_minutes?: number;
+  required_proof_photo?: boolean;
+  required_proof_checklist?: boolean;
+  required_proof_signature?: boolean;
+  is_default?: boolean;
+}): Promise<SLAPolicy> {
+  await loginManager();
+  return apiFetch<SLAPolicy>("/api/sla-policies/", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateSLAPolicy(
+  id: number,
+  data: Partial<SLAPolicy>
+): Promise<SLAPolicy> {
+  await loginManager();
+  return apiFetch<SLAPolicy>(`/api/sla-policies/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteSLAPolicy(id: number): Promise<void> {
+  await loginManager();
+  const token = localStorage.getItem(STORAGE_KEYS.ACCESS);
+  const response = await fetch(`${API_BASE_URL}/api/sla-policies/${id}/`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || `Delete failed: ${response.status}`);
+  }
+}
+
+// --- Audit Log ---
+
+export interface AuditLogEvent {
+  id: number;
+  job_id: number;
+  event_type: "check_in" | "check_out" | "force_complete";
+  cleaner: { id: number; full_name: string; email: string } | null;
+  location: { id: number; name: string };
+  latitude: number | null;
+  longitude: number | null;
+  distance_m: number | null;
+  created_at: string;
+}
+
+export interface AuditLogResponse {
+  count: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+  results: AuditLogEvent[];
+}
+
+export interface AuditLogFilters {
+  cleaner_id?: number;
+  location_id?: number;
+  date_from?: string;
+  date_to?: string;
+  event_type?: "check_in" | "check_out" | "force_complete";
+  page?: number;
+  page_size?: number;
+}
+
+export async function getAuditLog(
+  filters: AuditLogFilters = {}
+): Promise<AuditLogResponse> {
+  await loginManager();
+  const params = new URLSearchParams();
+  if (filters.cleaner_id) params.set("cleaner_id", String(filters.cleaner_id));
+  if (filters.location_id) params.set("location_id", String(filters.location_id));
+  if (filters.date_from) params.set("date_from", filters.date_from);
+  if (filters.date_to) params.set("date_to", filters.date_to);
+  if (filters.event_type) params.set("event_type", filters.event_type);
+  if (filters.page) params.set("page", String(filters.page));
+  if (filters.page_size) params.set("page_size", String(filters.page_size));
+  const qs = params.toString() ? `?${params.toString()}` : "";
+  return apiFetch<AuditLogResponse>(`/api/jobs/audit-log/${qs}`);
+}
+
+export async function exportAuditLog(filters: AuditLogFilters = {}): Promise<Blob> {
+  await loginManager();
+  const token = localStorage.getItem(STORAGE_KEYS.ACCESS);
+  const params = new URLSearchParams();
+  if (filters.cleaner_id) params.set("cleaner_id", String(filters.cleaner_id));
+  if (filters.location_id) params.set("location_id", String(filters.location_id));
+  if (filters.date_from) params.set("date_from", filters.date_from);
+  if (filters.date_to) params.set("date_to", filters.date_to);
+  if (filters.event_type) params.set("event_type", filters.event_type);
+  const qs = params.toString() ? `?${params.toString()}` : "";
+  const response = await fetch(
+    `${API_BASE_URL}/api/jobs/audit-log/export/${qs}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  if (!response.ok) throw new Error(`Export failed: ${response.status}`);
+  return response.blob();
+}

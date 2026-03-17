@@ -14,6 +14,9 @@ import {
   BookOpen,
   MessageCircle,
   Settings,
+  RefreshCw,
+  GitBranch,
+  ScrollText,
 } from "lucide-react";
 import type { ContextConfig, NavItem } from "./types";
 
@@ -32,6 +35,10 @@ export const cleaningNavItems: NavItem[] = [
   { name: "Locations", href: "/locations", icon: MapPin },
   // Company is RBAC-gated (owner/manager only)
   { name: "Company", href: "/company/profile", icon: Building2, roles: ["owner", "manager"] },
+  // M005: Multi-Branch, Recurring Jobs, Audit Log
+  { name: "Branches", href: "/branches", icon: GitBranch, roles: ["owner", "manager"] },
+  { name: "Scheduling", href: "/scheduling", icon: RefreshCw, roles: ["owner", "manager"] },
+  { name: "Audit Log", href: "/audit-log", icon: ScrollText, roles: ["owner", "manager"] },
   { name: "Docs", href: "/docs", icon: BookOpen },
   { name: "Support", href: "/support", icon: MessageCircle },
   { name: "Settings", href: "/settings", icon: Settings },

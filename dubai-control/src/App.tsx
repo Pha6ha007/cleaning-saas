@@ -31,7 +31,10 @@ import Docs from "./pages/Docs";
 import Support from "./pages/Support";
 import CompanyProfile from "./pages/company/CompanyProfile";
 import CompanyTeam from "./pages/company/CompanyTeam";
+import BranchesPage from "./pages/company/Branches";
 import Billing from "./pages/settings/Billing";
+import SchedulingPage from "./pages/Scheduling";
+import AuditLogPage from "./pages/AuditLog";
 
 /* Maintenance pages */
 import MaintenanceDocs from "./contexts/maintenance/pages/Docs";
@@ -194,6 +197,9 @@ const App = () => (
               <Route path="/settings/billing" element={<Billing />} />
               <Route path="/company/profile" element={<CompanyProfile />} />
               <Route path="/company/team" element={<CompanyTeam />} />
+              <Route path="/branches" element={<BranchesPage />} />
+              <Route path="/scheduling" element={<SchedulingPage />} />
+              <Route path="/audit-log" element={<AuditLogPage />} />
 
               {/* Maintenance */}
               <Route path="/maintenance/dashboard" element={<MaintenanceDashboard />} />
