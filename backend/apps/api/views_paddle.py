@@ -27,6 +27,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from apps.accounts.models import Company, PaddleSubscription, PaddleWebhookEvent
 
@@ -331,6 +332,21 @@ def _handle_subscription_updated(
 # =============================================================================
 
 
+@extend_schema(
+    tags=["billing"],
+    summary="Paddle webhook receiver",
+    description=(
+        "Receives Paddle webhook events (subscription.activated, subscription.canceled, etc.). "
+        "Unauthenticated — Paddle HMAC-SHA256 signature verification is the auth mechanism. "
+        "Always returns 200 for recognized events to prevent Paddle retry storms."
+    ),
+    request=None,
+    responses={
+        200: OpenApiResponse(description="Event processed or acknowledged"),
+        400: OpenApiResponse(description="Invalid signature or malformed payload"),
+    },
+    auth=[],
+)
 class PaddleWebhookView(APIView):
     """
     POST /api/paddle/webhook/
@@ -436,6 +452,18 @@ class PaddleWebhookView(APIView):
 # =============================================================================
 
 
+@extend_schema(
+    tags=["billing"],
+    summary="Current subscription status",
+    description=(
+        "Returns the Paddle subscription state for the authenticated user's company. "
+        "Returns `{status: null}` when no subscription exists (trial or new account)."
+    ),
+    responses={
+        200: OpenApiResponse(description="Subscription state: status, plan_tier, next_billed_at, etc."),
+        401: OpenApiResponse(description="Not authenticated"),
+    },
+)
 class BillingSubscriptionView(APIView):
     """
     GET /api/billing/subscription/

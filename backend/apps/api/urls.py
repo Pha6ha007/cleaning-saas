@@ -2,6 +2,7 @@
 from django.urls import path, include
 from django.http import JsonResponse
 from django.db import connection
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
 from apps.marketing.views import DemoRequestCreateView, ContactMessageCreateView
 from . import analytics_views
@@ -34,6 +35,24 @@ def health_view(request):
 
 
 urlpatterns = [
+    # =====================
+    # OpenAPI Schema & Docs (M002: drf-spectacular)
+    # /api/schema/         → raw OpenAPI 3.0 YAML/JSON
+    # /api/docs/           → Swagger UI
+    # /api/redoc/          → ReDoc UI
+    # =====================
+    path("schema/", SpectacularAPIView.as_view(), name="api-schema"),
+    path(
+        "docs/",
+        SpectacularSwaggerView.as_view(url_name="api-schema"),
+        name="api-docs-swagger",
+    ),
+    path(
+        "redoc/",
+        SpectacularRedocView.as_view(url_name="api-schema"),
+        name="api-docs-redoc",
+    ),
+
     # =====================
     # Health (no auth, no DB — for load balancer/nginx health checks)
     # Full path: /api/health/ (included under /api/ prefix)

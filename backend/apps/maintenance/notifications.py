@@ -161,12 +161,12 @@ def send_assignment_notification(job, triggered_by=None) -> bool:
     Send assignment notification to the technician.
     Called when a visit is created or technician is changed.
 
-    Returns True if sent, False otherwise.
+    Sends email + WhatsApp (if configured). Returns True if email sent.
     """
     if not job.cleaner or not job.cleaner.email:
         return False
 
-    return send_maintenance_notification(
+    email_ok = send_maintenance_notification(
         company=job.company,
         kind=MaintenanceNotificationLog.KIND_ASSIGNMENT,
         job=job,
@@ -175,22 +175,42 @@ def send_assignment_notification(job, triggered_by=None) -> bool:
         triggered_by=triggered_by,
     )
 
+    # WhatsApp — non-fatal; fires alongside email
+    try:
+        from apps.maintenance.whatsapp import send_whatsapp_assignment
+        send_whatsapp_assignment(job, triggered_by=triggered_by)
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("WhatsApp assignment failed for job #%s: %s", job.id, exc)
+
+    return email_ok
+
 
 def send_completion_notification(job, manager_email: str, triggered_by=None) -> bool:
     """
     Send completion notification to the manager.
     Called when a visit is marked as completed.
 
-    Returns True if sent, False otherwise.
+    Sends email + WhatsApp to owner (if configured). Returns True if email sent.
     """
-    return send_maintenance_notification(
+    email_ok = send_maintenance_notification(
         company=job.company,
         kind=MaintenanceNotificationLog.KIND_COMPLETION,
         job=job,
         to_email=manager_email,
-        recipient_user=None,  # Manager may not be a specific user
+        recipient_user=None,
         triggered_by=triggered_by,
     )
+
+    # WhatsApp to owner — non-fatal
+    try:
+        from apps.maintenance.whatsapp import send_whatsapp_completion
+        send_whatsapp_completion(job, triggered_by=triggered_by)
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("WhatsApp completion failed for job #%s: %s", job.id, exc)
+
+    return email_ok
 
 
 def send_sla_warning(job, is_overdue: bool = False, triggered_by=None) -> bool:
@@ -239,5 +259,13 @@ def send_sla_warning(job, is_overdue: bool = False, triggered_by=None) -> bool:
         )
         if success:
             sent_any = True
+
+    # WhatsApp — non-fatal
+    try:
+        from apps.maintenance.whatsapp import send_whatsapp_sla_warning
+        send_whatsapp_sla_warning(job, triggered_by=triggered_by)
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("WhatsApp SLA warning failed for job #%s: %s", job.id, exc)
 
     return sent_any

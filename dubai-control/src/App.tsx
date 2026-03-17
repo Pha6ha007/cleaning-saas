@@ -1,5 +1,6 @@
 // dubai-control/src/App.tsx
 
+import * as Sentry from "@sentry/react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -88,7 +89,29 @@ import "leaflet/dist/leaflet.css";
 
 const queryClient = new QueryClient();
 
+/**
+ * Minimal fallback shown when the entire app crashes (ErrorBoundary).
+ * Provides a reload button and error reporting — avoids a blank white screen.
+ */
+const SentryFallback = () => (
+  <div className="flex min-h-screen items-center justify-center bg-background">
+    <div className="text-center space-y-4 p-8 max-w-md">
+      <h1 className="text-2xl font-semibold text-foreground">Something went wrong</h1>
+      <p className="text-muted-foreground text-sm">
+        An unexpected error occurred. The error has been reported automatically.
+      </p>
+      <button
+        onClick={() => window.location.reload()}
+        className="inline-flex items-center px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+      >
+        Reload page
+      </button>
+    </div>
+  </div>
+);
+
 const App = () => (
+  <Sentry.ErrorBoundary fallback={<SentryFallback />} showDialog={false}>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -212,6 +235,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+  </Sentry.ErrorBoundary>
 );
 
 export default App;

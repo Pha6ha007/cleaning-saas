@@ -597,6 +597,95 @@ class MaintenanceNotificationLog(models.Model):
 
 
 # =============================================================================
+# M002: WhatsApp Business Notification Log
+# =============================================================================
+
+class WhatsAppNotificationLog(models.Model):
+    """
+    Audit log for WhatsApp notifications sent via pywa.
+
+    Parallel to MaintenanceNotificationLog (email).
+    Stores the WhatsApp message ID returned by Meta's API for delivery tracking.
+
+    See: apps/maintenance/whatsapp.py
+    """
+
+    KIND_ASSIGNMENT = "assignment"
+    KIND_COMPLETION = "completion"
+    KIND_SLA_WARNING = "sla_warning"
+
+    KIND_CHOICES = [
+        (KIND_ASSIGNMENT, "Assignment Alert"),
+        (KIND_COMPLETION, "Completion Notification"),
+        (KIND_SLA_WARNING, "SLA Warning"),
+    ]
+
+    STATUS_SENT = "sent"
+    STATUS_FAILED = "failed"
+
+    STATUS_CHOICES = [
+        (STATUS_SENT, "Sent"),
+        (STATUS_FAILED, "Failed"),
+    ]
+
+    # Company scope
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        related_name="whatsapp_notifications",
+    )
+
+    # Notification type and outcome
+    kind = models.CharField(max_length=30, choices=KIND_CHOICES)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES)
+
+    # Target job
+    job = models.ForeignKey(
+        "apps_jobs.Job",
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="whatsapp_notifications",
+    )
+
+    # Recipient
+    to_phone = models.CharField(max_length=30)
+    recipient_user = models.ForeignKey(
+        "apps_accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="received_whatsapp_notifications",
+    )
+
+    # WhatsApp message ID returned by Meta API (for delivery tracking)
+    wa_message_id = models.CharField(max_length=128, blank=True)
+
+    # Error detail if failed
+    error_message = models.TextField(blank=True)
+
+    # Audit
+    created_at = models.DateTimeField(auto_now_add=True)
+    triggered_by = models.ForeignKey(
+        "apps_accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="triggered_whatsapp_notifications",
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "WhatsApp Notification Log"
+        verbose_name_plural = "WhatsApp Notification Logs"
+        indexes = [
+            models.Index(fields=["company", "kind", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"WA {self.get_kind_display()} → {self.to_phone} ({self.status})"
+
+
+# =============================================================================
 # Stage 7: Parts & Inventory (Lite)
 # =============================================================================
 

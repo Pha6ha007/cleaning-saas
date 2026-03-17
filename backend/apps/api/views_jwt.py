@@ -19,11 +19,35 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
+from drf_spectacular.utils import extend_schema, OpenApiResponse, inline_serializer
+from rest_framework import serializers as drf_serializers
 
 from apps.accounts.models import User
 from apps.api.serializers_jwt import ProofTokenObtainPairSerializer
 
 
+@extend_schema(
+    tags=["auth"],
+    summary="JWT Login (manager portal)",
+    description=(
+        "Authenticate an owner, manager, or staff user. "
+        "Returns a JWT access token (30-day lifetime) and refresh token (90-day, rotates on use). "
+        "Mobile cleaner users are rejected — use `/api/auth/cleaner-login/` instead."
+    ),
+    request=inline_serializer(
+        name="JWTLoginRequest",
+        fields={
+            "email": drf_serializers.EmailField(),
+            "password": drf_serializers.CharField(),
+        },
+    ),
+    responses={
+        200: OpenApiResponse(description="Login successful — returns access + refresh tokens"),
+        401: OpenApiResponse(description="Invalid credentials or cleaner account"),
+        403: OpenApiResponse(description="Account inactive or must_change_password"),
+    },
+    auth=[],
+)
 class JWTManagerLoginView(APIView):
     """
     JWT Login for manager portal.
@@ -104,6 +128,23 @@ class JWTManagerLoginView(APIView):
         )
 
 
+@extend_schema(
+    tags=["auth"],
+    summary="JWT Token Refresh",
+    description=(
+        "Exchange a valid refresh token for a new access + refresh pair. "
+        "The old refresh token is blacklisted after rotation."
+    ),
+    request=inline_serializer(
+        name="JWTRefreshRequest",
+        fields={"refresh": drf_serializers.CharField()},
+    ),
+    responses={
+        200: OpenApiResponse(description="New access + refresh tokens"),
+        401: OpenApiResponse(description="Refresh token invalid or blacklisted"),
+    },
+    auth=[],
+)
 class JWTRefreshView(TokenRefreshView):
     """
     JWT Token Refresh.
@@ -120,6 +161,19 @@ class JWTRefreshView(TokenRefreshView):
     permission_classes = [AllowAny]
 
 
+@extend_schema(
+    tags=["auth"],
+    summary="JWT Logout",
+    description="Blacklist the refresh token so it can't be reused after logout.",
+    request=inline_serializer(
+        name="JWTLogoutRequest",
+        fields={"refresh": drf_serializers.CharField(required=False)},
+    ),
+    responses={
+        200: OpenApiResponse(description="Logged out — refresh token blacklisted"),
+        400: OpenApiResponse(description="Invalid or missing refresh token"),
+    },
+)
 class JWTLogoutView(APIView):
     """
     JWT Logout — blacklist the refresh token.

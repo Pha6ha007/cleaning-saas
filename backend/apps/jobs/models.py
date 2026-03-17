@@ -169,8 +169,8 @@ class Job(models.Model):
     class Meta:
         db_table = "jobs"
         indexes = [
-            models.Index(fields=['company', 'status', 'actual_end_time'], name='jobs_company_status_endtime_idx'),
-            models.Index(fields=['company', 'context', 'status'], name='jobs_company_context_status_idx'),
+            models.Index(fields=['company', 'status', 'actual_end_time'], name='jobs_co_status_endtime_idx'),
+            models.Index(fields=['company', 'context', 'status'], name='jobs_co_ctx_status_idx'),
         ]
 
     def __str__(self) -> str:

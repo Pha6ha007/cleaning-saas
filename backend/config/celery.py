@@ -4,7 +4,6 @@
 
 import os
 from celery import Celery
-from celery.schedules import crontab
 
 # Set default Django settings module
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
@@ -19,20 +18,14 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
 # Configure periodic tasks (beat schedule)
-app.conf.beat_schedule = {
-    # Generate visits from recurring templates every day at 6:00 AM
-    'generate-recurring-visits-daily': {
-        'task': 'apps.maintenance.tasks.generate_recurring_visits',
-        'schedule': crontab(hour=6, minute=0),
-        'options': {'queue': 'maintenance'},
-    },
-    # Check for SLA warnings every hour
-    'check-sla-warnings-hourly': {
-        'task': 'apps.maintenance.tasks.check_sla_warnings',
-        'schedule': crontab(minute=0),  # Every hour at :00
-        'options': {'queue': 'maintenance'},
-    },
-}
+# NOTE (M002/S04): Periodic tasks are now managed via Django Admin through
+# django-celery-beat DB-backed schedules. The hardcoded beat_schedule has been
+# removed. Run on each deploy to create/update tasks:
+#
+#   python manage.py setup_periodic_tasks
+#
+# This populates django_celery_beat PeriodicTask entries which beat reads
+# via DatabaseScheduler (set in settings.py: CELERY_BEAT_SCHEDULER).
 
 # Task routing
 app.conf.task_routes = {

@@ -69,6 +69,7 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "rest_framework_simplejwt.token_blacklist",  # JWT token blacklisting
     "django_celery_beat",  # Stage 14: Periodic tasks
+    "drf_spectacular",     # M002: OpenAPI 3.0 schema + Swagger UI
 
     # Our apps
     "apps.accounts",
@@ -211,6 +212,57 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "anon": "10/minute",
     },
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+# =============================================================================
+# drf-spectacular — OpenAPI 3.0 Schema (M002: API Docs)
+# =============================================================================
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Proof Platform API",
+    "DESCRIPTION": (
+        "REST API for the Proof Platform (CleanProof + MaintainProof).\n\n"
+        "## Authentication\n\n"
+        "Manager/owner endpoints use **JWT Bearer** tokens.\n"
+        "Obtain tokens via `POST /api/manager/auth/login/`.\n\n"
+        "Mobile cleaner endpoints use **Token** auth (`Authorization: Token <key>`).\n\n"
+        "## Rate Limits\n\n"
+        "Anonymous endpoints: 10 requests/minute."
+    ),
+    "VERSION": os.getenv("APP_VERSION", "1.0.0"),
+    "SERVE_INCLUDE_SCHEMA": False,      # don't include /api/schema/ in itself
+    "SERVE_PUBLIC": True,               # schema accessible without auth
+    "COMPONENT_SPLIT_REQUEST": True,    # separate request/response schemas
+    "SORT_OPERATIONS": True,
+    # Security schemes
+    "SECURITY": [{"jwtAuth": []}],
+    "APPEND_COMPONENTS": {
+        "securitySchemes": {
+            "jwtAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+                "description": "JWT access token. Obtain via POST /api/manager/auth/login/",
+            },
+            "tokenAuth": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "Authorization",
+                "description": "Token auth for mobile cleaner app. Format: `Token <key>`",
+            },
+        }
+    },
+    # Tags for grouping endpoints in Swagger UI
+    "TAGS": [
+        {"name": "auth", "description": "JWT authentication — login, refresh, logout"},
+        {"name": "billing", "description": "Paddle billing — subscription status and webhooks"},
+        {"name": "maintenance", "description": "MaintainProof — service visits, assets, technicians"},
+        {"name": "jobs", "description": "CleanProof — job management"},
+        {"name": "company", "description": "Company and team management"},
+        {"name": "reports", "description": "PDF and Excel report generation"},
+        {"name": "health", "description": "Health check"},
+    ],
 }
 
 
@@ -255,6 +307,16 @@ PADDLE_WEBHOOK_SECRET = os.getenv("PADDLE_WEBHOOK_SECRET", "")
 PADDLE_PRICE_ID_STANDARD = os.getenv("PADDLE_PRICE_ID_STANDARD", "")
 PADDLE_PRICE_ID_PRO = os.getenv("PADDLE_PRICE_ID_PRO", "")
 PADDLE_PRICE_ID_ENTERPRISE = os.getenv("PADDLE_PRICE_ID_ENTERPRISE", "")
+
+# =============================================================================
+# WhatsApp Business Notifications (M002: pywa)
+# =============================================================================
+# Obtain from Meta Business Manager / WhatsApp Business Platform
+# Dashboard: https://developers.facebook.com/apps → WhatsApp → API Setup
+WHATSAPP_PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "")
+WHATSAPP_ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN", "")
+# Set to True to use WhatsApp test numbers (no approved template required)
+WHATSAPP_USE_SANDBOX = os.getenv("WHATSAPP_USE_SANDBOX", "False").lower() == "true"
 
 
 # =============================================================================
@@ -423,17 +485,45 @@ CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 
 
 # =============================================================================
-# Sentry Error Tracking (Production Only)
+# Sentry Error Tracking (M002: Observability)
 # =============================================================================
 
 import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
+from sentry_sdk.integrations.celery import CeleryIntegration
+from sentry_sdk.integrations.redis import RedisIntegration
+from sentry_sdk.integrations.logging import LoggingIntegration
+import logging as _logging
 
 SENTRY_DSN = os.getenv("SENTRY_DSN", "")
+SENTRY_ENVIRONMENT = os.getenv("SENTRY_ENVIRONMENT", "development" if DEBUG else "production")
+SENTRY_TRACES_SAMPLE_RATE = float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.2" if not DEBUG else "0.0"))
+SENTRY_PROFILES_SAMPLE_RATE = float(os.getenv("SENTRY_PROFILES_SAMPLE_RATE", "0.1" if not DEBUG else "0.0"))
 
-if not DEBUG and SENTRY_DSN:
+if SENTRY_DSN:
     sentry_sdk.init(
         dsn=SENTRY_DSN,
-        traces_sample_rate=0.1,
-        profiles_sample_rate=0.1,
-        send_default_pii=False,
+        environment=SENTRY_ENVIRONMENT,
+        integrations=[
+            DjangoIntegration(
+                transaction_style="url",       # group by URL pattern, not function
+                middleware_spans=True,
+                signals_spans=False,           # too noisy
+                cache_spans=False,
+            ),
+            CeleryIntegration(
+                monitor_beat_tasks=True,       # track beat task health
+                propagate_traces=True,         # link Celery traces to parent requests
+            ),
+            RedisIntegration(),
+            LoggingIntegration(
+                level=_logging.INFO,           # capture INFO+ as breadcrumbs
+                event_level=_logging.ERROR,    # send ERROR+ as Sentry events
+            ),
+        ],
+        traces_sample_rate=SENTRY_TRACES_SAMPLE_RATE,
+        profiles_sample_rate=SENTRY_PROFILES_SAMPLE_RATE,
+        send_default_pii=False,                # GDPR — no request bodies or user IPs
+        attach_stacktrace=True,                # include stacktrace on all events
+        release=os.getenv("APP_VERSION", "unknown"),
     )
