@@ -1,10 +1,7 @@
 # GSD State
 
-**Active Milestone:** — (Phase 1–4 partial complete)
+**Active Milestone:** — (Phase 1–4 in progress)
 **Status:** in-progress
-
-## Milestone Registry
-- ✅ M001–M012: All milestones complete (see history below)
 
 ## Improvement Plan Progress (from audit 2026-03-21)
 
@@ -26,9 +23,21 @@
 - [ ] Split client.ts (3051 lines) — DEFERRED (dedicated session)
 - [ ] Split views_maintenance.py (5511 lines) — DEFERRED (dedicated session)
 
-### Phase 4 — Type Safety (partial)
-- [x] Replace catch(err: any) → catch(err: unknown) + instanceof Error (7 catches in 5 files)
-- [ ] Replace remaining `any` types (~179 remaining)
+### Phase 4 — Type Safety (in progress)
+- [x] catch(err: any) → catch(err: unknown) + instanceof Error (7 catches in 5 non-maint files)
+- [x] ApiError type + getApiErrorMessage/getApiErrorCode utilities in maintenance.ts
+- [x] 32× onError any → unknown in 12 maintenance page files
+- [x] 5× onError any → unknown in TechniciansPage
+- [x] 3× (error as any) → typed assertions in completionErrors.ts
+- [x] Login.tsx: location.state + res.json() properly typed
+- [x] Locations.tsx: onError any → unknown
+- [x] LocationsOld.tsx: raw as any → String(raw)
+- [x] Dashboard maintenance: as any → readonly string[]
+- [x] VisitDetail: item: any → typed checklist items
+- **any count: 186 → 127 (59 removed, 31% reduction)**
+  - 50 in LOCKED files (untouchable)
+  - 18 in client.ts (needs file split first)
+  - 59 in unlocked files (ongoing)
 - [ ] i18n infrastructure
 - [ ] Accessibility audit
 - [ ] Bundle optimization
@@ -54,7 +63,10 @@
 4. `015cc60` — feat: Phase 1–2 (auth guard, contact form, error boundaries, 61 unit tests, CI)
 5. `116cbfd` — perf: Phase 3 (dynamic xlsx imports, dashboard skeleton)
 6. `86789de` — docs: STATE.md update
-7. `f37bd35` — refactor: Phase 4 type safety (catch any → unknown)
+7. `f37bd35` — refactor: Phase 4 catch any → unknown (5 files)
+8. `40aa019` — docs: STATE.md update
+9. `1911aae` — refactor: 45× any → typed in maintenance pages + ApiError utilities
+10. `336b2a8` — refactor: any → typed in TechniciansPage, Login, Locations
 
 ## Full Audit
 See `docs/audit/PROJECT_AUDIT_AND_PLAN_2026-03-21.md`
