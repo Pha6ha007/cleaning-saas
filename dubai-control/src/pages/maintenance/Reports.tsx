@@ -31,6 +31,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
 import { MaintenanceLayout } from "@/contexts/maintenance/ui/MaintenanceLayout";
+import { ProgressRing } from "@/components/maintenance/ProgressRing";
 import {
   getMaintenanceWeeklyReport,
   getMaintenanceMonthlyReport,
@@ -663,21 +664,54 @@ export default function MaintenanceReports() {
               </div>
 
               <div className="mt-6 grid gap-4 sm:grid-cols-3">
-                <div className="rounded-lg bg-slate-50 p-4 text-center">
-                  <p className="text-2xl font-semibold">{report.visits_count}</p>
-                  <p className="text-xs text-muted-foreground">Visits Completed</p>
+                <div className="rounded-lg bg-slate-50 p-4 flex items-center gap-4">
+                  <div className="relative">
+                    <ProgressRing
+                      value={report.visits_count > 0 ? 100 : 0}
+                      size={52}
+                      strokeWidth={5}
+                      color="hsl(215 70% 50%)"
+                    />
+                    <span className="absolute inset-0 flex items-center justify-center text-xs font-bold">{report.visits_count}</span>
+                  </div>
+                  <div>
+                    <p className="text-xl font-semibold">{report.visits_count}</p>
+                    <p className="text-xs text-muted-foreground">Visits Completed</p>
+                  </div>
                 </div>
-                <div className="rounded-lg bg-red-50 p-4 text-center">
-                  <p className="text-2xl font-semibold text-red-600">
-                    {report.violations_count}
-                  </p>
-                  <p className="text-xs text-muted-foreground">SLA Violations</p>
+                <div className="rounded-lg bg-red-50 p-4 flex items-center gap-4">
+                  <div className="relative">
+                    <ProgressRing
+                      value={report.visits_count > 0 ? (report.violations_count / report.visits_count) * 100 : 0}
+                      size={52}
+                      strokeWidth={5}
+                      color="hsl(0 84% 60%)"
+                    />
+                    <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-red-600">{report.violations_count}</span>
+                  </div>
+                  <div>
+                    <p className="text-xl font-semibold text-red-600">
+                      {report.violations_count}
+                    </p>
+                    <p className="text-xs text-muted-foreground">SLA Violations</p>
+                  </div>
                 </div>
-                <div className="rounded-lg bg-emerald-50 p-4 text-center">
-                  <p className="text-2xl font-semibold text-emerald-600">
-                    {((1 - report.issue_rate) * 100).toFixed(1)}%
-                  </p>
-                  <p className="text-xs text-muted-foreground">Success Rate</p>
+                <div className="rounded-lg bg-emerald-50 p-4 flex items-center gap-4">
+                  <div className="relative">
+                    <ProgressRing
+                      value={(1 - report.issue_rate) * 100}
+                      size={52}
+                      strokeWidth={5}
+                      color="hsl(152 60% 40%)"
+                    />
+                    <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-emerald-600">{((1 - report.issue_rate) * 100).toFixed(0)}%</span>
+                  </div>
+                  <div>
+                    <p className="text-xl font-semibold text-emerald-600">
+                      {((1 - report.issue_rate) * 100).toFixed(1)}%
+                    </p>
+                    <p className="text-xs text-muted-foreground">Success Rate</p>
+                  </div>
                 </div>
               </div>
             </div>

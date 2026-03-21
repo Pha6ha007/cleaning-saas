@@ -2,7 +2,7 @@
 // Sidebar navigation - renders items from current context registry
 // Supports collapsible groups for contexts with many items
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
@@ -141,6 +141,22 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   const user = useUserRole();
   const { currentContext, contextConfig } = useAppContext();
 
+  // Mobile: auto-collapse sidebar below 768px
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  // Close mobile drawer on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
+
   // Get navigation items for current context, filtered by user role
   const consoleRole = user.role === "cleaner" ? undefined : user.role;
   const navigation = getNavItems(currentContext, consoleRole);
@@ -159,13 +175,39 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
     [location.pathname]
   );
 
+  // Mobile drawer overlay
+  const showDrawer = isMobile && mobileOpen;
+
   return (
-    <aside
-      className={cn(
-        "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border bg-sidebar transition-all duration-200 ease-out",
-        collapsed ? "w-16" : "w-64"
+    <>
+      {/* Mobile hamburger */}
+      {isMobile && !mobileOpen && (
+        <button
+          type="button"
+          onClick={() => setMobileOpen(true)}
+          className="fixed top-4 left-4 z-50 flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card shadow-sm"
+          aria-label="Open menu"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
       )}
-    >
+
+      {/* Backdrop */}
+      {showDrawer && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px]"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border bg-sidebar transition-all duration-200 ease-out",
+          isMobile
+            ? cn("w-64", showDrawer ? "translate-x-0" : "-translate-x-full")
+            : cn(collapsed ? "w-16" : "w-64")
+        )}
+      >
       {/* Header + logo */}
       <div className="flex h-16 items-center justify-between border-b border-border px-3 shrink-0">
         <div
@@ -239,5 +281,6 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
         </NavLink>
       </div>
     </aside>
+    </>
   );
 }

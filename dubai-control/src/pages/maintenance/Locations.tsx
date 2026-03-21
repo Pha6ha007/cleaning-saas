@@ -281,7 +281,7 @@ export default function MaintenanceLocations() {
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">
               Locations
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -291,29 +291,33 @@ export default function MaintenanceLocations() {
           <div className="flex gap-2">
             <Button
               variant="outline"
+              size="sm"
               onClick={handleDownloadTemplate}
-              className="border-teal-200 text-teal-700 hover:bg-teal-50 hover:text-teal-800"
+              className="h-8 px-3 text-xs font-medium border-teal-200 text-teal-700 hover:bg-teal-50 hover:text-teal-800"
             >
               <FileDown className="mr-2 h-4 w-4" />
               Template
             </Button>
             <Button
               variant="outline"
+              size="sm"
               onClick={handleImportClick}
-              className="border-teal-200 text-teal-700 hover:bg-teal-50 hover:text-teal-800"
+              className="h-8 px-3 text-xs font-medium border-teal-200 text-teal-700 hover:bg-teal-50 hover:text-teal-800"
             >
               <Upload className="mr-2 h-4 w-4" />
               Import Excel/CSV
             </Button>
             <Button
+              size="sm"
               onClick={handleExport}
               disabled={locations.length === 0}
+              className="h-8 px-3 text-xs font-medium"
             >
               <Download className="mr-2 h-4 w-4" />
               Export Excel
             </Button>
-            <Button onClick={handleAddNew}>
-              <Plus className="mr-2 h-4 w-4" />
+            <Button size="sm" className="h-8 px-3 text-xs font-medium" onClick={handleAddNew}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
               Add location
             </Button>
           </div>

@@ -286,8 +286,8 @@ export default function Calendar() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold text-foreground">Calendar</h1>
-            <p className="text-sm text-muted-foreground">Visual scheduling for service visits</p>
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">Calendar</h1>
+            <p className="text-sm text-muted-foreground">Schedule and track service visits visually</p>
           </div>
           <div className="flex items-center gap-2">
             {/* View toggle */}

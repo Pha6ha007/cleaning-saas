@@ -3,7 +3,7 @@
 // Imported from control-hub/src/pages/WorkOrdersPage.tsx design
 // See docs/execution/LOVABLE_UI_IMPORT_PROTOCOL.md
 
-import { Plus, ChevronRight, Camera, CheckSquare, AlertTriangle, Timer, CalendarDays } from "lucide-react";
+import { Plus, ChevronRight, Camera, CheckSquare, AlertTriangle, Timer, CalendarDays, SlidersHorizontal, ArrowUpDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -372,8 +372,17 @@ export function VisitsLovableLayout({
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="filter-bar">
+      {/* Filters with collapse toggle */}
+      <div className="filter-bar flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          Filters
+          {(statusFilter !== "all" || assetFilter !== "all" || technicianFilter !== "all" || categoryFilter !== "all") && (
+            <span className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground px-1">
+              {[statusFilter, assetFilter, technicianFilter, categoryFilter].filter(f => f !== "all").length}
+            </span>
+          )}
+        </span>
         {onStatusFilterChange && (
           <FilterSelect
             placeholder="Status"
@@ -436,12 +445,36 @@ export function VisitsLovableLayout({
                     />
                   </th>
                 )}
-                <th className="w-[100px]">Status</th>
-                <th>Visit ID</th>
-                <th>Asset</th>
-                <th>Location</th>
-                <th>Technician</th>
-                <th className="w-[110px]">Scheduled</th>
+                <th className="w-[100px]">
+                  <span className="inline-flex items-center gap-1">Status</span>
+                </th>
+                <th>
+                  <span className="inline-flex items-center gap-1">Visit ID</span>
+                </th>
+                <th>
+                  <span className="inline-flex items-center gap-1 group/sort cursor-default">
+                    Asset
+                    <ArrowUpDown className="h-3 w-3 text-muted-foreground/40 group-hover/sort:text-muted-foreground transition-colors" />
+                  </span>
+                </th>
+                <th>
+                  <span className="inline-flex items-center gap-1 group/sort cursor-default">
+                    Location
+                    <ArrowUpDown className="h-3 w-3 text-muted-foreground/40 group-hover/sort:text-muted-foreground transition-colors" />
+                  </span>
+                </th>
+                <th>
+                  <span className="inline-flex items-center gap-1 group/sort cursor-default">
+                    Technician
+                    <ArrowUpDown className="h-3 w-3 text-muted-foreground/40 group-hover/sort:text-muted-foreground transition-colors" />
+                  </span>
+                </th>
+                <th className="w-[110px]">
+                  <span className="inline-flex items-center gap-1 group/sort cursor-default">
+                    Scheduled
+                    <ArrowUpDown className="h-3 w-3 text-muted-foreground/40 group-hover/sort:text-muted-foreground transition-colors" />
+                  </span>
+                </th>
                 <th className="w-[100px]">Proof</th>
                 <th className="w-[50px]">SLA</th>
                 <th className="w-[90px]">Priority</th>

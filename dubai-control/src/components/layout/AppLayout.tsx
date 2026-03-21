@@ -77,6 +77,7 @@ export function AppLayout() {
         className={cn(
           "app-header fixed top-0 right-0 z-30 flex h-16 items-center justify-between border-b border-border bg-card px-6 transition-[left] duration-200 ease-out",
           collapsed ? "left-16" : "left-64",
+          "max-md:left-0",  // On mobile, sidebar is a drawer overlay
         )}
       >
         {/* Left: Product Switcher */}
@@ -91,6 +92,7 @@ export function AppLayout() {
         className={cn(
           "pt-16 transition-[padding-left] duration-200 ease-out",
           collapsed ? "pl-16" : "pl-64",
+          "max-md:pl-0",  // On mobile, no sidebar offset
         )}
       >
         <div className={getContainerClasses(shellMode, collapsed)}>
