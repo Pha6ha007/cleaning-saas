@@ -465,7 +465,7 @@ export default function MaintenanceMap() {
         {showFilters && (
           <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-3">
             <div className="flex items-center gap-2">
-              <label className="text-xs font-medium text-muted-foreground">Show:</label>
+              <label htmlFor="map-show-filter" className="text-xs font-medium text-muted-foreground">Show:</label>
               <Button
                 variant={filter.showAssets ? "default" : "outline"}
                 size="sm"
@@ -489,7 +489,7 @@ export default function MaintenanceMap() {
             <div className="h-6 w-px bg-border" />
 
             <div className="flex items-center gap-2">
-              <label className="text-xs font-medium text-muted-foreground">Status:</label>
+              <label htmlFor="map-status-filter" className="text-xs font-medium text-muted-foreground">Status:</label>
               <Select
                 value={filter.visitStatus}
                 onValueChange={(v) => setFilter((f) => ({ ...f, visitStatus: v }))}
@@ -508,7 +508,7 @@ export default function MaintenanceMap() {
             </div>
 
             <div className="flex items-center gap-2">
-              <label className="text-xs font-medium text-muted-foreground">Technician:</label>
+              <label htmlFor="map-tech-filter" className="text-xs font-medium text-muted-foreground">Technician:</label>
               <Select
                 value={filter.technicianId?.toString() || "all"}
                 onValueChange={(v) =>

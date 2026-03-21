@@ -541,7 +541,7 @@ export default function MaintenanceDashboard() {
             ) : techError ? (
               <div className="text-center py-6">
                 <p className="text-sm text-destructive">Failed to load</p>
-                <Button variant="ghost" size="sm" className="mt-2" onClick={() => refetchTech()}>
+                <Button variant="ghost" size="sm" className="mt-2" onClick={() => refetchTech()} aria-label="Retry loading technicians">
                   Retry
                 </Button>
               </div>
@@ -590,7 +590,7 @@ export default function MaintenanceDashboard() {
             ) : assetsError ? (
               <div className="text-center py-6">
                 <p className="text-sm text-destructive">Failed to load</p>
-                <Button variant="ghost" size="sm" className="mt-2" onClick={() => refetchAssets()}>
+                <Button variant="ghost" size="sm" className="mt-2" onClick={() => refetchAssets()} aria-label="Retry loading assets">
                   Retry
                 </Button>
               </div>
@@ -641,7 +641,7 @@ export default function MaintenanceDashboard() {
           ) : recentError ? (
             <div className="text-center py-6">
               <p className="text-sm text-destructive">Failed to load</p>
-              <Button variant="ghost" size="sm" className="mt-2" onClick={() => refetchRecent()}>
+              <Button variant="ghost" size="sm" className="mt-2" onClick={() => refetchRecent()} aria-label="Retry loading recent visits">
                 Retry
               </Button>
             </div>

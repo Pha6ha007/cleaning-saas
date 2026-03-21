@@ -7,6 +7,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { usePageTracking } from "@/hooks/usePageTracking";
+import { SkipToContent } from "@/components/a11y/SkipToContent";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import ScrollToTop from "@/components/layout/ScrollToTop";
@@ -132,6 +133,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         {/* глобальный контроль скролла */}
+        <SkipToContent />
         <ScrollToTop />
         <PageTracker />
 

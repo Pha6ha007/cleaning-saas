@@ -77,7 +77,7 @@ export default function CustomerLayout() {
                 <span className="text-muted-foreground">{profile.company.name}</span>
               </div>
             )}
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
+            <Button variant="ghost" size="sm" onClick={handleLogout} aria-label="Sign out">
               <LogOut className="h-4 w-4" />
               <span className="ml-2 hidden md:inline">Logout</span>
             </Button>

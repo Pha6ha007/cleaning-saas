@@ -83,6 +83,7 @@ export function AppLayout() {
       </header>
 
       <main
+        id="main-content"
         className={cn(
           "pt-16 transition-[padding-left] duration-200 ease-out",
           collapsed ? "pl-16" : "pl-64",

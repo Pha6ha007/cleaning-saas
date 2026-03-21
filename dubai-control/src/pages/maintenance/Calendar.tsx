@@ -342,6 +342,7 @@ export default function Calendar() {
               size="icon"
               className="h-8 w-8 rounded-[6px]"
               onClick={handlePrev}
+              aria-label="Previous month"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -358,6 +359,7 @@ export default function Calendar() {
               size="icon"
               className="h-8 w-8 rounded-[6px]"
               onClick={handleNext}
+              aria-label="Next month"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -455,6 +457,7 @@ export default function Calendar() {
               size="icon"
               className="h-8 w-8"
               onClick={() => refetch()}
+              aria-label="Refresh calendar"
               disabled={isLoading}
             >
               <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
