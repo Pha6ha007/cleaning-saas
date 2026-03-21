@@ -181,3 +181,4 @@ Strategy: extract when touching file for other work.
 20. `baeb45b` — infra: staging environment (5.3)
 21. `1339338` — feat: mobile UX safety states (5.2)
 22. `8587cad` — refactor: split client.ts (4.1)
+23. `6c8387a` — infra: S3 storage + email config (B2 + B3)
