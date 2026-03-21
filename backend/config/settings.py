@@ -81,6 +81,7 @@ INSTALLED_APPS = [
     "apps.support",
     "apps.api",
     "apps.marketing",
+    "apps.analytics",
 ]
 
 
@@ -213,6 +214,12 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_THROTTLE_RATES": {
         "anon": "10/minute",
+        # M006/S04: Per-endpoint granular throttle scopes
+        "check_in": "60/hour",
+        "photo_upload": "120/hour",
+        "webhook": "1000/day",
+        "manager_dashboard": "300/hour",
+        "api_key": "10000/day",
     },
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
@@ -478,6 +485,38 @@ if not DEBUG:
 # =============================================================================
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
+
+# =============================================================================
+# Cache Configuration (M006/S01: API Response Caching)
+# =============================================================================
+# Production: Redis cache (same instance as Celery, separate DB index)
+# Test/dev: falls back to LocMemCache when CACHE_BACKEND is unset
+_CACHE_BACKEND = os.getenv("CACHE_BACKEND", "")
+
+if _CACHE_BACKEND == "redis" or os.getenv("REDIS_URL"):
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": os.getenv("REDIS_URL", "redis://localhost:6379/1"),
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                "IGNORE_EXCEPTIONS": True,  # Degrade gracefully if Redis is down
+                "SOCKET_CONNECT_TIMEOUT": 2,
+                "SOCKET_TIMEOUT": 2,
+            },
+            "KEY_PREFIX": "proof_platform",
+            "TIMEOUT": 300,  # 5 minutes default TTL
+        }
+    }
+else:
+    # Development / test: in-process memory cache (no Redis required)
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "proof-platform-dev",
+        }
+    }
+
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"

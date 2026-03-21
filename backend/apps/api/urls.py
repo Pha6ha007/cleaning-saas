@@ -171,6 +171,13 @@ urlpatterns = [
         name="api-auth-password-reset-confirm",
     ),
 
+    # Analytics tracking (no auth required)
+    path(
+        "analytics/page-view/",
+        PageViewTrackingView.as_view(),
+        name="api-analytics-page-view",
+    ),
+
     # Demo login (no auth required)
     path(
         "auth/demo-login/",
