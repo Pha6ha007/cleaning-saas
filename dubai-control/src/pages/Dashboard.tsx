@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { EmptyState } from "@/components/empty/EmptyState";
+import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
+import { useLocations } from "@/contexts/LocationsContext";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/ui/stat-card";

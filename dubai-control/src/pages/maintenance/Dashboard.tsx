@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
 import { EmptyState } from "@/components/empty/EmptyState";
+import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
 import { MaintenanceLayout } from "@/contexts/maintenance/ui/MaintenanceLayout";
 import {
   listVisits,
