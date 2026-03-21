@@ -496,7 +496,6 @@ export async function loginManager(): Promise<void> {
     }
   }
 
-  console.log("[api] Logged in as manager (dev fallback JWT)", data.email);
 }
 
 // ---------- Helpers ----------

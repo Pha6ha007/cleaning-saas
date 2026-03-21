@@ -162,13 +162,10 @@ export default function Assets() {
   // Deactivate/Activate asset mutation
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ id, is_active }: { id: number; is_active: boolean }) => {
-      console.log("[Assets] Calling updateExistingAsset:", { id, is_active });
       const result = await updateExistingAsset(id, { is_active });
-      console.log("[Assets] Update result:", result);
       return result;
     },
     onSuccess: (_, variables) => {
-      console.log("[Assets] Mutation success");
       queryClient.invalidateQueries({ queryKey: maintenanceKeys.assets.all });
       toast({
         title: "Success",
@@ -231,12 +228,10 @@ export default function Assets() {
 
   const confirmDeactivate = () => {
     if (deactivateConfirm) {
-      console.log("[Assets] Deactivating asset:", deactivateConfirm.id);
       toggleActiveMutation.mutate(
         { id: deactivateConfirm.id, is_active: false },
         {
           onSettled: () => {
-            console.log("[Assets] Mutation settled");
           },
         }
       );

@@ -10,6 +10,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import ScrollToTop from "@/components/layout/ScrollToTop";
 import { SuspenseFallback } from "@/components/layout/SuspenseFallback";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { PageErrorBoundary } from "@/components/error/PageErrorBoundary";
 
 /* Eager — above the fold / auth shell (must not lazy-load) */
 import Login from "./pages/Login";
@@ -164,10 +166,10 @@ const App = () => (
             {/* =========================
                 Protected app (with layout)
                 ========================= */}
-            <Route element={<AppLayout />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/jobs" element={<Jobs />} />
-              <Route path="/jobs/:id" element={<JobDetails />} />
+            <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+              <Route path="/dashboard" element={<PageErrorBoundary pageName="Dashboard"><Dashboard /></PageErrorBoundary>} />
+              <Route path="/jobs" element={<PageErrorBoundary pageName="Jobs"><Jobs /></PageErrorBoundary>} />
+              <Route path="/jobs/:id" element={<PageErrorBoundary pageName="Job Details"><JobDetails /></PageErrorBoundary>} />
 
               {/* create-job считается легаси: всегда ведём в Job Planning */}
               <Route
@@ -175,57 +177,57 @@ const App = () => (
                 element={<Navigate to="/planning" replace />}
               />
 
-              <Route path="/planning" element={<JobPlanning />} />
-              <Route path="/history" element={<History />} />
-              <Route path="/performance" element={<Performance />} />
-              <Route path="/reports" element={<Reports />} />
+              <Route path="/planning" element={<PageErrorBoundary pageName="Job Planning"><JobPlanning /></PageErrorBoundary>} />
+              <Route path="/history" element={<PageErrorBoundary pageName="History"><History /></PageErrorBoundary>} />
+              <Route path="/performance" element={<PageErrorBoundary pageName="Performance"><Performance /></PageErrorBoundary>} />
+              <Route path="/reports" element={<PageErrorBoundary pageName="Reports"><Reports /></PageErrorBoundary>} />
               <Route
                 path="/reports/violations"
-                element={<ViolationJobsPage />}
+                element={<PageErrorBoundary pageName="Violation Jobs"><ViolationJobsPage /></PageErrorBoundary>}
               />
               <Route
                 path="/reports/email-logs"
-                element={<ReportEmailLogsPage />}
+                element={<PageErrorBoundary pageName="Email Logs"><ReportEmailLogsPage /></PageErrorBoundary>}
               />
-              <Route path="/analytics" element={<Analytics />} />
-              <Route path="/locations" element={<Locations />} />
-              <Route path="/locations/new" element={<Locations />} />
-              <Route path="/locations/:id" element={<Locations />} />
-              <Route path="/docs" element={<Docs />} />
-              <Route path="/docs/:page" element={<Docs />} />
-              <Route path="/support" element={<Support />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/settings/account" element={<AccountSettings />} />
-              <Route path="/settings/billing" element={<Billing />} />
-              <Route path="/company/profile" element={<CompanyProfile />} />
-              <Route path="/company/team" element={<CompanyTeam />} />
-              <Route path="/branches" element={<BranchesPage />} />
-              <Route path="/scheduling" element={<SchedulingPage />} />
-              <Route path="/audit-log" element={<AuditLogPage />} />
+              <Route path="/analytics" element={<PageErrorBoundary pageName="Analytics"><Analytics /></PageErrorBoundary>} />
+              <Route path="/locations" element={<PageErrorBoundary pageName="Locations"><Locations /></PageErrorBoundary>} />
+              <Route path="/locations/new" element={<PageErrorBoundary pageName="Locations"><Locations /></PageErrorBoundary>} />
+              <Route path="/locations/:id" element={<PageErrorBoundary pageName="Locations"><Locations /></PageErrorBoundary>} />
+              <Route path="/docs" element={<PageErrorBoundary pageName="Documentation"><Docs /></PageErrorBoundary>} />
+              <Route path="/docs/:page" element={<PageErrorBoundary pageName="Documentation"><Docs /></PageErrorBoundary>} />
+              <Route path="/support" element={<PageErrorBoundary pageName="Support"><Support /></PageErrorBoundary>} />
+              <Route path="/settings" element={<PageErrorBoundary pageName="Settings"><Settings /></PageErrorBoundary>} />
+              <Route path="/settings/account" element={<PageErrorBoundary pageName="Account Settings"><AccountSettings /></PageErrorBoundary>} />
+              <Route path="/settings/billing" element={<PageErrorBoundary pageName="Billing"><Billing /></PageErrorBoundary>} />
+              <Route path="/company/profile" element={<PageErrorBoundary pageName="Company Profile"><CompanyProfile /></PageErrorBoundary>} />
+              <Route path="/company/team" element={<PageErrorBoundary pageName="Company Team"><CompanyTeam /></PageErrorBoundary>} />
+              <Route path="/branches" element={<PageErrorBoundary pageName="Branches"><BranchesPage /></PageErrorBoundary>} />
+              <Route path="/scheduling" element={<PageErrorBoundary pageName="Scheduling"><SchedulingPage /></PageErrorBoundary>} />
+              <Route path="/audit-log" element={<PageErrorBoundary pageName="Audit Log"><AuditLogPage /></PageErrorBoundary>} />
 
               {/* Maintenance */}
-              <Route path="/maintenance/dashboard" element={<MaintenanceDashboard />} />
-              <Route path="/maintenance/visits" element={<MaintenanceVisitList />} />
-              <Route path="/maintenance/visits/new" element={<MaintenanceCreateVisit />} />
-              <Route path="/maintenance/visits/:id" element={<MaintenanceVisitDetail />} />
-              <Route path="/maintenance/assets" element={<MaintenanceAssets />} />
-              <Route path="/maintenance/assets/:id" element={<MaintenanceAssetDetail />} />
-              <Route path="/maintenance/asset-types" element={<MaintenanceAssetTypes />} />
-              <Route path="/maintenance/technicians" element={<TechniciansPage />} />
-              <Route path="/maintenance/calendar" element={<MaintenanceCalendar />} />
-              <Route path="/maintenance/schedules" element={<MaintenanceRecurringTemplates />} />
-              <Route path="/maintenance/contracts" element={<MaintenanceContracts />} />
-              <Route path="/maintenance/locations" element={<MaintenanceLocations />} />
-              <Route path="/maintenance/locations/:id" element={<MaintenanceLocations />} />
-              <Route path="/maintenance/checklists" element={<MaintenanceChecklists />} />
-              <Route path="/maintenance/parts" element={<MaintenanceParts />} />
-              <Route path="/maintenance/map" element={<MaintenanceMap />} />
-              <Route path="/maintenance/company" element={<MaintenanceCompany />} />
-              <Route path="/maintenance/analytics" element={<MaintenanceAnalytics />} />
-              <Route path="/maintenance/reports" element={<MaintenanceReports />} />
-              <Route path="/maintenance/docs" element={<MaintenanceDocs />} />
-              <Route path="/maintenance/docs/:page" element={<MaintenanceDocs />} />
-              <Route path="/maintenance/support" element={<MaintenanceSupport />} />
+              <Route path="/maintenance/dashboard" element={<PageErrorBoundary pageName="Maintenance Dashboard"><MaintenanceDashboard /></PageErrorBoundary>} />
+              <Route path="/maintenance/visits" element={<PageErrorBoundary pageName="Visit List"><MaintenanceVisitList /></PageErrorBoundary>} />
+              <Route path="/maintenance/visits/new" element={<PageErrorBoundary pageName="Create Visit"><MaintenanceCreateVisit /></PageErrorBoundary>} />
+              <Route path="/maintenance/visits/:id" element={<PageErrorBoundary pageName="Visit Detail"><MaintenanceVisitDetail /></PageErrorBoundary>} />
+              <Route path="/maintenance/assets" element={<PageErrorBoundary pageName="Assets"><MaintenanceAssets /></PageErrorBoundary>} />
+              <Route path="/maintenance/assets/:id" element={<PageErrorBoundary pageName="Asset Detail"><MaintenanceAssetDetail /></PageErrorBoundary>} />
+              <Route path="/maintenance/asset-types" element={<PageErrorBoundary pageName="Asset Types"><MaintenanceAssetTypes /></PageErrorBoundary>} />
+              <Route path="/maintenance/technicians" element={<PageErrorBoundary pageName="Technicians"><TechniciansPage /></PageErrorBoundary>} />
+              <Route path="/maintenance/calendar" element={<PageErrorBoundary pageName="Calendar"><MaintenanceCalendar /></PageErrorBoundary>} />
+              <Route path="/maintenance/schedules" element={<PageErrorBoundary pageName="Schedules"><MaintenanceRecurringTemplates /></PageErrorBoundary>} />
+              <Route path="/maintenance/contracts" element={<PageErrorBoundary pageName="Contracts"><MaintenanceContracts /></PageErrorBoundary>} />
+              <Route path="/maintenance/locations" element={<PageErrorBoundary pageName="Locations"><MaintenanceLocations /></PageErrorBoundary>} />
+              <Route path="/maintenance/locations/:id" element={<PageErrorBoundary pageName="Locations"><MaintenanceLocations /></PageErrorBoundary>} />
+              <Route path="/maintenance/checklists" element={<PageErrorBoundary pageName="Checklists"><MaintenanceChecklists /></PageErrorBoundary>} />
+              <Route path="/maintenance/parts" element={<PageErrorBoundary pageName="Parts"><MaintenanceParts /></PageErrorBoundary>} />
+              <Route path="/maintenance/map" element={<PageErrorBoundary pageName="Map"><MaintenanceMap /></PageErrorBoundary>} />
+              <Route path="/maintenance/company" element={<PageErrorBoundary pageName="Company"><MaintenanceCompany /></PageErrorBoundary>} />
+              <Route path="/maintenance/analytics" element={<PageErrorBoundary pageName="Maintenance Analytics"><MaintenanceAnalytics /></PageErrorBoundary>} />
+              <Route path="/maintenance/reports" element={<PageErrorBoundary pageName="Maintenance Reports"><MaintenanceReports /></PageErrorBoundary>} />
+              <Route path="/maintenance/docs" element={<PageErrorBoundary pageName="Maintenance Docs"><MaintenanceDocs /></PageErrorBoundary>} />
+              <Route path="/maintenance/docs/:page" element={<PageErrorBoundary pageName="Maintenance Docs"><MaintenanceDocs /></PageErrorBoundary>} />
+              <Route path="/maintenance/support" element={<PageErrorBoundary pageName="Maintenance Support"><MaintenanceSupport /></PageErrorBoundary>} />
             </Route>
 
             {/* =========================

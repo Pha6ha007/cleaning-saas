@@ -77,12 +77,10 @@ export function useOfflinePhotos(visitId: number) {
         }
 
         const originalSizeMB = getFileSizeMB(file);
-        console.log(`Original photo size: ${originalSizeMB.toFixed(2)}MB`);
 
         // Compress image if needed (target: < 8MB)
         let processedFile = file;
         if (originalSizeMB > 8) {
-          console.log("Compressing image...");
           try {
             processedFile = await compressImage(file, {
               maxSizeMB: 8,
@@ -90,7 +88,6 @@ export function useOfflinePhotos(visitId: number) {
               quality: 0.85,
             });
             const compressedSizeMB = getFileSizeMB(processedFile);
-            console.log(`Compressed photo size: ${compressedSizeMB.toFixed(2)}MB`);
           } catch (compressionError) {
             console.error("Failed to compress image:", compressionError);
             // Continue with original file if compression fails

@@ -32,7 +32,6 @@ export function MaintenanceLayout({ children }: MaintenanceLayoutProps) {
   // Enable background photo sync across all maintenance pages
   const { triggerSync } = usePhotoSync({
     onPhotoUploaded: (visitId, photoType) => {
-      console.log(`[MaintenanceLayout] Photo uploaded for visit ${visitId}, type: ${photoType}`);
       // Dispatch custom event to notify VisitDetail page to refresh
       const event = new CustomEvent('photoUploaded', {
         detail: { visitId, photoType },

@@ -40,6 +40,7 @@ const ShieldLogo = () => (
 // Custom Input with Icon
 interface IconInputProps {
   icon: React.ReactNode;
+  id?: string;
   label: string;
   type?: string;
   placeholder?: string;
@@ -53,6 +54,7 @@ interface IconInputProps {
 
 function IconInput({
   icon,
+  id,
   label,
   type = "text",
   placeholder,
@@ -67,9 +69,11 @@ function IconInput({
   const [showPassword, setShowPassword] = useState(false);
   const actualType = showToggle ? (showPassword ? "text" : "password") : type;
 
+  const inputId = id || label.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+
   return (
     <div className="mb-[18px]">
-      <Label className="block text-[13.5px] font-medium text-[#4B5161] mb-1.5">
+      <Label htmlFor={inputId} className="block text-[13.5px] font-medium text-[#4B5161] mb-1.5">
         {label}
         {required && <span className="text-red-600 ml-1">*</span>}
       </Label>
@@ -80,6 +84,7 @@ function IconInput({
           </div>
         </div>
         <Input
+          id={inputId}
           type={actualType}
           placeholder={placeholder}
           value={value}
@@ -100,6 +105,7 @@ function IconInput({
         {showToggle && (
           <button
             type="button"
+            aria-label={showPassword ? "Hide password" : "Show password"}
             onClick={() => setShowPassword(!showPassword)}
             className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[#9CA3B0] hover:text-[#6C7281]"
           >
@@ -230,7 +236,7 @@ export default function Login() {
         localStorage.setItem("cleanproof_trial_entry", trialTier);
       }
 
-      navigate("/dashboard");
+      navigate((location.state as any)?.from || "/dashboard");
     } catch (err: any) {
       setError(err?.message || "Unable to sign in. Please check your credentials.");
     } finally {
@@ -368,7 +374,7 @@ export default function Login() {
         localStorage.setItem("authUserEmail", newLoginData.email);
       }
 
-      navigate("/dashboard");
+      navigate((location.state as any)?.from || "/dashboard");
     } catch (err: any) {
       setPasswordChangeError(err?.message || "Failed to change password");
     } finally {

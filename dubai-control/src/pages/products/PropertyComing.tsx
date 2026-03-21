@@ -10,7 +10,6 @@ const PropertyComing = () => {
 
   const handleNotify = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Notify me:", email);
     // TODO: Implement backend integration
     alert("Thank you! We'll notify you when PropertyProof launches.");
     setEmail("");

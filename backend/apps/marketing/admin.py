@@ -19,7 +19,7 @@ class DemoRequestAdmin(admin.ModelAdmin):
 
 @admin.register(ContactMessage)
 class ContactMessageAdmin(admin.ModelAdmin):
-    list_display = ("name", "email", "company", "created_at")
+    list_display = ("name", "email", "phone", "company", "created_at")
     search_fields = ("name", "email", "company", "message")
     list_filter = ("created_at",)
     ordering = ("-created_at",)

@@ -60,12 +60,6 @@ export function LocationMap({
     | string
     | undefined;
 
-  // Лёгкий лог, чтобы в консоли сразу было видно, что ключ подхватился
-  console.log(
-    "[LocationMap] GOOGLE_MAPS_API_KEY present:",
-    Boolean(apiKey),
-  );
-
   // Если ключа нет — честно показываем пользователю, а не просто пустой блок
   if (!apiKey) {
     return (

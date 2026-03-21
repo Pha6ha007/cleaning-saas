@@ -153,7 +153,6 @@ export default function Dashboard() {
         })
           .then(async (resp) => {
             if (resp.ok) {
-              console.log(`Trial started successfully with tier: ${trialEntry}`);
             } else {
               console.warn("Failed to start trial:", resp.status);
             }

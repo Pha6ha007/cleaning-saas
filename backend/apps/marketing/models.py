@@ -23,6 +23,7 @@ class ContactMessage(models.Model):
     name = models.CharField(max_length=255)
     company = models.CharField(max_length=255, blank=True)
     email = models.EmailField()
+    phone = models.CharField(max_length=30, blank=True)
     message = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 

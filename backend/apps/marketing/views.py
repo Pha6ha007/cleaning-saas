@@ -66,6 +66,7 @@ class ContactMessageCreateView(generics.CreateAPIView):
             f"Name: {instance.name}",
             f"Company: {instance.company or '-'}",
             f"Email: {instance.email}",
+            f"Phone: {instance.phone or \x27-\x27}",
             "",
             "Message:",
             instance.message,

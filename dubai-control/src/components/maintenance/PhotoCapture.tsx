@@ -45,16 +45,6 @@ export function PhotoCapture({
   const serverPhotoUrl = existingPhoto?.url || null;
   const currentPhotoUrl = offlinePhotoUrl || serverPhotoUrl;
 
-  // Debug logging
-  console.log(`[PhotoCapture ${photoType}] Display priority:`, {
-    visitId,
-    hasOffline: !!offlinePhoto,
-    hasServer: !!existingPhoto,
-    showing: currentPhotoUrl ? (offlinePhotoUrl ? 'OFFLINE' : 'SERVER') : 'NONE',
-    offlineStatus: offlinePhoto?.status,
-    useHook: !!getPhotoByType(photoType),
-    useProp: !!offlinePhotoProp,
-  });
 
   // Handle file selection
   const handleFileChange = useCallback(
@@ -94,12 +84,10 @@ export function PhotoCapture({
       // Background sync will handle upload automatically
       (async () => {
         try {
-          console.log(`[PhotoCapture ${photoType}] Saving to IndexedDB...`);
 
           // Use offline hook directly
           await capturePhotoOffline(file, photoType);
 
-          console.log(`[PhotoCapture ${photoType}] Saved to IndexedDB successfully`);
 
           toast({
             title: "Photo saved",

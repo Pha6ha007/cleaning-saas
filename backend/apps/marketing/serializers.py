@@ -37,6 +37,7 @@ class ContactMessageSerializer(serializers.ModelSerializer):
             "name",
             "company",
             "email",
+            "phone",
             "message",
             "created_at",
         ]

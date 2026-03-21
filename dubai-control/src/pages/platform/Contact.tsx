@@ -4,7 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
-import { Mail, Phone, MapPin, Clock } from "lucide-react";
+import { Mail, Phone, MapPin, Clock, CheckCircle, AlertCircle } from "lucide-react";
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8001";
+
+type SubmitState = "idle" | "submitting" | "success" | "error";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -14,11 +19,38 @@ const Contact = () => {
     phone: "",
     message: "",
   });
+  const [submitState, setSubmitState] = useState<SubmitState>("idle");
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form submitted:", formData);
-    // TODO: Implement actual form submission
+    setSubmitState("submitting");
+    setErrorMessage("");
+
+    try {
+      const resp = await fetch(`${API_BASE_URL}/api/public/contact-messages/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => null);
+        const msg =
+          data && typeof data === "object"
+            ? Object.values(data).flat().join(". ")
+            : "Failed to send message. Please try again.";
+        throw new Error(msg);
+      }
+
+      setSubmitState("success");
+      setFormData({ name: "", email: "", company: "", phone: "", message: "" });
+    } catch (err) {
+      setSubmitState("error");
+      setErrorMessage(
+        err instanceof Error ? err.message : "Failed to send message. Please try again."
+      );
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -26,6 +58,11 @@ const Contact = () => {
       ...formData,
       [e.target.name]: e.target.value,
     });
+    // Reset error state when user starts typing again
+    if (submitState === "error") {
+      setSubmitState("idle");
+      setErrorMessage("");
+    }
   };
 
   return (
@@ -51,94 +88,129 @@ const Contact = () => {
             {/* Form */}
             <div className="lg:col-span-7">
               <h2 className="text-2xl font-semibold mb-8">Send us a message</h2>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="name" className="text-sm font-medium">
-                      Full Name *
-                    </Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      type="text"
-                      value={formData.name}
-                      onChange={handleChange}
-                      required
-                      className="h-12"
-                      placeholder="Your name"
-                    />
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-medium">
-                      Work Email *
-                    </Label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      required
-                      className="h-12"
-                      placeholder="you@company.com"
-                    />
-                  </div>
+              {submitState === "success" ? (
+                <div className="rounded-lg border border-green-200 bg-green-50 p-8 text-center">
+                  <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-green-900 mb-2">
+                    Message sent successfully!
+                  </h3>
+                  <p className="text-green-700 mb-6">
+                    Thank you for reaching out. We'll get back to you within 24 hours.
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => setSubmitState("idle")}
+                  >
+                    Send Another Message
+                  </Button>
                 </div>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {submitState === "error" && errorMessage && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 p-4 flex items-start gap-3">
+                      <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-red-700">{errorMessage}</p>
+                    </div>
+                  )}
 
-                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="name" className="text-sm font-medium">
+                        Full Name *
+                      </Label>
+                      <Input
+                        id="name"
+                        name="name"
+                        type="text"
+                        value={formData.name}
+                        onChange={handleChange}
+                        required
+                        className="h-12"
+                        placeholder="Your name"
+                        disabled={submitState === "submitting"}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-sm font-medium">
+                        Work Email *
+                      </Label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        required
+                        className="h-12"
+                        placeholder="you@company.com"
+                        disabled={submitState === "submitting"}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="company" className="text-sm font-medium">
+                        Company *
+                      </Label>
+                      <Input
+                        id="company"
+                        name="company"
+                        type="text"
+                        value={formData.company}
+                        onChange={handleChange}
+                        required
+                        className="h-12"
+                        placeholder="Company name"
+                        disabled={submitState === "submitting"}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="phone" className="text-sm font-medium">
+                        Phone Number
+                      </Label>
+                      <Input
+                        id="phone"
+                        name="phone"
+                        type="tel"
+                        value={formData.phone}
+                        onChange={handleChange}
+                        className="h-12"
+                        placeholder="+971 XX XXX XXXX"
+                        disabled={submitState === "submitting"}
+                      />
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="company" className="text-sm font-medium">
-                      Company *
+                    <Label htmlFor="message" className="text-sm font-medium">
+                      How can we help? *
                     </Label>
-                    <Input
-                      id="company"
-                      name="company"
-                      type="text"
-                      value={formData.company}
+                    <Textarea
+                      id="message"
+                      name="message"
+                      value={formData.message}
                       onChange={handleChange}
+                      rows={6}
                       required
-                      className="h-12"
-                      placeholder="Company name"
+                      className="resize-none"
+                      placeholder="Tell us about your operations, team size, and what challenges you're looking to solve."
+                      disabled={submitState === "submitting"}
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-sm font-medium">
-                      Phone Number
-                    </Label>
-                    <Input
-                      id="phone"
-                      name="phone"
-                      type="tel"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      className="h-12"
-                      placeholder="+971 XX XXX XXXX"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="message" className="text-sm font-medium">
-                    How can we help? *
-                  </Label>
-                  <Textarea
-                    id="message"
-                    name="message"
-                    value={formData.message}
-                    onChange={handleChange}
-                    rows={6}
-                    required
-                    className="resize-none"
-                    placeholder="Tell us about your operations, team size, and what challenges you're looking to solve."
-                  />
-                </div>
-
-                <Button type="submit" className="w-full md:w-auto marketing-btn-orange">
-                  Send Message
-                </Button>
-              </form>
+                  <Button
+                    type="submit"
+                    className="w-full md:w-auto marketing-btn-orange"
+                    disabled={submitState === "submitting"}
+                  >
+                    {submitState === "submitting" ? "Sending…" : "Send Message"}
+                  </Button>
+                </form>
+              )}
             </div>
 
             {/* Info Sidebar */}
