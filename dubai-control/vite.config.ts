@@ -72,11 +72,17 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         manualChunks(id: string) {
-          // React core — smallest possible eager chunk
+          // React core + essential React-dependent libs that call createContext() at import time.
+          // These MUST be in the same chunk to avoid undefined-React race conditions in production.
           if (id.includes("node_modules/react/") ||
               id.includes("node_modules/react-dom/") ||
               id.includes("node_modules/react-router-dom/") ||
-              id.includes("node_modules/scheduler/")) {
+              id.includes("node_modules/react-router/") ||
+              id.includes("node_modules/scheduler/") ||
+              id.includes("node_modules/react-i18next") ||
+              id.includes("node_modules/i18next") ||
+              id.includes("node_modules/sonner") ||
+              id.includes("node_modules/react-hot-toast")) {
             return "vendor-react";
           }
 
