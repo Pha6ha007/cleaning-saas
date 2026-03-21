@@ -82,6 +82,7 @@ INSTALLED_APPS = [
     "apps.api",
     "apps.marketing",
     "apps.analytics",
+    "storages",  # S3-compatible file storage
 ]
 
 
@@ -186,14 +187,50 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-
 
 # Media (uploads)
-# ВАЖНО: media лежит в backend/media, без вложенных директорий по умолчанию
+# Production: S3-compatible storage (set AWS_STORAGE_BUCKET_NAME env var)
+# Development: local filesystem (default when no bucket configured)
 
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+_storage_bucket = os.getenv("AWS_STORAGE_BUCKET_NAME")
+
+if _storage_bucket:
+    # S3-compatible storage (AWS S3, DigitalOcean Spaces, Cloudflare R2)
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+
+    AWS_STORAGE_BUCKET_NAME = _storage_bucket
+    AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "fra1")
+    AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+    AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+
+    # For DigitalOcean Spaces / Cloudflare R2 — set custom endpoint
+    AWS_S3_ENDPOINT_URL = os.getenv("AWS_S3_ENDPOINT_URL")  # e.g. https://fra1.digitaloceanspaces.com
+
+    # Public read access for media files (photos, documents)
+    AWS_DEFAULT_ACL = os.getenv("AWS_DEFAULT_ACL", "public-read")
+    AWS_S3_OBJECT_PARAMETERS = {
+        "CacheControl": "max-age=86400",  # 1 day cache
+    }
+    AWS_QUERYSTRING_AUTH = False  # Don't add auth querystring to URLs
+
+    # Media URL from CDN or bucket
+    MEDIA_URL = os.getenv(
+        "MEDIA_URL",
+        f"https://{_storage_bucket}.{AWS_S3_REGION_NAME}.digitaloceanspaces.com/"
+    )
+    MEDIA_ROOT = ""  # Not used with S3
+else:
+    # Local filesystem (development)
+    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+    MEDIA_URL = "/media/"
+    MEDIA_ROOT = BASE_DIR / "media"
 
 
 # Default primary key field type
@@ -363,7 +400,30 @@ FOUNDER_DEMO_EMAIL = os.getenv("FOUNDER_DEMO_EMAIL", "photobp2019@gmail.com")
 # M004/S02: Frontend URL for email verification links
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
-# Email backend: SMTP in production, console in dev if not configured
+# =============================================================================
+# Email Configuration (environment-driven)
+# =============================================================================
+# Supports: SMTP (Gmail, SendGrid, Mailgun, SES), or console (dev)
+#
+# For SendGrid SMTP:
+#   EMAIL_HOST=smtp.sendgrid.net
+#   EMAIL_PORT=587
+#   EMAIL_HOST_USER=apikey
+#   EMAIL_HOST_PASSWORD=SG.your-api-key
+#
+# For Mailgun SMTP:
+#   EMAIL_HOST=smtp.mailgun.org
+#   EMAIL_PORT=587
+#   EMAIL_HOST_USER=postmaster@mg.yourdomain.com
+#   EMAIL_HOST_PASSWORD=your-mailgun-password
+#
+# For AWS SES:
+#   EMAIL_HOST=email-smtp.us-east-1.amazonaws.com
+#   EMAIL_PORT=587
+#   EMAIL_HOST_USER=your-ses-smtp-user
+#   EMAIL_HOST_PASSWORD=your-ses-smtp-password
+# =============================================================================
+
 _email_password = os.environ.get("EMAIL_HOST_PASSWORD")
 if _email_password or not DEBUG:
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
@@ -375,17 +435,18 @@ EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() in ("true", "1", "yes")
 
-# Sender email
+# Sender credentials
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "reports.cleanproof@gmail.com")
-
-# App Password from environment (NEVER hardcode in production)
 EMAIL_HOST_PASSWORD = _email_password or ""
 
-# Default sender
+# Default "From" address
 DEFAULT_FROM_EMAIL = os.getenv(
     "DEFAULT_FROM_EMAIL",
-    "CleanProof Reports <reports.cleanproof@gmail.com>"
+    "Proof Platform <noreply@proofplatform.com>"
 )
+
+# Server email for error reports
+SERVER_EMAIL = os.getenv("SERVER_EMAIL", DEFAULT_FROM_EMAIL)
 
 
 # =============================================================================
