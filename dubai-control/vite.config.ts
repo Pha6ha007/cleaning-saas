@@ -162,8 +162,21 @@ export default defineConfig(({ mode }) => ({
             return "vendor-qrcode";
           }
 
-          // Remaining third-party dependencies
+          // Remaining third-party deps that DON'T depend on React at top level.
+          // React-dependent packages (sonner, cmdk, etc.) are left for Rollup
+          // to place naturally alongside their React import.
           if (id.includes("node_modules/")) {
+            // Skip React-dependent packages — they must stay with Rollup's
+            // natural ordering to ensure React is evaluated first.
+            const reactDependent = [
+              "sonner", "cmdk", "react-day-picker", "react-dropzone",
+              "react-hook-form", "react-resizable-panels", "vaul",
+              "input-otp", "react-remove-scroll", "react-style-singleton",
+              "@floating-ui/react", "embla-carousel-react"
+            ];
+            if (reactDependent.some(pkg => id.includes(`node_modules/${pkg}`))) {
+              return; // Let Rollup decide — keeps them near vendor-react
+            }
             return "vendor-misc";
           }
 
