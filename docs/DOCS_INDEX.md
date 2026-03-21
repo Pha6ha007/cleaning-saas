@@ -589,3 +589,14 @@ Founder, sales, bizdev.
 
 Если не укладывается никуда — лучше сначала придумать, **к какому слою это относится**, а уже потом писать документ.
 
+
+---
+
+## Audit & Improvement Plans
+
+| Document | Purpose |
+|----------|---------|
+| `docs/audit/PROJECT_AUDIT_AND_PLAN_2026-03-21.md` | Full-stack audit: 8 bugs fixed, architecture analysis, prioritized 5-phase improvement plan |
+| `docs/audit/AUDIT_FIXES_APPLIED.md` | Historical audit fixes log |
+| `docs/audit/AUDIT_FIXES_README.md` | Audit process documentation |
+
