@@ -268,10 +268,11 @@ function EmailDialog({ open, onClose, onSend, userEmail, mode }: EmailDialogProp
     try {
       await onSend(email);
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Extract error message from API response if available
-      const apiMessage = err?.response?.data?.message;
-      setError(apiMessage || "Failed to send email. Please try again.");
+      const apiErr = err as { response?: { data?: { message?: string } } };
+      const apiMessage = apiErr?.response?.data?.message;
+      setError(apiMessage || (err instanceof Error ? err.message : "Failed to send email. Please try again."));
     } finally {
       setSending(false);
     }

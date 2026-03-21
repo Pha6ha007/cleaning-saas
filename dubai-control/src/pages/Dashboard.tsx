@@ -178,16 +178,17 @@ export default function Dashboard() {
       const mappedJobs = (apiJobs as ApiJob[]).map(mapApiJobToUi);
       setTodayJobs(mappedJobs);
       setUsage(usageSummary as UsageSummary);
-    } catch (err: any) {
+    } catch (err: unknown) {
       // 🔒 company blocked → read-only mode
-      if ((err as any)?.code === "company_blocked") {
+      const apiErr = err as { code?: string; message?: string };
+      if (apiErr?.code === "company_blocked") {
         setCompanyBlocked(true);
         setTodayJobs([]);
         setUsage(null);
         return;
       }
 
-      setError(err.message || "Failed to load dashboard data");
+      setError(err instanceof Error ? err.message : "Failed to load dashboard data");
       setTodayJobs([]);
     } finally {
       setLoading(false);

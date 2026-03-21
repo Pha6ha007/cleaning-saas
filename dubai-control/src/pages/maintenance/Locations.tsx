@@ -75,7 +75,7 @@ export default function MaintenanceLocations() {
     },
     onError: (error: any) => {
       const message =
-        error?.response?.data?.message || "Failed to create location";
+        error?.response?.(data instanceof Error ? data.message : "Failed to create location");
       toast({
         variant: "destructive",
         title: "Error",
@@ -104,7 +104,7 @@ export default function MaintenanceLocations() {
     },
     onError: (error: any) => {
       const message =
-        error?.response?.data?.message || "Failed to update location";
+        error?.response?.(data instanceof Error ? data.message : "Failed to update location");
       toast({
         variant: "destructive",
         title: "Error",
@@ -205,11 +205,11 @@ export default function MaintenanceLocations() {
 
         setImportData(result);
         setShowImportModal(true);
-      } catch (error: any) {
+      } catch (error: unknown) {
         toast({
           variant: "destructive",
           title: "Import Error",
-          description: error.message || "Failed to parse file",
+          description: error instanceof Error ? error.message : "Failed to parse file",
         });
       }
     };

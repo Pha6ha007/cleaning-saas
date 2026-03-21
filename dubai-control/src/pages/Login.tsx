@@ -237,8 +237,8 @@ export default function Login() {
       }
 
       navigate((location.state as any)?.from || "/dashboard");
-    } catch (err: any) {
-      setError(err?.message || "Unable to sign in. Please check your credentials.");
+    } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : "Unable to sign in. Please check your credentials."));
     } finally {
       setIsLoading(false);
     }
@@ -304,8 +304,8 @@ export default function Login() {
       setSignupEmail("");
       setSignupPassword("");
       setSignupConfirmPassword("");
-    } catch (err: any) {
-      setError(err?.message || "Failed to create account. Please try again.");
+    } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : "Failed to create account. Please try again."));
     } finally {
       setIsLoading(false);
     }
@@ -375,8 +375,8 @@ export default function Login() {
       }
 
       navigate((location.state as any)?.from || "/dashboard");
-    } catch (err: any) {
-      setPasswordChangeError(err?.message || "Failed to change password");
+    } catch (err: unknown) {
+      setPasswordChangeError((err instanceof Error ? err.message : "Failed to change password"));
     } finally {
       setIsChangingPassword(false);
     }

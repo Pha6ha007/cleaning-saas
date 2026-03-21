@@ -70,11 +70,12 @@ export default function ViolationJobsPage() {
       locationId,
     })
       .then((res) => setData(res))
-      .catch((err: any) => {
+      .catch((err: unknown) => {
         console.error(err);
+        const apiErr = err as { response?: { data?: { detail?: string } } };
         const message =
-          err?.response?.data?.detail ||
-          "Failed to load violation jobs. Please try again.";
+          apiErr?.response?.data?.detail ||
+          (err instanceof Error ? err.message : "Failed to load violation jobs. Please try again.");
         setError(message);
       })
       .finally(() => setLoading(false));
