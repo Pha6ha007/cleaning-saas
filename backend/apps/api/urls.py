@@ -13,6 +13,8 @@ from .views_recurring_jobs import RecurringJobListCreateView, RecurringJobDetail
 from .views_sla_policies import SLAPolicyListCreateView, SLAPolicyDetailView, EffectiveSLAPolicyView
 from .views_audit_log import AuditLogView, AuditLogExportView
 from .views_api_keys import ApiKeyListCreateView, ApiKeyDetailView, ApiKeyUsageView
+from .views_analytics_tracking import PageViewTrackingView
+from .views_demo import DemoLoginView
 from . import views
 from .views_jwt import JWTManagerLoginView, JWTCleanerLoginView, JWTRefreshView, JWTLogoutView
 

@@ -4,7 +4,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("accounts", "0012_add_password_reset_token"),
+        ("apps_accounts", "0012_add_password_reset_token"),
     ]
 
     operations = [

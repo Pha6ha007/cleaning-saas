@@ -8,7 +8,7 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("accounts", "0011_add_branch_model"),
+        ("apps_accounts", "0011_add_branch_model"),
     ]
 
     operations = [
@@ -38,7 +38,7 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name="password_reset_tokens",
-                        to="accounts.user",
+                        to="apps_accounts.user",
                     ),
                 ),
             ],
