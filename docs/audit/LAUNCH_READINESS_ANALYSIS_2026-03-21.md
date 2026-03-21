@@ -120,23 +120,17 @@ Missing billing + file storage for production.
   4. Test subscription lifecycle (create → upgrade → cancel)
 - **Effort:** 1-2 days after Paddle approves
 
-### B2: File Storage for Production
-- **Impact:** Photos, documents stored locally — won't survive container restart
-- **Current:** `MEDIA_ROOT = BASE_DIR / "media"` (local filesystem)
-- **Action needed:** Configure S3/DigitalOcean Spaces/Cloudflare R2
-  1. Install `django-storages` + `boto3`
-  2. Set `DEFAULT_FILE_STORAGE` to S3
-  3. Migrate existing files
-- **Effort:** 2-4 hours
+### ~~B2: File Storage for Production~~ ✅ RESOLVED (`6c8387a`)
+- django-storages + boto3 added
+- S3-compatible storage configured via env vars (DO Spaces / AWS S3 / R2)
+- Falls back to local filesystem when no bucket configured
+- **To activate:** Set `AWS_STORAGE_BUCKET_NAME` + credentials in production env
 
-### B3: Production Email Configuration
-- **Impact:** Verification emails, password resets, report emails may not deliver
-- **Current:** `EMAIL_BACKEND` likely default (console in dev)
-- **Action needed:** Configure production SMTP (SendGrid/Mailgun/SES)
-  1. Set `EMAIL_BACKEND = 'django.core.mail.backends.smtp.SmtpEmailBackend'`
-  2. Configure `EMAIL_HOST`, credentials
-  3. Set up SPF/DKIM/DMARC for deliverability
-- **Effort:** 1-2 hours (config) + 1 day (DNS propagation)
+### ~~B3: Production Email Configuration~~ ✅ RESOLVED (`6c8387a`)
+- Email config already env-driven (SMTP when password set, console in dev)
+- Enhanced with docs for SendGrid, Mailgun, SES, Gmail
+- .env.production.example includes all email vars
+- **To activate:** Set `EMAIL_HOST_PASSWORD` + provider settings in production env
 
 ---
 
