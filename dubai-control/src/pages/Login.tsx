@@ -236,7 +236,7 @@ export default function Login() {
         localStorage.setItem("cleanproof_trial_entry", trialTier);
       }
 
-      navigate((location.state as any)?.from || "/dashboard");
+      navigate((location.state as { from?: string } | null)?.from || "/dashboard");
     } catch (err: unknown) {
       setError((err instanceof Error ? err.message : "Unable to sign in. Please check your credentials."));
     } finally {
@@ -280,7 +280,7 @@ export default function Login() {
       if (!res.ok) {
         let message = "Failed to create account. Please try again.";
         try {
-          const data = (await res.json()) as any;
+          const data = await res.json() as { access?: string; refresh?: string; detail?: string; non_field_errors?: string[] };
           if (typeof data?.detail === "string") {
             message = data.detail;
           } else if (typeof data?.error === "string") {
@@ -374,7 +374,7 @@ export default function Login() {
         localStorage.setItem("authUserEmail", newLoginData.email);
       }
 
-      navigate((location.state as any)?.from || "/dashboard");
+      navigate((location.state as { from?: string } | null)?.from || "/dashboard");
     } catch (err: unknown) {
       setPasswordChangeError((err instanceof Error ? err.message : "Failed to change password"));
     } finally {

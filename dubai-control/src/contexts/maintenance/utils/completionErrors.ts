@@ -81,9 +81,9 @@ function extractErrorData(error: unknown): StandardizedError | null {
   if (
     typeof error === "object" &&
     "response" in error &&
-    (error as any).response?.data
+    (error as { response?: { data?: Record<string, unknown> } }).response?.data
   ) {
-    const data = (error as any).response.data;
+    const data = (error as { response?: { data?: Record<string, unknown> } }).response?.data;
     if (data.code) {
       return data as StandardizedError;
     }
@@ -91,7 +91,7 @@ function extractErrorData(error: unknown): StandardizedError | null {
 
   // Error with data property directly
   if (typeof error === "object" && "data" in error) {
-    const data = (error as any).data;
+    const data = (error as { data?: Record<string, unknown> }).data;
     if (data?.code) {
       return data as StandardizedError;
     }

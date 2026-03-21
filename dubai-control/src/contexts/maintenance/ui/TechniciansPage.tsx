@@ -244,11 +244,11 @@ export function TechniciansPage({ showBackButton = false, onBack }: TechniciansP
             });
             handleCloseModal();
           },
-          onError: (error: any) => {
+          onError: (error: unknown) => {
             toast({
               variant: "destructive",
               title: "Error",
-              description: error?.response?.data?.message || "Failed to update technician",
+              description: getApiErrorMessage(error, "Failed to update technician"),
             });
           },
         }
@@ -269,11 +269,11 @@ export function TechniciansPage({ showBackButton = false, onBack }: TechniciansP
           });
           handleCloseModal();
         },
-        onError: (error: any) => {
+        onError: (error: unknown) => {
           toast({
             variant: "destructive",
             title: "Error",
-            description: error?.response?.data?.message || "Failed to create technician",
+            description: getApiErrorMessage(error, "Failed to create technician"),
           });
         },
       });
@@ -294,11 +294,11 @@ export function TechniciansPage({ showBackButton = false, onBack }: TechniciansP
               description: "Technician activated",
             });
           },
-          onError: (error: any) => {
+          onError: (error: unknown) => {
             toast({
               variant: "destructive",
               title: "Error",
-              description: error?.response?.data?.message || "Failed to activate technician",
+              description: getApiErrorMessage(error, "Failed to activate technician"),
             });
           },
         }
@@ -319,11 +319,11 @@ export function TechniciansPage({ showBackButton = false, onBack }: TechniciansP
           });
           setDeactivateConfirm(null);
         },
-        onError: (error: any) => {
+        onError: (error: unknown) => {
           toast({
             variant: "destructive",
             title: "Error",
-            description: error?.response?.data?.message || "Failed to deactivate technician",
+            description: getApiErrorMessage(error, "Failed to deactivate technician"),
           });
           setDeactivateConfirm(null);
         },
@@ -343,11 +343,11 @@ export function TechniciansPage({ showBackButton = false, onBack }: TechniciansP
           description: "New PIN generated successfully",
         });
       },
-      onError: (error: any) => {
+      onError: (error: unknown) => {
         toast({
           variant: "destructive",
           title: "Error",
-          description: error?.response?.data?.message || "Failed to reset PIN",
+          description: getApiErrorMessage(error, "Failed to reset PIN"),
         });
         setResetPinModal(null);
       },

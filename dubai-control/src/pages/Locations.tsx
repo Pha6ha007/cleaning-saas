@@ -108,9 +108,9 @@ export default function LocationsNew() {
       setShowModal(false);
       setEditingLocation(null);
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       const message =
-        error?.response?.data?.message || "Failed to create location";
+        (error instanceof Error ? error.message : "Failed to create location");
       toast({
         variant: "destructive",
         title: "Error",
@@ -139,9 +139,9 @@ export default function LocationsNew() {
         description: "Location updated successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       const message =
-        error?.response?.data?.message || "Failed to update location";
+        (error instanceof Error ? error.message : "Failed to update location");
       toast({
         variant: "destructive",
         title: "Error",

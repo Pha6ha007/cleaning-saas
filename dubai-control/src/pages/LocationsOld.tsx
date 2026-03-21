@@ -220,7 +220,7 @@ export default function Locations() {
   const getCreatedTimestamp = (loc: UILocation): number => {
     const raw = loc.createdAt ?? (loc as ApiLocation).created_at;
     if (!raw) return 0;
-    const d = new Date(raw as any);
+    const d = new Date(String(raw));
     const ts = d.getTime();
     return Number.isNaN(ts) ? 0 : ts;
   };
