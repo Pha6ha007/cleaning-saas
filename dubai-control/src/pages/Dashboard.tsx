@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
+import { EmptyState } from "@/components/empty/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/ui/stat-card";
@@ -382,9 +383,13 @@ export default function Dashboard() {
               ))}
             </div>
           ) : todayJobs.length === 0 ? (
-            <div className="px-6 py-4 text-sm text-muted-foreground">
-              No jobs for today.
-            </div>
+            <EmptyState
+              icon={<svg className="h-6 w-6 text-muted-foreground" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" /></svg>}
+              title="No jobs scheduled for today"
+              description="Create a job to get started. Jobs assigned to today will appear here."
+              actionLabel="Create a job"
+              actionHref="/planning"
+            />
           ) : (
             todayJobs.map((job) => (
               <Link

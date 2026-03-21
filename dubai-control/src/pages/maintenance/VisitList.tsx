@@ -443,7 +443,9 @@ export default function VisitList() {
               }
             : {
                 title: "No service visits yet",
-                description: "Get started by creating your first service visit",
+                description: "Create your first service visit to start tracking maintenance work.",
+                actionLabel: canCreate ? "Create visit" : undefined,
+                actionHref: canCreate ? "/maintenance/visits/new" : undefined,
               }
         }
         // Filters - map 1:1 to backend query params

@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
+import { EmptyState } from "@/components/empty/EmptyState";
 import { MaintenanceLayout } from "@/contexts/maintenance/ui/MaintenanceLayout";
 import {
   listVisits,
@@ -543,7 +544,7 @@ export default function MaintenanceDashboard() {
                 </Button>
               </div>
             ) : topTechnicians.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-6 text-center">No data available</p>
+              <p className="text-sm text-muted-foreground py-6 text-center">No technician data yet. Complete some visits to see performance.</p>
             ) : (
               <div className="space-y-3">
                 {topTechnicians.map((tech, idx) => (
@@ -643,7 +644,7 @@ export default function MaintenanceDashboard() {
               </Button>
             </div>
           ) : recentCompletedVisits.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-6 text-center">No completed visits</p>
+            <p className="text-sm text-muted-foreground py-6 text-center">No completed visits yet. Schedule your first visit to start tracking.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
