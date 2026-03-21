@@ -68,4 +68,120 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          // React core — smallest possible eager chunk
+          if (id.includes("node_modules/react/") ||
+              id.includes("node_modules/react-dom/") ||
+              id.includes("node_modules/react-router-dom/") ||
+              id.includes("node_modules/scheduler/")) {
+            return "vendor-react";
+          }
+
+          // UI component libraries (Radix + shadcn generated components)
+          if (id.includes("node_modules/@radix-ui/") ||
+              id.includes("node_modules/class-variance-authority") ||
+              id.includes("node_modules/clsx") ||
+              id.includes("node_modules/tailwind-merge") ||
+              id.includes("node_modules/lucide-react")) {
+            return "vendor-ui";
+          }
+
+          // Charts / data visualisation
+          if (id.includes("node_modules/recharts") ||
+              id.includes("node_modules/d3-") ||
+              id.includes("node_modules/victory")) {
+            return "vendor-charts";
+          }
+
+          // Date utilities (date-fns is large)
+          if (id.includes("node_modules/date-fns")) {
+            return "vendor-date";
+          }
+
+          // Animation library
+          if (id.includes("node_modules/framer-motion")) {
+            return "vendor-animation";
+          }
+
+          // Form validation
+          if (id.includes("node_modules/zod") ||
+              id.includes("node_modules/react-hook-form") ||
+              id.includes("node_modules/@hookform/")) {
+            return "vendor-forms";
+          }
+
+          // Spreadsheet processing (xlsx is very large)
+          if (id.includes("node_modules/xlsx") ||
+              id.includes("node_modules/exceljs")) {
+            return "vendor-spreadsheet";
+          }
+
+          // Maps (Google Maps — separate from Leaflet)
+          if (id.includes("node_modules/@react-google-maps") ||
+              id.includes("node_modules/@googlemaps")) {
+            return "vendor-googlemaps";
+          }
+
+          // Map / geolocation (leaflet is large)
+          if (id.includes("node_modules/leaflet") ||
+              id.includes("node_modules/react-leaflet")) {
+            return "vendor-map";
+          }
+
+          // Tanstack / state management
+          if (id.includes("node_modules/@tanstack/")) {
+            return "vendor-tanstack";
+          }
+
+          // Sentry (error tracking — kept separate so it can be deferred)
+          if (id.includes("node_modules/@sentry/")) {
+            return "vendor-sentry";
+          }
+
+          // Drag & drop (only used in maintenance calendar)
+          if (id.includes("node_modules/@dnd-kit/")) {
+            return "vendor-dnd";
+          }
+
+          // Paddle billing SDK (only used on billing page)
+          if (id.includes("node_modules/@paddle/")) {
+            return "vendor-paddle";
+          }
+
+          // QR code generation (only used in maintenance assets)
+          if (id.includes("node_modules/qrcode")) {
+            return "vendor-qrcode";
+          }
+
+          // Remaining third-party dependencies
+          if (id.includes("node_modules/")) {
+            return "vendor-misc";
+          }
+
+          // Maintenance context pages (only loaded on /maintenance/* routes)
+          if (id.includes("/pages/maintenance/") ||
+              id.includes("/contexts/maintenance/")) {
+            return "chunk-maintenance";
+          }
+
+          // Marketing / landing pages (rarely loaded after first visit)
+          if (id.includes("/pages/platform") ||
+              id.includes("/pages/products") ||
+              id.includes("/marketing/")) {
+            return "chunk-marketing";
+          }
+
+          // CleanProof app pages
+          if (id.includes("/pages/") || id.includes("/components/")) {
+            return "chunk-cleaning-app";
+          }
+        },
+      },
+    },
+    // Raise warning threshold slightly — still targeting <500KB per chunk
+    chunkSizeWarningLimit: 500,
+  },
 }));
