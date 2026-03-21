@@ -53,7 +53,7 @@ const MaintenanceLanding = () => {
             </p>
 
             <div className="flex flex-col sm:flex-row items-start gap-4">
-              <Link to="/contact">
+              <Link to="/signup?context=maintenance">
                 <button className="relative overflow-hidden h-14 px-10 text-base font-semibold rounded-xl backdrop-blur-md bg-[#059669]/90 hover:bg-[#059669] text-white border border-[#059669]/60 shadow-2xl shadow-[#059669]/40 hover:shadow-[#059669]/60 transition-all duration-300 hover:-translate-y-1 hover:scale-105">
                   <div className="absolute inset-0 bg-gradient-to-b from-white/25 to-transparent pointer-events-none" />
                   <span className="relative flex items-center gap-2">
@@ -567,7 +567,7 @@ const MaintenanceLanding = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
-            <Link to="/contact">
+            <Link to="/signup?context=maintenance">
               <button className="relative overflow-hidden h-16 px-12 text-lg font-semibold rounded-2xl backdrop-blur-xl bg-[#059669]/90 hover:bg-[#059669] text-white border border-[#059669]/60 shadow-2xl shadow-[#059669]/40 hover:shadow-[#059669]/60 transition-all duration-300 hover:-translate-y-1 hover:scale-105">
                 <div className="absolute inset-0 bg-gradient-to-b from-white/30 to-transparent pointer-events-none" />
                 <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />

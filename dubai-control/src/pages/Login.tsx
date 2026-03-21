@@ -128,6 +128,8 @@ const proofSteps = [
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const contextParam = searchParams.get("context");
 
   // Mode: "signin" or "signup"
   const [mode, setMode] = useState<"signin" | "signup" | "verification_pending">("signin");
@@ -237,7 +239,7 @@ export default function Login() {
         localStorage.setItem("cleanproof_trial_entry", trialTier);
       }
 
-      navigate((location.state as { from?: string } | null)?.from || "/dashboard");
+      navigate((location.state as { from?: string } | null)?.from || (contextParam === "maintenance" ? "/maintenance/dashboard" : "/dashboard"));
     } catch (err: unknown) {
       setError((err instanceof Error ? err.message : "Unable to sign in. Please check your credentials."));
     } finally {
@@ -369,7 +371,7 @@ export default function Login() {
         localStorage.setItem("authUserEmail", newLoginData.email);
       }
 
-      navigate((location.state as { from?: string } | null)?.from || "/dashboard");
+      navigate((location.state as { from?: string } | null)?.from || (contextParam === "maintenance" ? "/maintenance/dashboard" : "/dashboard"));
     } catch (err: unknown) {
       setPasswordChangeError((err instanceof Error ? err.message : "Failed to change password"));
     } finally {
