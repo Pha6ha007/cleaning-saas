@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { EmptyState } from "@/components/empty/EmptyState";
+import { useTranslation } from "react-i18next";
 import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
 import { useLocations } from "@/contexts/LocationsContext";
 import { Button } from "@/components/ui/button";
@@ -235,12 +236,12 @@ export default function Dashboard() {
 
   const bannerDescription =
     isPaid
-      ? "Your plan is active. All features are available."
+      ? t("dashboard.planStatus.activePlan")
       : usage && usage.is_trial_expired
       ? TRIAL_COPY.trialExpiredDescription
       : usage && usage.is_trial_active
       ? TRIAL_COPY.trialActiveDescription
-      : "You're on a paid plan. All features are available.";
+      : t("dashboard.planStatus.paidPlan");
 
   return (
     <div className="p-8 animate-fade-in">
@@ -265,7 +266,7 @@ export default function Dashboard() {
             ) : (
               <>
                 <Plus className="mr-2 h-4 w-4" />
-                Create Job
+                {t("cleaning.jobs.createJob")}
               </>
             )}
           </Button>
@@ -324,25 +325,25 @@ export default function Dashboard() {
       {/* Stats Grid */}
       <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Jobs Today"
+          title={t("dashboard.stats.jobsToday")}
           value={stats.total}
           icon={Calendar}
           variant="primary"
         />
         <StatCard
-          title="In Progress"
+          title={t("dashboard.stats.inProgress")}
           value={stats.inProgress}
           icon={Clock}
           variant="default"
         />
         <StatCard
-          title="Completed"
+          title={t("dashboard.stats.completed")}
           value={stats.completed}
           icon={CheckCircle2}
           variant="success"
         />
         <StatCard
-          title="Issues"
+          title={t("dashboard.stats.issues")}
           value={stats.issues}
           icon={AlertCircle}
           variant="warning"
@@ -353,7 +354,7 @@ export default function Dashboard() {
         <div className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 flex items-center justify-between gap-3">
           <div className="text-sm text-destructive">Failed to load jobs: {error}</div>
           <Button size="sm" variant="outline" onClick={loadData}>
-            Retry
+            {t("common.retry")}
           </Button>
         </div>
       )}
@@ -361,12 +362,12 @@ export default function Dashboard() {
       {/* Today's Jobs */}
       <div className="rounded-xl border border-border bg-card shadow-card">
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <h2 className="font-semibold text-foreground">Today&apos;s Jobs</h2>
+          <h2 className="font-semibold text-foreground">{t("dashboard.todayJobs.title")}</h2>
           <Link
             to="/jobs"
             className="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80"
           >
-            View all
+            {t("common.viewAll")}
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
@@ -387,9 +388,9 @@ export default function Dashboard() {
           ) : todayJobs.length === 0 ? (
             <EmptyState
               icon={<svg className="h-6 w-6 text-muted-foreground" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" /></svg>}
-              title="No jobs scheduled for today"
-              description="Create a job to get started. Jobs assigned to today will appear here."
-              actionLabel="Create a job"
+              title={t("dashboard.todayJobs.empty.title")}
+              description={t("dashboard.todayJobs.empty.description")}
+              actionLabel={t("dashboard.todayJobs.empty.action")}
               actionHref="/planning"
             />
           ) : (

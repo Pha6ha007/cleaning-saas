@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
 import { EmptyState } from "@/components/empty/EmptyState";
+import { useTranslation } from "react-i18next";
 import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
 import { MaintenanceLayout } from "@/contexts/maintenance/ui/MaintenanceLayout";
 import {
@@ -412,10 +413,10 @@ export default function MaintenanceDashboard() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {/* 1. Visits Today */}
           <Widget
-            title="Visits Today"
+            title={t("maintenance.dashboard.visitsToday")}
             icon={<Calendar className="h-5 w-5" />}
             value={validTodayVisits.length}
-            subtitle={validTodayVisits.length === 0 ? "No visits scheduled" : undefined}
+            subtitle={validTodayVisits.length === 0 ? t("maintenance.dashboard.noVisitsScheduled") : undefined}
             loading={todayLoading}
             error={todayError}
             onRetry={() => refetchToday()}
@@ -545,7 +546,7 @@ export default function MaintenanceDashboard() {
                 </Button>
               </div>
             ) : topTechnicians.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-6 text-center">No technician data yet. Complete some visits to see performance.</p>
+              <p className="text-sm text-muted-foreground py-6 text-center">{t("maintenance.dashboard.noTechnicianData")}</p>
             ) : (
               <div className="space-y-3">
                 {topTechnicians.map((tech, idx) => (
@@ -645,7 +646,7 @@ export default function MaintenanceDashboard() {
               </Button>
             </div>
           ) : recentCompletedVisits.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-6 text-center">No completed visits yet. Schedule your first visit to start tracking.</p>
+            <p className="text-sm text-muted-foreground py-6 text-center">{t("maintenance.dashboard.noCompletedVisits")}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

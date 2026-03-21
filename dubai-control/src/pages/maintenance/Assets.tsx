@@ -38,6 +38,7 @@ import {
 } from "@/api/maintenance";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
 import { EmptyState } from "@/components/empty/EmptyState";
+import { useTranslation } from "react-i18next";
 import { MaintenanceLayout } from "@/contexts/maintenance/ui/MaintenanceLayout";
 import { AssetImportExport } from "./components/AssetImportExport";
 
@@ -62,6 +63,7 @@ function canReadAssets(role: UserRole): boolean {
 
 export default function Assets() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const user = useUserRole();
@@ -441,9 +443,9 @@ export default function Assets() {
         {filteredAssets.length === 0 ? (
           <EmptyState
             icon={<svg className="h-6 w-6 text-muted-foreground" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" /></svg>}
-            title="No assets yet"
-            description="Add your first asset to start tracking equipment, machinery, and other items that need maintenance."
-            actionLabel="Add asset"
+            title={t("maintenance.assets.noAssets")}
+            description={t("maintenance.assets.noAssetsDesc")}
+            actionLabel={t("maintenance.assets.addAsset")}
             onAction={() => { setShowModal(true); setEditingAsset(null); }}
           />
         ) : (

@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { CheckCircle2, Loader2, KeyRound, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8001";
@@ -13,6 +14,7 @@ const API_BASE_URL =
 type Mode = "request" | "requesting" | "requested" | "reset" | "resetting" | "done" | "error";
 
 export default function ResetPassword() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
 
@@ -47,11 +49,11 @@ export default function ResetPassword() {
     setError("");
 
     if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+      setError(t("auth.errors.passwordTooShort"));
       return;
     }
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+      setError(t("auth.errors.passwordMismatch"));
       return;
     }
 
@@ -67,11 +69,11 @@ export default function ResetPassword() {
       if (res.ok) {
         setMode("done");
       } else {
-        setError(data.message || "Failed to reset password.");
+        setError(data.message || t("common.unknownError"));
         setMode("reset");
       }
     } catch {
-      setError("Could not connect to the server.");
+      setError(t("common.unknownError"));
       setMode("reset");
     }
   };
@@ -87,9 +89,9 @@ export default function ResetPassword() {
               <Mail className="h-8 w-8 text-muted-foreground" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Forgot your password?</h1>
+              <h1 className="text-2xl font-bold tracking-tight">{t("auth.resetPassword.forgotTitle")}</h1>
               <p className="text-muted-foreground mt-2">
-                Enter your email and we'll send you a reset link.
+                {t("auth.resetPassword.forgotDescription")}
               </p>
             </div>
             <form onSubmit={handleRequest} className="space-y-4">
@@ -97,20 +99,20 @@ export default function ResetPassword() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
+                placeholder={t("auth.emailPlaceholder")}
                 required
                 className="w-full rounded-lg border border-input bg-background px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-ring"
               />
               <Button type="submit" className="w-full" disabled={mode === "requesting"}>
                 {mode === "requesting" ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sending...</>
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t("auth.resetPassword.sending")}</>
                 ) : (
-                  "Send reset link"
+                  t("auth.resetPassword.sendLink")
                 )}
               </Button>
             </form>
             <Link to="/login" className="text-sm text-muted-foreground hover:underline block">
-              ← Back to sign in
+              ← {t("auth.verification.backToSignIn")}
             </Link>
           </div>
         )}
@@ -122,15 +124,14 @@ export default function ResetPassword() {
               <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Check your email</h1>
+              <h1 className="text-2xl font-bold tracking-tight">{t("auth.resetPassword.checkEmail")}</h1>
               <p className="text-muted-foreground mt-2">
-                If an account with <span className="font-medium">{email}</span> exists,
-                we've sent a password reset link.
+                {t("auth.resetPassword.checkEmailDescription", { email })}
               </p>
             </div>
-            <p className="text-xs text-muted-foreground">The link expires in 1 hour.</p>
+            <p className="text-xs text-muted-foreground">{t("auth.resetPassword.linkExpires")}</p>
             <Link to="/login" className="text-sm text-muted-foreground hover:underline block">
-              ← Back to sign in
+              ← {t("auth.verification.backToSignIn")}
             </Link>
           </div>
         )}
@@ -142,9 +143,9 @@ export default function ResetPassword() {
               <KeyRound className="h-8 w-8 text-muted-foreground" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Set new password</h1>
+              <h1 className="text-2xl font-bold tracking-tight">{t("auth.resetPassword.setNewTitle")}</h1>
               <p className="text-muted-foreground mt-2">
-                Enter your new password below.
+                {t("auth.resetPassword.setNewDescription")}
               </p>
             </div>
             {error && (
@@ -154,24 +155,24 @@ export default function ResetPassword() {
             )}
             <form onSubmit={handleReset} className="space-y-4 text-left">
               <div>
-                <label className="text-sm font-medium block mb-1.5">New password</label>
+                <label className="text-sm font-medium block mb-1.5">{t("auth.resetPassword.newPassword")}</label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="At least 8 characters"
+                  placeholder={t("auth.passwordMinLength")}
                   required
                   minLength={8}
                   className="w-full rounded-lg border border-input bg-background px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium block mb-1.5">Confirm password</label>
+                <label className="text-sm font-medium block mb-1.5">{t("auth.resetPassword.confirmPassword")}</label>
                 <input
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Repeat password"
+                  placeholder={t("auth.resetPassword.confirmPassword")}
                   required
                   minLength={8}
                   className="w-full rounded-lg border border-input bg-background px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-ring"
@@ -179,9 +180,9 @@ export default function ResetPassword() {
               </div>
               <Button type="submit" className="w-full" disabled={mode === "resetting"}>
                 {mode === "resetting" ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Resetting...</>
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t("auth.resetPassword.resetting")}</>
                 ) : (
-                  "Reset password"
+                  t("auth.resetPassword.resetButton")
                 )}
               </Button>
             </form>
@@ -195,13 +196,13 @@ export default function ResetPassword() {
               <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Password reset!</h1>
+              <h1 className="text-2xl font-bold tracking-tight">{t("auth.resetPassword.successTitle")}</h1>
               <p className="text-muted-foreground mt-2">
-                Your password has been updated. You can now sign in.
+                {t("auth.resetPassword.successDescription")}
               </p>
             </div>
             <Button asChild className="w-full">
-              <Link to="/login">Sign in</Link>
+              <Link to="/login">{t("auth.signIn")}</Link>
             </Button>
           </div>
         )}
@@ -209,10 +210,10 @@ export default function ResetPassword() {
         {/* Error */}
         {mode === "error" && (
           <div className="text-center space-y-6">
-            <h1 className="text-2xl font-bold tracking-tight">Something went wrong</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{t("common.error")}</h1>
             <p className="text-muted-foreground">{error}</p>
             <Button asChild variant="outline" className="w-full">
-              <Link to="/login">Back to sign in</Link>
+              <Link to="/login">{t("auth.verification.backToSignIn")}</Link>
             </Button>
           </div>
         )}

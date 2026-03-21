@@ -5,7 +5,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Check, ChevronRight, X, MapPin, Users, CalendarPlus, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 
 interface Step {
   id: string;
@@ -17,19 +17,20 @@ interface Step {
 }
 
 interface OnboardingChecklistProps {
-  /** Product context */
   context: "cleaning" | "maintenance";
-  /** Number of locations the company has */
   locationCount: number;
-  /** Number of cleaners/technicians */
   staffCount: number;
-  /** Number of jobs/visits created */
   taskCount: number;
-  /** Number of assets (maintenance only) */
   assetCount?: number;
 }
 
 const STORAGE_KEY = "onboarding_dismissed";
+
+const CubeIcon = () => (
+  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
+  </svg>
+);
 
 export function OnboardingChecklist({
   context,
@@ -38,6 +39,7 @@ export function OnboardingChecklist({
   taskCount,
   assetCount = 0,
 }: OnboardingChecklistProps) {
+  const { t } = useTranslation();
   const [dismissed, setDismissed] = useState(() => {
     try {
       const val = localStorage.getItem(STORAGE_KEY);
@@ -59,24 +61,24 @@ export function OnboardingChecklist({
     ? [
         {
           id: "location",
-          label: "Add a location",
-          description: "Where does your team clean?",
+          label: t("cleaning.onboarding.addLocation"),
+          description: t("cleaning.onboarding.addLocationDesc"),
           href: "/locations",
           icon: <MapPin className="h-4 w-4" />,
           check: () => locationCount > 0,
         },
         {
           id: "staff",
-          label: "Add a cleaner",
-          description: "Invite your cleaning staff",
+          label: t("cleaning.onboarding.addCleaner"),
+          description: t("cleaning.onboarding.addCleanerDesc"),
           href: "/company/team",
           icon: <Users className="h-4 w-4" />,
           check: () => staffCount > 0,
         },
         {
           id: "task",
-          label: "Create your first job",
-          description: "Schedule a cleaning job",
+          label: t("cleaning.onboarding.createJob"),
+          description: t("cleaning.onboarding.createJobDesc"),
           href: "/planning",
           icon: <CalendarPlus className="h-4 w-4" />,
           check: () => taskCount > 0,
@@ -85,32 +87,32 @@ export function OnboardingChecklist({
     : [
         {
           id: "location",
-          label: "Add a location",
-          description: "Where does your team operate?",
+          label: t("maintenance.onboarding.addLocation"),
+          description: t("maintenance.onboarding.addLocationDesc"),
           href: "/maintenance/locations",
           icon: <MapPin className="h-4 w-4" />,
           check: () => locationCount > 0,
         },
         {
           id: "asset",
-          label: "Add an asset",
-          description: "Equipment or systems to maintain",
+          label: t("maintenance.onboarding.addAsset"),
+          description: t("maintenance.onboarding.addAssetDesc"),
           href: "/maintenance/assets",
-          icon: <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" /></svg>,
+          icon: <CubeIcon />,
           check: () => assetCount > 0,
         },
         {
           id: "staff",
-          label: "Add a technician",
-          description: "Your maintenance team",
+          label: t("maintenance.onboarding.addTechnician"),
+          description: t("maintenance.onboarding.addTechnicianDesc"),
           href: "/maintenance/technicians",
           icon: <Users className="h-4 w-4" />,
           check: () => staffCount > 0,
         },
         {
           id: "task",
-          label: "Create a service visit",
-          description: "Schedule your first visit",
+          label: t("maintenance.onboarding.createVisit"),
+          description: t("maintenance.onboarding.createVisitDesc"),
           href: "/maintenance/visits/new",
           icon: <CalendarPlus className="h-4 w-4" />,
           check: () => taskCount > 0,
@@ -120,10 +122,8 @@ export function OnboardingChecklist({
   const completedCount = steps.filter((s) => s.check()).length;
   const allDone = completedCount === steps.length;
 
-  // Auto-dismiss when all steps complete
   useEffect(() => {
     if (allDone && !isDismissed) {
-      // Show "all done" for 5 seconds then dismiss
       const timer = setTimeout(() => handleDismiss(), 5000);
       return () => clearTimeout(timer);
     }
@@ -141,19 +141,19 @@ export function OnboardingChecklist({
           </div>
           <div>
             <h3 className="text-sm font-semibold text-foreground">
-              {allDone ? "You're all set! 🎉" : "Get started"}
+              {allDone ? t("dashboard.onboarding.allSet") : t("dashboard.onboarding.getStarted")}
             </h3>
             <p className="text-xs text-muted-foreground">
               {allDone
-                ? "Your workspace is ready to go"
-                : `${completedCount} of ${steps.length} steps complete`}
+                ? t("dashboard.onboarding.workspaceReady")
+                : t("dashboard.onboarding.stepsComplete", { completed: completedCount, total: steps.length })}
             </p>
           </div>
         </div>
         <button
           onClick={handleDismiss}
           className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          aria-label="Dismiss setup guide"
+          aria-label={t("dashboard.onboarding.dismiss")}
         >
           <X className="h-4 w-4" />
         </button>

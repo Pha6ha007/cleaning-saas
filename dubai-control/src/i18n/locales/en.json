@@ -1,0 +1,244 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Retry",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "filter": "Filter",
+    "noResults": "No results found",
+    "backTo": "Back to {{page}}",
+    "viewAll": "View all",
+    "showMore": "Show more",
+    "showLess": "Show less",
+    "requiredField": "This field is required",
+    "copiedToClipboard": "Copied to clipboard",
+    "unknownError": "An unexpected error occurred"
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "signUp": "Create account",
+    "signOut": "Sign out",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "companyName": "Company name",
+    "yourName": "Your name",
+    "forgotPassword": "Forgot password?",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "tryDemo": "Try demo",
+    "or": "or",
+    "emailPlaceholder": "name@company.com",
+    "passwordPlaceholder": "Enter your password",
+    "passwordMinLength": "At least 8 characters",
+    "signInTitle": "Welcome back",
+    "signInSubtitle": "Sign in to your account",
+    "signUpTitle": "Get started",
+    "signUpSubtitle": "Start your 7-day free trial. No credit card required.",
+    "errors": {
+      "invalidCredentials": "Unable to sign in. Please check your credentials.",
+      "allFieldsRequired": "All fields are required",
+      "passwordTooShort": "Password must be at least 8 characters long",
+      "passwordMismatch": "Passwords do not match",
+      "signUpFailed": "Failed to create account. Please try again.",
+      "autoLoginFailed": "Password changed but auto-login failed. Please log in manually."
+    },
+    "verification": {
+      "title": "Check your email",
+      "description": "We sent a verification link to <strong>{{email}}</strong>. Click the link in the email to activate your account and start your 7-day free trial.",
+      "backToSignIn": "Back to sign in",
+      "linkExpires": "The link expires in 24 hours."
+    },
+    "passwordChange": {
+      "title": "Change your password",
+      "subtitle": "Your administrator requires you to set a new password.",
+      "newPassword": "New password",
+      "confirmNew": "Confirm new password",
+      "submit": "Change password"
+    },
+    "resetPassword": {
+      "forgotTitle": "Forgot your password?",
+      "forgotDescription": "Enter your email and we'll send you a reset link.",
+      "sendLink": "Send reset link",
+      "sending": "Sending...",
+      "checkEmail": "Check your email",
+      "checkEmailDescription": "If an account with <strong>{{email}}</strong> exists, we've sent a password reset link.",
+      "linkExpires": "The link expires in 1 hour.",
+      "setNewTitle": "Set new password",
+      "setNewDescription": "Enter your new password below.",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm password",
+      "resetButton": "Reset password",
+      "resetting": "Resetting...",
+      "successTitle": "Password reset!",
+      "successDescription": "Your password has been updated. You can now sign in."
+    },
+    "verifyEmail": {
+      "verifying": "Verifying your email...",
+      "successTitle": "Email verified!",
+      "successDescription": "Your account is now active. You can sign in and start using the platform.",
+      "expiredTitle": "Link expired",
+      "expiredDescription": "This verification link has expired. Click below to request a new one.",
+      "resendButton": "Resend verification email",
+      "resending": "Sending...",
+      "resentSuccess": "New verification email sent! Check your inbox.",
+      "errorTitle": "Verification failed",
+      "errorDescription": "We couldn't verify your email. The link may be invalid or already used.",
+      "missingTitle": "Missing verification token",
+      "missingDescription": "This link appears to be incomplete. Please check your email for the correct link."
+    }
+  },
+  "dashboard": {
+    "greeting": "Good {{timeOfDay}}, {{name}}",
+    "timeOfDay": {
+      "morning": "morning",
+      "afternoon": "afternoon",
+      "evening": "evening"
+    },
+    "planStatus": {
+      "trialActive": "You have {{days}} days left in your trial.",
+      "trialExpired": "Your trial has expired.",
+      "activePlan": "Your plan is active. All features are available.",
+      "suspended": "Account suspended",
+      "paidPlan": "You're on a paid plan. All features are available."
+    },
+    "stats": {
+      "jobsToday": "Jobs Today",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "issues": "Issues"
+    },
+    "todayJobs": {
+      "title": "Today's Jobs",
+      "seeAll": "See all jobs",
+      "empty": {
+        "title": "No jobs scheduled for today",
+        "description": "Create a job to get started. Jobs assigned to today will appear here.",
+        "action": "Create a job"
+      }
+    },
+    "onboarding": {
+      "getStarted": "Get started",
+      "allSet": "You're all set! 🎉",
+      "workspaceReady": "Your workspace is ready to go",
+      "stepsComplete": "{{completed}} of {{total}} steps complete",
+      "dismiss": "Dismiss setup guide"
+    }
+  },
+  "cleaning": {
+    "onboarding": {
+      "addLocation": "Add a location",
+      "addLocationDesc": "Where does your team clean?",
+      "addCleaner": "Add a cleaner",
+      "addCleanerDesc": "Invite your cleaning staff",
+      "createJob": "Create your first job",
+      "createJobDesc": "Schedule a cleaning job"
+    },
+    "jobs": {
+      "title": "Jobs",
+      "planning": "Planning",
+      "history": "History",
+      "createJob": "Create job"
+    },
+    "locations": {
+      "title": "Locations",
+      "addLocation": "Add location",
+      "noLocations": "No locations yet",
+      "noLocationsDesc": "Get started by adding your first location",
+      "noLocationsFound": "No locations found",
+      "noLocationsFoundDesc": "Try adjusting your search or filters"
+    }
+  },
+  "maintenance": {
+    "onboarding": {
+      "addLocation": "Add a location",
+      "addLocationDesc": "Where does your team operate?",
+      "addAsset": "Add an asset",
+      "addAssetDesc": "Equipment or systems to maintain",
+      "addTechnician": "Add a technician",
+      "addTechnicianDesc": "Your maintenance team",
+      "createVisit": "Create a service visit",
+      "createVisitDesc": "Schedule your first visit"
+    },
+    "dashboard": {
+      "visitsToday": "Visits Today",
+      "noVisitsScheduled": "No visits scheduled",
+      "upcoming": "Upcoming Visits",
+      "overdueVisits": "Overdue Visits",
+      "activeAssets": "Active Assets",
+      "slaCompliance": "SLA Compliance",
+      "topTechnicians": "Top Technicians",
+      "noTechnicianData": "No technician data yet. Complete some visits to see performance.",
+      "recentCompleted": "Recent Completed",
+      "noCompletedVisits": "No completed visits yet. Schedule your first visit to start tracking."
+    },
+    "visits": {
+      "title": "Service Visits",
+      "createVisit": "Create visit",
+      "noVisits": "No service visits yet",
+      "noVisitsDesc": "Create your first service visit to start tracking maintenance work.",
+      "noVisitsFound": "No visits found",
+      "noVisitsFoundDesc": "Try adjusting your filters"
+    },
+    "assets": {
+      "title": "Assets",
+      "addAsset": "Add asset",
+      "noAssets": "No assets yet",
+      "noAssetsDesc": "Add your first asset to start tracking equipment, machinery, and other items that need maintenance."
+    },
+    "locations": {
+      "title": "Locations",
+      "addLocation": "Add location",
+      "noLocations": "No locations yet",
+      "noLocationsDesc": "Get started by adding your first location"
+    },
+    "technicians": {
+      "title": "Technicians",
+      "addTechnician": "Add technician"
+    },
+    "contracts": {
+      "title": "Contracts"
+    },
+    "recurring": {
+      "title": "Recurring Templates"
+    }
+  },
+  "demo": {
+    "banner": "You're exploring a demo account. Data is read-only.",
+    "signUpCta": "Sign up free",
+    "createWorkspace": "to create your own workspace."
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "jobs": "Jobs",
+    "planning": "Planning",
+    "history": "History",
+    "locations": "Locations",
+    "performance": "Performance",
+    "analytics": "Analytics",
+    "reports": "Reports",
+    "settings": "Settings",
+    "team": "Team",
+    "visits": "Visits",
+    "assets": "Assets",
+    "technicians": "Technicians",
+    "contracts": "Contracts",
+    "recurring": "Recurring"
+  },
+  "settings": {
+    "title": "Settings",
+    "account": "Account",
+    "billing": "Billing",
+    "company": "Company",
+    "team": "Team"
+  },
+  "empty": {
+    "defaultTitle": "Nothing here yet",
+    "defaultDescription": "Get started by creating your first item."
+  }
+}
