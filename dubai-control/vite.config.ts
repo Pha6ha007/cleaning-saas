@@ -72,102 +72,8 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         manualChunks(id: string) {
-          // React core + essential React-dependent libs that call createContext() at import time.
-          // These MUST be in the same chunk to avoid undefined-React race conditions in production.
-          if (id.includes("node_modules/react/") ||
-              id.includes("node_modules/react-dom/") ||
-              id.includes("node_modules/react-router-dom/") ||
-              id.includes("node_modules/react-router/") ||
-              id.includes("node_modules/scheduler/") ||
-              id.includes("node_modules/react-i18next") ||
-              id.includes("node_modules/i18next") ||
-              id.includes("node_modules/sonner") ||
-              id.includes("node_modules/react-hot-toast")) {
-            return "vendor-react";
-          }
-
-          // UI component libraries (Radix + shadcn generated components)
-          if (id.includes("node_modules/@radix-ui/") ||
-              id.includes("node_modules/class-variance-authority") ||
-              id.includes("node_modules/clsx") ||
-              id.includes("node_modules/tailwind-merge") ||
-              id.includes("node_modules/lucide-react")) {
-            return "vendor-ui";
-          }
-
-          // Charts / data visualisation
-          if (id.includes("node_modules/recharts") ||
-              id.includes("node_modules/d3-") ||
-              id.includes("node_modules/victory")) {
-            return "vendor-charts";
-          }
-
-          // Date utilities (date-fns is large)
-          if (id.includes("node_modules/date-fns")) {
-            return "vendor-date";
-          }
-
-          // Animation library
-          if (id.includes("node_modules/framer-motion")) {
-            return "vendor-animation";
-          }
-
-          // Form validation
-          if (id.includes("node_modules/zod") ||
-              id.includes("node_modules/react-hook-form") ||
-              id.includes("node_modules/@hookform/")) {
-            return "vendor-forms";
-          }
-
-          // Spreadsheet processing (xlsx is very large)
-          if (id.includes("node_modules/xlsx") ||
-              id.includes("node_modules/exceljs")) {
-            return "vendor-spreadsheet";
-          }
-
-          // Maps (Google Maps — separate from Leaflet)
-          if (id.includes("node_modules/@react-google-maps") ||
-              id.includes("node_modules/@googlemaps")) {
-            return "vendor-googlemaps";
-          }
-
-          // Map / geolocation (leaflet is large)
-          if (id.includes("node_modules/leaflet") ||
-              id.includes("node_modules/react-leaflet")) {
-            return "vendor-map";
-          }
-
-          // Tanstack / state management
-          if (id.includes("node_modules/@tanstack/")) {
-            return "vendor-tanstack";
-          }
-
-          // Sentry (error tracking — kept separate so it can be deferred)
-          if (id.includes("node_modules/@sentry/")) {
-            return "vendor-sentry";
-          }
-
-          // Drag & drop (only used in maintenance calendar)
-          if (id.includes("node_modules/@dnd-kit/")) {
-            return "vendor-dnd";
-          }
-
-          // Paddle billing SDK (only used on billing page)
-          if (id.includes("node_modules/@paddle/")) {
-            return "vendor-paddle";
-          }
-
-          // QR code generation (only used in maintenance assets)
-          if (id.includes("node_modules/qrcode")) {
-            return "vendor-qrcode";
-          }
-
-          // All other node_modules — DO NOT use a catch-all "vendor-misc" chunk.
-          // Many npm packages call React.useState/createContext at module scope.
-          // Forcing them into a separate chunk causes race conditions where the
-          // chunk evaluates before vendor-react, crashing with "undefined".
-          // Rollup's natural chunk placement handles this correctly.
-
+          // ── App-level code splitting (safe — no React dependency issues) ──
+          
           // Maintenance context pages (only loaded on /maintenance/* routes)
           if (id.includes("/pages/maintenance/") ||
               id.includes("/contexts/maintenance/")) {
@@ -181,10 +87,23 @@ export default defineConfig(({ mode }) => ({
             return "chunk-marketing";
           }
 
-          // CleanProof app pages
-          if (id.includes("/pages/") || id.includes("/components/")) {
-            return "chunk-cleaning-app";
+          // ── Vendor splitting: only for large, React-free packages ──
+          
+          // Spreadsheet processing (xlsx/exceljs — 400KB+, no React dependency)
+          if (id.includes("node_modules/xlsx") ||
+              id.includes("node_modules/exceljs")) {
+            return "vendor-spreadsheet";
           }
+
+          // Date utilities (date-fns — React-free)
+          if (id.includes("node_modules/date-fns")) {
+            return "vendor-date";
+          }
+
+          // DO NOT add a catch-all for node_modules here.
+          // Many packages call React.useState/createContext at module scope.
+          // Forcing them into a separate chunk causes evaluation order bugs
+          // where React is undefined → white screen in production.
         },
       },
     },
