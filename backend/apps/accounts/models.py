@@ -277,6 +277,11 @@ class Branch(models.Model):
         related_name="managed_branches",
     )
 
+    is_demo = models.BooleanField(
+        default=False,
+        help_text="Demo account — read-only, no billing"
+    )
+
     is_active = models.BooleanField(default=True)
 
     created_at = models.DateTimeField(default=timezone.now)
@@ -411,6 +416,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     must_change_password = models.BooleanField(
         default=False,
         help_text="User must change password on next login (set after reset-access)"
+    )
+
+    is_demo = models.BooleanField(
+        default=False,
+        help_text="Demo account — read-only, no billing"
     )
 
     is_active = models.BooleanField(default=True)

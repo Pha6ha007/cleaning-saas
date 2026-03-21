@@ -171,6 +171,13 @@ urlpatterns = [
         name="api-auth-password-reset-confirm",
     ),
 
+    # Demo login (no auth required)
+    path(
+        "auth/demo-login/",
+        DemoLoginView.as_view(),
+        name="api-auth-demo-login",
+    ),
+
     # =====================
     # JWT Auth (M001-sijc46: manager portal)
     # =====================

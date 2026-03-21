@@ -7,6 +7,7 @@ import { AccountDropdown } from "./AccountDropdown";
 import { ProductSwitcher } from "./ProductSwitcher";
 import { useAppContext } from "@/contexts/AppContext";
 import { cn } from "@/lib/utils";
+import { DemoBanner } from "@/components/demo/DemoBanner";
 
 /**
  * Get container classes based on shell mode.
@@ -64,6 +65,7 @@ export function AppLayout() {
 
   return (
     <div className={cn("min-h-screen bg-background", productClass)}>
+      <DemoBanner />
       <AppSidebar collapsed={collapsed} onToggle={handleToggle} />
 
       {/* App Header with Product Switcher and Account Dropdown */}

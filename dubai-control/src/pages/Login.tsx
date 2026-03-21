@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { DemoLoginButton } from "@/components/demo/DemoLoginButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, AlertCircle, Eye, EyeOff, Mail, Lock, User, Building2, MapPin, Camera, Clipboard, FileText, ArrowRight } from "lucide-react";
@@ -642,6 +643,18 @@ export default function Login() {
                     )}
                   </Button>
                 </form>
+
+                {/* Demo access */}
+                <div className="flex items-center gap-3 mt-5">
+                  <div className="h-px flex-1 bg-[#E5E7EB]" />
+                  <span className="text-[12px] text-[#9CA3B0]">or</span>
+                  <div className="h-px flex-1 bg-[#E5E7EB]" />
+                </div>
+                <DemoLoginButton
+                  context={contextParam === "maintenance" ? "maintenance" : "cleaning"}
+                  variant="outline"
+                  className="w-full mt-4 h-[46px] rounded-xl text-[14px] font-semibold"
+                />
               </>
             ) : (
               <>

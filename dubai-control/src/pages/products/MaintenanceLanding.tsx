@@ -1,6 +1,7 @@
 import MarketingLayout from "@/components/marketing/MarketingLayout";
 import { ArrowRight, Check, Shield, FileCheck, Users, Clock, Eye, BarChart3, Plus, Send, CheckCircle2, ClipboardCheck, Wrench, Building2 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { DemoLoginButton } from "@/components/demo/DemoLoginButton";
 import heroImage from "@/assets/maintainproof/hero-maintenance.jpg";
 
 const MaintenanceLanding = () => {
@@ -62,12 +63,11 @@ const MaintenanceLanding = () => {
                   </span>
                 </button>
               </Link>
-              <Link to="/contact">
-                <button className="relative overflow-hidden h-14 px-9 text-base font-medium rounded-xl backdrop-blur-xl bg-white/10 hover:bg-white/20 text-white border border-white/30 hover:border-white/50 shadow-lg shadow-black/20 transition-all duration-300 hover:-translate-y-1">
-                  <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
-                  <span className="relative">Request Demo</span>
-                </button>
-              </Link>
+              <DemoLoginButton
+                context="maintenance"
+                variant="outline"
+                className="h-14 px-9 text-base font-medium rounded-xl backdrop-blur-xl bg-white/10 hover:bg-white/20 text-white border border-white/30 hover:border-white/50 shadow-lg shadow-black/20 transition-all duration-300 hover:-translate-y-1"
+              />
             </div>
           </div>
         </div>
