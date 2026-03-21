@@ -142,15 +142,15 @@ Strategy: extract when touching file for other work.
 | # | Task | Effort | Status |
 |---|------|--------|--------|
 | 4.2 | i18n infrastructure | — | ✅ Done (incremental extraction ongoing) |
-| 4.3 | Accessibility audit (WCAG) | 3h | ⬜ Next |
+| 4.3 | Accessibility audit (WCAG) | 3h | ✅ `f64841f` |
 | 4.1 | Split client.ts (3051 lines) | 4h | ⬜ Deferred |
 
 ### Phase 5 — Revenue & Scale
 | # | Task | Effort | Status |
 |---|------|--------|--------|
 | 5.1 | Paddle billing | 2–3 days | ⏸️ Waiting for Paddle |
-| 5.2 | Mobile UX safety states | 1–2 days | ⬜ |
-| 5.3 | Staging environment | 1 day | ⬜ |
+| 5.2 | Mobile UX safety states | 1–2 days | ✅ `1339338` |
+| 5.3 | Staging environment | 1 day | ✅ `baeb45b` |
 
 ---
 
@@ -177,3 +177,6 @@ Strategy: extract when touching file for other work.
 16. `9f20bfd` — feat: demo accounts (C5 + M5)
 17. `777675c` — feat: page view analytics (S3)
 18. `33d1b87` — feat: i18n infrastructure + 180 keys (4.2)
+19. `f64841f` — a11y: accessibility audit fixes (4.3)
+20. `baeb45b` — infra: staging environment (5.3)
+21. `1339338` — feat: mobile UX safety states (5.2)
