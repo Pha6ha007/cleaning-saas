@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusPill } from "@/components/ui/status-pill";
 import { TrialExpiredBanner } from "@/components/access";
@@ -368,8 +369,16 @@ export default function Dashboard() {
 
         <div className="divide-y divide-border">
           {loading ? (
-            <div className="px-6 py-4 text-sm text-muted-foreground">
-              Loading jobs...
+            <div className="divide-y divide-border">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center justify-between px-6 py-4">
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-[200px]" />
+                    <Skeleton className="h-3 w-[150px]" />
+                  </div>
+                  <Skeleton className="h-6 w-[80px] rounded-full" />
+                </div>
+              ))}
             </div>
           ) : todayJobs.length === 0 ? (
             <div className="px-6 py-4 text-sm text-muted-foreground">

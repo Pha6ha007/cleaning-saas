@@ -40,7 +40,6 @@ import {
 } from "@/api/maintenance";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
 import { MaintenanceLayout } from "@/contexts/maintenance/ui/MaintenanceLayout";
-import { exportContractsToExcel } from "@/lib/excel-export";
 
 // Format date for display
 function formatDate(dateStr: string | null): string {
@@ -268,8 +267,9 @@ export default function Contracts() {
     }
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const date = new Date().toISOString().split("T")[0].replace(/-/g, "");
+    const { exportContractsToExcel } = await import("@/lib/excel-export");
     exportContractsToExcel(contracts, `contracts_${date}.xlsx`);
 
     toast({

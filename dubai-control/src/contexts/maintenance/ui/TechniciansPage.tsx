@@ -44,7 +44,6 @@ import {
   type Technician,
   type CreateTechnicianInput,
 } from "../adapters/useTechnicians";
-import { exportTechniciansToExcel } from "@/lib/excel-export";
 
 // Props interface
 interface TechniciansPageProps {
@@ -377,8 +376,9 @@ export function TechniciansPage({ showBackButton = false, onBack }: TechniciansP
     }
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const date = new Date().toISOString().split("T")[0].replace(/-/g, "");
+    const { exportTechniciansToExcel } = await import("@/lib/excel-export");
     exportTechniciansToExcel(technicians, `technicians_${date}.xlsx`);
 
     toast({

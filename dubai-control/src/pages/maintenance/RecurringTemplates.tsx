@@ -56,7 +56,6 @@ import {
 } from "@/api/maintenance";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
 import { MaintenanceLayout } from "@/contexts/maintenance/ui/MaintenanceLayout";
-import { exportSchedulesToExcel } from "@/lib/excel-export";
 
 // RBAC
 function canWriteTemplates(role: UserRole): boolean {
@@ -347,8 +346,9 @@ export default function RecurringTemplates() {
     generateMutation.mutate({ templateId: generateTemplateId, dateTo: generateDateTo });
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const date = new Date().toISOString().split("T")[0].replace(/-/g, "");
+    const { exportSchedulesToExcel } = await import("@/lib/excel-export");
     exportSchedulesToExcel(templates, `schedules_${date}.xlsx`);
 
     toast({

@@ -34,13 +34,7 @@ import {
 import { LocationForm } from "@/components/locations/LocationForm";
 import { MaintenanceLayout } from "@/contexts/maintenance/ui/MaintenanceLayout";
 import { LocationImportModal } from "./components/LocationImportModal";
-import {
-  parseAndValidateCSV,
-  locationsToExcel,
-  generateExcelTemplate,
-  readLocationFile,
-  type ParsedLocation,
-} from "@/lib/csv";
+import type { ParsedLocation } from "@/lib/csv";
 
 type StatusFilter = "all" | "active" | "inactive";
 
@@ -173,8 +167,9 @@ export default function MaintenanceLocations() {
   };
 
   // Excel Export
-  const handleExport = () => {
+  const handleExport = async () => {
     const date = new Date().toISOString().split("T")[0].replace(/-/g, "");
+    const { locationsToExcel } = await import("@/lib/csv");
     locationsToExcel(locations, `locations_${date}.xlsx`);
 
     toast({
@@ -184,7 +179,8 @@ export default function MaintenanceLocations() {
   };
 
   // Excel Template Download
-  const handleDownloadTemplate = () => {
+  const handleDownloadTemplate = async () => {
+    const { generateExcelTemplate } = await import("@/lib/csv");
     generateExcelTemplate("locations_template.xlsx");
 
     toast({
@@ -203,6 +199,7 @@ export default function MaintenanceLocations() {
       if (!file) return;
 
       try {
+        const { readLocationFile, parseAndValidateCSV } = await import("@/lib/csv");
         const csvContent = await readLocationFile(file);
         const result = parseAndValidateCSV(csvContent, locations);
 
