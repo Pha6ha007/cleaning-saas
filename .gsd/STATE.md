@@ -23,7 +23,7 @@
 | # | Task | Priority | Status |
 |---|------|----------|--------|
 | M1 | **Email verification** — shared `/verify-email` route | Must | ✅ |
-| M2 | **Signup flow for Maintenance** — context selector | Must | ⬜ |
+| M2 | **Signup flow for Maintenance** — context param + redirect | Must | ✅ |
 | M3 | **Onboarding checklist** — location → asset → technician → visit | Must | ✅ |
 | M4 | **Empty states** — Dashboard, Visits, Assets with CTAs | Must | ✅ |
 | M5 | **Demo account** — pre-filled maintenance data | Nice | ⬜ |
@@ -97,3 +97,4 @@
 12. `23c4667` — feat: email verification + password reset + signup flow
 13. `2c70e1a` — feat: empty states with CTAs
 14. `eaa3cac` — feat: onboarding checklists
+15. `1a671a3` — feat: maintenance signup flow (M2)
