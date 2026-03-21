@@ -1,7 +1,7 @@
 // dubai-control/src/pages/Login.tsx
 
 import { useState, useEffect, useMemo } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { DemoLoginButton } from "@/components/demo/DemoLoginButton";
 import { Input } from "@/components/ui/input";

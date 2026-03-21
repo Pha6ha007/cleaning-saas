@@ -181,7 +181,7 @@ function Widget({
 // ============================================================================
 
 export default function MaintenanceDashboard() {
-  const navigate = useNavigate();
+  const { t } = useTranslation();  const navigate = useNavigate();
   const user = useUserRole();
   const hasAccess = canAccessDashboard(user.role);
 

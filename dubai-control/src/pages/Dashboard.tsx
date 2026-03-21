@@ -125,7 +125,7 @@ function mapApiJobToUi(job: ApiJob): UiJob {
 }
 
 export default function Dashboard() {
-  const [todayJobs, setTodayJobs] = useState<UiJob[]>([]);
+  const { t } = useTranslation();  const [todayJobs, setTodayJobs] = useState<UiJob[]>([]);
   const [usage, setUsage] = useState<UsageSummary | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
