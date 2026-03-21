@@ -30,6 +30,8 @@ export interface NavItem {
   icon: LucideIcon;
   /** RBAC: roles that can see this item (undefined = all roles) */
   roles?: ("owner" | "manager" | "staff")[];
+  /** Optional group label for collapsible sidebar sections */
+  group?: string;
 }
 
 /**

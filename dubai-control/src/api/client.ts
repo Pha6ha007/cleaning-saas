@@ -860,7 +860,9 @@ export interface PaginatedLocationsResponse {
 
 export async function getLocations(): Promise<Location[]> {
   await loginManager();
-  return apiFetch<Location[]>("/api/manager/locations/");
+  const data = await apiFetch<Location[] | { results: Location[] }>("/api/manager/locations/");
+  // Backend may return paginated { results: [] } or plain array
+  return Array.isArray(data) ? data : (Array.isArray(data?.results) ? data.results : []);
 }
 
 export async function getLocationsPaginated(

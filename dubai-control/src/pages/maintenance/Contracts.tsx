@@ -41,6 +41,8 @@ import {
 } from "@/api/maintenance";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
 import { MaintenanceLayout } from "@/contexts/maintenance/ui/MaintenanceLayout";
+import { MaintenanceEmptyState } from "@/components/maintenance/EmptyState";
+import { ScrollText } from "lucide-react";
 
 // Format date for display
 function formatDate(dateStr: string | null): string {
@@ -351,10 +353,18 @@ export default function Contracts() {
               </Button>
             </div>
           ) : contracts.length === 0 ? (
-            <div className="py-12 text-center text-muted-foreground">
-              <p className="font-medium text-foreground">No contracts yet</p>
-              <p className="mt-1 text-sm">Create your first service contract</p>
-            </div>
+            <MaintenanceEmptyState
+              icon={ScrollText}
+              title="No contracts yet"
+              description="Service contracts define recurring maintenance schedules and SLA terms for your clients."
+              actionLabel="Add Contract"
+              onAction={() => setShowModal(true)}
+              steps={[
+                { label: "Add locations for your clients" },
+                { label: "Register assets to maintain" },
+                { label: "Create a service contract" },
+              ]}
+            />
           ) : (
             <table className="data-table">
               <thead>

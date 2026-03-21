@@ -63,7 +63,13 @@ export function LocationsProvider({ children }: LocationsProviderProps) {
 
     try {
       const data = await getLocations();
-      setLocations(data);
+      // Backend may return paginated { results: [] } or plain []
+      const list = Array.isArray(data)
+        ? data
+        : Array.isArray((data as any)?.results)
+          ? (data as any).results
+          : [];
+      setLocations(list);
     } catch (err) {
       console.error("[Locations] load error", err);
       const message =

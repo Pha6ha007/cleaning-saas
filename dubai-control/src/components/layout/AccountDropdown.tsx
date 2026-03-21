@@ -19,10 +19,23 @@ interface AccountDropdownProps {
   userName?: string;
 }
 
+function deriveUserInfo() {
+  const email = localStorage.getItem('authUserEmail') || '';
+  const role = localStorage.getItem('authUserRole') || '';
+  // Try to build a name from email (before @)
+  const namePart = email.split('@')[0] || 'User';
+  const displayName = namePart.charAt(0).toUpperCase() + namePart.slice(1).replace(/[._]/g, ' ');
+  const initials = displayName.split(' ').map(w => w[0]?.toUpperCase() || '').join('').slice(0, 2) || 'U';
+  return { displayName, initials, role, email };
+}
+
 export function AccountDropdown({
-  userInitials = 'SC',
-  userName = 'User',
+  userInitials,
+  userName,
 }: AccountDropdownProps) {
+  const derived = deriveUserInfo();
+  const finalInitials = userInitials || derived.initials;
+  const finalName = userName || derived.displayName;
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -123,11 +136,11 @@ export function AccountDropdown({
       >
         {/* User Avatar/Initials */}
         <div className="account-avatar flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card text-sm font-semibold text-foreground">
-          {userInitials}
+          {finalInitials}
         </div>
 
         {/* User Name (hidden on small screens) */}
-        <span className="account-name hidden sm:inline">{userName}</span>
+        <span className="account-name hidden sm:inline">{finalName}</span>
 
         {/* Dropdown Icon */}
         <ChevronDown

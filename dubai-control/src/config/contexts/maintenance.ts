@@ -36,34 +36,29 @@ import type { ContextConfig, NavItem } from "./types";
 export const maintenanceNavItems: NavItem[] = [
   // === Daily Operations ===
   { name: "Dashboard", href: "/maintenance/dashboard", icon: LayoutDashboard },
-  { name: "Service Visits", href: "/maintenance/visits", icon: ClipboardList },
-  { name: "Calendar", href: "/maintenance/calendar", icon: CalendarDays },
+  { name: "Service Visits", href: "/maintenance/visits", icon: ClipboardList, group: "Operations" },
+  { name: "Calendar", href: "/maintenance/calendar", icon: CalendarDays, group: "Operations" },
+  { name: "Schedules", href: "/maintenance/schedules", icon: CalendarRange, group: "Operations" },
 
-  // === Planning ===
-  { name: "Schedules", href: "/maintenance/schedules", icon: CalendarRange },
-  { name: "Contracts", href: "/maintenance/contracts", icon: ScrollText },
+  // === Assets & Locations ===
+  { name: "Locations", href: "/maintenance/locations", icon: Building2, group: "Assets & Locations" },
+  { name: "Assets", href: "/maintenance/assets", icon: Wrench, group: "Assets & Locations" },
+  { name: "Asset Types", href: "/maintenance/asset-types", icon: Tag, group: "Assets & Locations" },
+  { name: "Parts", href: "/maintenance/parts", icon: Package, group: "Assets & Locations" },
 
-  // === Assets Management ===
-  { name: "Locations", href: "/maintenance/locations", icon: Building2 },
-  { name: "Assets", href: "/maintenance/assets", icon: Wrench },
-  { name: "Asset Types", href: "/maintenance/asset-types", icon: Tag },
+  // === Configuration ===
+  { name: "Contracts", href: "/maintenance/contracts", icon: ScrollText, group: "Configuration" },
+  { name: "Checklists", href: "/maintenance/checklists", icon: ListChecks, group: "Configuration" },
 
-  // === Tools ===
-  { name: "Checklists", href: "/maintenance/checklists", icon: ListChecks },
-  { name: "Parts", href: "/maintenance/parts", icon: Package },
+  // === Insights ===
+  { name: "Map", href: "/maintenance/map", icon: MapPin, group: "Insights" },
+  { name: "Analytics", href: "/maintenance/analytics", icon: BarChart3, group: "Insights" },
+  { name: "Reports", href: "/maintenance/reports", icon: FileText, group: "Insights" },
 
-  // === Visualization & Management ===
-  { name: "Map", href: "/maintenance/map", icon: MapPin },
-  // Company is RBAC-gated (owner/manager only) - includes Team Members & Technicians
-  { name: "Company", href: "/maintenance/company", icon: Building, roles: ["owner", "manager"] },
-
-  // === Analytics ===
-  { name: "Analytics", href: "/maintenance/analytics", icon: BarChart3 },
-  { name: "Reports", href: "/maintenance/reports", icon: FileText },
-
-  // === Help & Support ===
-  { name: "Docs", href: "/maintenance/docs", icon: BookOpen },
-  { name: "Support", href: "/maintenance/support", icon: LifeBuoy },
+  // === System (RBAC-gated) ===
+  { name: "Company", href: "/maintenance/company", icon: Building, roles: ["owner", "manager"], group: "System" },
+  { name: "Docs", href: "/maintenance/docs", icon: BookOpen, group: "System" },
+  { name: "Support", href: "/maintenance/support", icon: LifeBuoy, group: "System" },
 ];
 
 /**

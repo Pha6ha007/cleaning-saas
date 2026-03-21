@@ -443,7 +443,7 @@ export default function VisitList() {
               }
             : {
                 title: "No service visits yet",
-                description: "Create your first service visit to start tracking maintenance work.",
+                description: "Create your first service visit to start tracking maintenance work. Service visits let you assign technicians, track progress, and prove work completion.",
                 actionLabel: canCreate ? "Create visit" : undefined,
                 actionHref: canCreate ? "/maintenance/visits/new" : undefined,
               }

@@ -1,5 +1,5 @@
 // dubai-control/src/pages/maintenance/Dashboard.tsx
-// Maintenance Dashboard with 4 summary widgets
+import { cn } from "@/lib/utils";// Maintenance Dashboard with 4 summary widgets
 // Uses ONLY existing endpoints - no new backend required
 
 import { useMemo } from "react";
@@ -70,6 +70,8 @@ interface WidgetProps {
   linkTo?: string;
   linkLabel?: string;
   variant?: "default" | "warning" | "success" | "blue" | "purple" | "teal";
+  /** primary = large numbers, secondary = compact */
+  size?: "primary" | "secondary";
 }
 
 function Widget({
@@ -83,6 +85,7 @@ function Widget({
   linkTo,
   linkLabel = "View all",
   variant = "default",
+  size = "primary",
 }: WidgetProps) {
   const variantClasses = {
     default: "border-border bg-card",
@@ -490,6 +493,7 @@ export default function MaintenanceDashboard() {
             linkTo="/maintenance/analytics"
             linkLabel="Analytics"
             variant={slaCompliancePercent >= 90 ? "success" : slaCompliancePercent >= 70 ? "warning" : "default"}
+            size="secondary"
           />
 
           {/* 6. Avg Visit Duration */}
@@ -502,6 +506,7 @@ export default function MaintenanceDashboard() {
             error={analyticsError}
             onRetry={() => refetchAnalytics()}
             variant="blue"
+            size="secondary"
           />
 
           {/* 7. Completed This Month */}
@@ -515,6 +520,7 @@ export default function MaintenanceDashboard() {
             onRetry={() => refetchAnalytics()}
             linkTo="/maintenance/visits?status=completed"
             variant="purple"
+            size="secondary"
           />
         </div>
 

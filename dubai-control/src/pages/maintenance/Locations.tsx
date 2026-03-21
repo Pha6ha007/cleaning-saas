@@ -24,6 +24,7 @@ import {
   Download,
   Upload,
   FileDown,
+  X as XIcon,
 } from "lucide-react";
 import {
   getLocations,
@@ -49,6 +50,7 @@ export default function MaintenanceLocations() {
 
   // CSV Import state
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showInfoBanner, setShowInfoBanner] = useState(() => !localStorage.getItem("mp_loc_info_dismissed"));
   const [importData, setImportData] = useState<{
     valid: ParsedLocation[];
     invalid: ParsedLocation[];
@@ -317,15 +319,25 @@ export default function MaintenanceLocations() {
           </div>
         </div>
 
-        {/* Info Banner - Teal Theme */}
-        <div className="mb-6 rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-900">
-          <p className="font-medium">💡 About location status</p>
-          <ul className="mt-2 space-y-1 text-xs">
-            <li>• <strong>Active</strong> locations appear when creating assets and service visits</li>
-            <li>• <strong>Inactive</strong> locations are hidden from selection but remain in history</li>
-            <li>• Locations with asset history cannot be deleted, only deactivated</li>
-          </ul>
-        </div>
+        {/* Info Banner - Dismissible */}
+        {showInfoBanner && (
+          <div className="mb-6 rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-900 relative">
+            <button
+              type="button"
+              onClick={() => { localStorage.setItem("mp_loc_info_dismissed", "1"); setShowInfoBanner(false); }}
+              className="absolute top-2 right-2 p-1 rounded-md text-teal-600 hover:text-teal-800 hover:bg-teal-100 transition-colors"
+              aria-label="Dismiss"
+            >
+              <XIcon className="h-4 w-4" />
+            </button>
+            <p className="font-medium">💡 About location status</p>
+            <ul className="mt-2 space-y-1 text-xs">
+              <li>• <strong>Active</strong> locations appear when creating assets and service visits</li>
+              <li>• <strong>Inactive</strong> locations are hidden from selection but remain in history</li>
+              <li>• Locations with asset history cannot be deleted, only deactivated</li>
+            </ul>
+          </div>
+        )}
 
         {/* Search and Filters */}
         <div className="mb-6 flex gap-4">

@@ -7,6 +7,8 @@ import { AccountDropdown } from "./AccountDropdown";
 import { ProductSwitcher } from "./ProductSwitcher";
 import { useAppContext } from "@/contexts/AppContext";
 import { cn } from "@/lib/utils";
+import { PageTransition } from "./PageTransition";
+import { useUserRole } from "@/hooks/useUserRole";
 import { DemoBanner } from "@/components/demo/DemoBanner";
 import { OfflineBanner } from "@/components/a11y/OfflineBanner";
 
@@ -81,7 +83,7 @@ export function AppLayout() {
         <ProductSwitcher />
 
         {/* Right: Account Dropdown */}
-        <AccountDropdown userInitials="SC" userName="User" />
+        <AccountDropdown />
       </header>
 
       <main
@@ -92,7 +94,9 @@ export function AppLayout() {
         )}
       >
         <div className={getContainerClasses(shellMode, collapsed)}>
-          <Outlet />
+          <PageTransition>
+            <Outlet />
+          </PageTransition>
         </div>
       </main>
     </div>
