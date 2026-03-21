@@ -11,8 +11,8 @@
 
 | # | Task | Priority | Status |
 |---|------|----------|--------|
-| C1 | **Email verification page** — `/verify-email` route to handle backend verification links | Must | ⬜ |
-| C2 | **Signup → "Check your email" screen** — after signup show verification message instead of silently switching to login | Must | ⬜ |
+| C1 | **Email verification page** — `/verify-email` route to handle backend verification links | Must | ✅ |
+| C2 | **Signup → "Check your email" screen** — after signup show verification message instead of silently switching to login | Must | ✅ |
 | C3 | **Onboarding wizard** — after first login: create location → add cleaner → create first job | Must | ⬜ |
 | C4 | **Empty states** — Dashboard, Jobs, Locations show helpful CTAs when no data exists | Must | ⬜ |
 | C5 | **Demo account** — "Try without signup" button on landing → pre-filled read-only demo | Nice | ⬜ |
@@ -22,7 +22,7 @@
 
 | # | Task | Priority | Status |
 |---|------|----------|--------|
-| M1 | **Email verification** — shared with CleanProof (same route) | Must | ⬜ |
+| M1 | **Email verification** — shared with CleanProof (same route) | Must | ✅ |
 | M2 | **Signup flow for Maintenance** — separate entry point or context selector after signup | Must | ⬜ |
 | M3 | **Onboarding wizard** — after first login: add location → add asset → create first visit | Must | ⬜ |
 | M4 | **Empty states** — Dashboard, Visits, Assets show helpful CTAs | Must | ⬜ |
@@ -33,8 +33,8 @@
 
 | # | Task | Priority | Status |
 |---|------|----------|--------|
-| S1 | **Resend verification email** — button if user didn't receive it | Must | ⬜ |
-| S2 | **Password reset flow** — "Forgot password?" on login page | Must | ⬜ |
+| S1 | **Resend verification email** — button if user didn't receive it | Must | ✅ |
+| S2 | **Password reset flow** — "Forgot password?" on login page | Must | ✅ |
 | S3 | **Analytics tracking** — basic page views + signup funnel events | Nice | ⬜ |
 
 ### Execution Order
