@@ -1,89 +1,164 @@
 # GSD State
 
-**Active Milestone:** Launch Readiness Plan
-**Status:** ✅ COMPLETE (except billing — blocked on Paddle verification)
+**Active Milestone:** Post-Launch Polish (Phases 4–5)
+**Status:** in-progress
 
 ---
 
-## Launch Readiness Plan
+## Launch Readiness — ✅ COMPLETE
 
-### CleanProof — Launch Checklist
-
-| # | Task | Priority | Status | Commit |
-|---|------|----------|--------|--------|
-| C1 | **Email verification page** — `/verify-email` route | Must | ✅ | `23c4667` |
-| C2 | **Signup → "Check your email" screen** | Must | ✅ | `23c4667` |
-| C3 | **Onboarding checklist** — location → cleaner → job | Must | ✅ | `eaa3cac` |
-| C4 | **Empty states** — Dashboard, Assets with CTAs | Must | ✅ | `2c70e1a` |
-| C5 | **Demo account** — "Try demo" on Login + landing | Nice | ✅ | `9f20bfd` |
-| C6 | Paddle billing integration | Must | ⏸️ | Waiting for Paddle |
-
-### MaintainProof — Launch Checklist
-
-| # | Task | Priority | Status | Commit |
-|---|------|----------|--------|--------|
-| M1 | **Email verification** — shared `/verify-email` route | Must | ✅ | `23c4667` |
-| M2 | **Signup flow** — context param + redirect | Must | ✅ | `1a671a3` |
-| M3 | **Onboarding checklist** — location → asset → tech → visit | Must | ✅ | `eaa3cac` |
-| M4 | **Empty states** — Dashboard, Visits, Assets with CTAs | Must | ✅ | `2c70e1a` |
-| M5 | **Demo account** — "Try demo" on Login + landing | Nice | ✅ | `9f20bfd` |
-| M6 | Paddle billing integration | Must | ⏸️ | Waiting for Paddle |
-
-### Shared Infrastructure
-
-| # | Task | Priority | Status | Commit |
-|---|------|----------|--------|--------|
-| S1 | **Resend verification email** — backend + frontend | Must | ✅ | `23c4667` |
-| S2 | **Password reset flow** — forgot + reset with token | Must | ✅ | `23c4667` |
-| S3 | **Page view analytics** — anonymous tracking | Nice | ✅ | `777675c` |
+C1–C5, M1–M5, S1–S3 all done. Only C6/M6 (Paddle billing) blocked on external verification.
 
 ---
 
-### Summary: 13/13 tasks done (2 blocked on external Paddle verification)
+## i18n Status — Infrastructure Done, Extraction In Progress
+
+### What's done
+- ✅ react-i18next installed and configured
+- ✅ Language detection (localStorage → navigator)
+- ✅ `en.json` with **180 translation keys** across 12 namespaces
+- ✅ **7 files** fully extracted (87 `t()` calls)
+
+### Files WITH i18n (done)
+| File | t() calls |
+|------|-----------|
+| `src/pages/VerifyEmail.tsx` | 15 |
+| `src/pages/ResetPassword.tsx` | 20 |
+| `src/pages/Dashboard.tsx` (cleaning) | ~15 |
+| `src/pages/maintenance/Dashboard.tsx` | ~8 |
+| `src/pages/maintenance/Assets.tsx` | ~5 |
+| `src/components/onboarding/OnboardingChecklist.tsx` | ~18 |
+| `src/components/demo/DemoBanner.tsx` | ~6 |
+
+### Files WITHOUT i18n — full inventory
+
+#### 🔒 LOCKED — Cannot touch (10 pages)
+```
+src/pages/Jobs.tsx
+src/pages/JobPlanning.tsx
+src/pages/JobDetails.tsx
+src/pages/Performance.tsx
+src/pages/Reports.tsx
+src/pages/Settings.tsx
+src/pages/settings/Billing.tsx
+src/pages/settings/BillingSettings.tsx
+src/pages/settings/AccountSettings.tsx
+src/pages/settings/SettingsHome.tsx
+```
+
+#### 🔧 Maintenance pages — OK to modify (25 files)
+```
+src/pages/maintenance/Analytics.tsx
+src/pages/maintenance/AssetDetail.tsx
+src/pages/maintenance/AssetQRPrint.tsx
+src/pages/maintenance/AssetQuickAccess.tsx
+src/pages/maintenance/AssetTypes.tsx
+src/pages/maintenance/Calendar.tsx
+src/pages/maintenance/Checklists.tsx
+src/pages/maintenance/Company.tsx
+src/pages/maintenance/Contracts.tsx
+src/pages/maintenance/CreateVisit.tsx
+src/pages/maintenance/Locations.tsx
+src/pages/maintenance/Map.tsx
+src/pages/maintenance/Parts.tsx
+src/pages/maintenance/RecurringTemplates.tsx
+src/pages/maintenance/Reports.tsx
+src/pages/maintenance/VisitDetail.tsx
+src/pages/maintenance/VisitList.tsx
+src/pages/maintenance/components/AssetDocuments.tsx
+src/pages/maintenance/components/AssetHistoryTimeline.tsx
+src/pages/maintenance/components/AssetImportExport.tsx
+src/pages/maintenance/components/AssetQRModal.tsx
+src/pages/maintenance/components/CalendarDayCell.tsx
+src/pages/maintenance/components/CalendarGrid.tsx
+src/pages/maintenance/components/CalendarVisitCard.tsx
+src/pages/maintenance/components/LocationImportModal.tsx
+```
+
+#### 👤 Customer portal (7 files)
+```
+src/pages/customer/CustomerAssets.tsx
+src/pages/customer/CustomerContracts.tsx
+src/pages/customer/CustomerDashboard.tsx
+src/pages/customer/CustomerLayout.tsx
+src/pages/customer/CustomerLocations.tsx
+src/pages/customer/CustomerVisitDetail.tsx
+src/pages/customer/CustomerVisits.tsx
+```
+
+#### 🌐 Platform/landing pages (12 files)
+```
+src/pages/platform/Contact.tsx
+src/pages/platform/PlatformLanding.tsx
+src/pages/platform/Principles.tsx
+src/pages/platform/PrivacyPolicy.tsx
+src/pages/platform/Products.tsx
+src/pages/platform/RefundPolicy.tsx
+src/pages/platform/TermsOfService.tsx
+src/pages/platform/Updates.tsx
+src/pages/products/CleaningLanding.tsx
+src/pages/products/FitoutComing.tsx
+src/pages/products/MaintenanceLanding.tsx
+src/pages/products/PropertyComing.tsx
+```
+
+#### 🧹 Cleaning pages — unlocked (13 files)
+```
+src/pages/Login.tsx
+src/pages/Analytics.tsx
+src/pages/AuditLog.tsx
+src/pages/CleanerJob.tsx
+src/pages/CreateJob.tsx
+src/pages/History.tsx
+src/pages/Locations.tsx
+src/pages/LocationsOld.tsx
+src/pages/ReportEmailLogs.tsx
+src/pages/ViolationJobsPage.tsx
+src/pages/PricingPage.tsx
+src/pages/NotFound.tsx
+src/pages/Support.tsx
+```
+
+#### 🧩 Components without i18n: ~107 files
+Strategy: extract when touching file for other work.
+
+### Recommended extraction order (when doing i18n pass)
+1. **Login.tsx** — highest traffic, most user-facing strings (~40 keys)
+2. **Maintenance VisitList/VisitDetail/CreateVisit** — core workflow (~60 keys)
+3. **Maintenance Locations/Contracts** — CRUD pages (~30 keys)
+4. **Customer portal** — external-facing (~50 keys)
+5. **Platform landing pages** — marketing copy (~100+ keys)
+6. **Remaining maintenance components** — modals, calendars (~40 keys)
+7. **Cleaning unlocked pages** — Analytics, History, etc. (~40 keys)
+
+**Total estimated remaining: ~360 keys across ~67 files**
+**Strategy: extract incrementally when touching files, not as a bulk pass**
 
 ---
 
-## Components Built This Session
+## Remaining Work
 
-| Component | Path | Purpose |
-|-----------|------|---------|
-| VerifyEmail | `src/pages/VerifyEmail.tsx` | Handle email verification links |
-| ResetPassword | `src/pages/ResetPassword.tsx` | Forgot + reset password flow |
-| EmptyState | `src/components/empty/EmptyState.tsx` | Reusable empty state with CTA |
-| OnboardingChecklist | `src/components/onboarding/OnboardingChecklist.tsx` | Setup guide for new users |
-| DemoLoginButton | `src/components/demo/DemoLoginButton.tsx` | "Try demo" auto-login button |
-| DemoBanner | `src/components/demo/DemoBanner.tsx` | Sticky banner for demo sessions |
-| usePageTracking | `src/hooks/usePageTracking.ts` | Anonymous page view tracking |
+### Phase 4 — Polish
+| # | Task | Effort | Status |
+|---|------|--------|--------|
+| 4.2 | i18n infrastructure | — | ✅ Done (incremental extraction ongoing) |
+| 4.3 | Accessibility audit (WCAG) | 3h | ⬜ Next |
+| 4.1 | Split client.ts (3051 lines) | 4h | ⬜ Deferred |
 
-### Backend Additions
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/auth/resend-verification/` | POST | Resend verification email |
-| `/api/auth/password-reset/` | POST | Request password reset email |
-| `/api/auth/password-reset/confirm/` | POST | Set new password with token |
-| `/api/auth/demo-login/` | POST | Get demo session token |
-| `/api/analytics/page-view/` | POST | Track anonymous page views |
-
-### Models Added
-- `PasswordResetToken` (accounts) — 1-hour TTL, single-use
-- `User.is_demo` (accounts) — flag for demo accounts
-- `PageView` (analytics) — anonymous page view events
+### Phase 5 — Revenue & Scale
+| # | Task | Effort | Status |
+|---|------|--------|--------|
+| 5.1 | Paddle billing | 2–3 days | ⏸️ Waiting for Paddle |
+| 5.2 | Mobile UX safety states | 1–2 days | ⬜ |
+| 5.3 | Staging environment | 1 day | ⬜ |
 
 ---
 
-## Previous Session Work (Improvement Phases 1–4)
-
-- Phase 1: Contact form, ProtectedRoute, e2e CI, console.log cleanup
-- Phase 2: Error boundaries (46 routes), 61 unit tests, a11y, eslint audit
-- Phase 3: Dynamic xlsx imports, dashboard skeleton
-- Phase 4: Type safety (186→107 any), bundle optimization (-23KB gzip)
-
-### Test Totals
+## Test Totals
 - Backend: 845 | Frontend E2E: 62 | Frontend Unit: 61 | Mobile: 37
 - **Total: 1005 tests** — TSC: 0 errors — Build: clean
 
-### All Session Commits
+## All Session Commits
 1. `552892f` — fix: 8 bugs
 2. `44b72a0` — test: 62 e2e tests
 3. `a5e3201` — docs: project audit & plan
