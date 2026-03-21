@@ -53,6 +53,7 @@ import {
   type Cleaner,
   type MaintenanceCategory,
   type ChecklistTemplate,
+  getApiErrorMessage,
 } from "@/api/maintenance";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
 import { MaintenanceLayout } from "@/contexts/maintenance/ui/MaintenanceLayout";
@@ -174,8 +175,8 @@ export default function RecurringTemplates() {
       toast({ title: "Success", description: "Schedule created successfully" });
       handleCloseModal();
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.message || "Failed to create schedule";
+    onError: (error: unknown) => {
+      const message = getApiErrorMessage(error, "Failed to create schedule");
       toast({ variant: "destructive", title: "Error", description: message });
     },
   });
@@ -189,8 +190,8 @@ export default function RecurringTemplates() {
       toast({ title: "Success", description: "Schedule updated successfully" });
       if (showModal) handleCloseModal();
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.message || "Failed to update schedule";
+    onError: (error: unknown) => {
+      const message = getApiErrorMessage(error, "Failed to update schedule");
       toast({ variant: "destructive", title: "Error", description: message });
     },
   });
@@ -209,8 +210,8 @@ export default function RecurringTemplates() {
       if (!variables.is_active) setShowInactive(true);
       setDeactivateConfirm(null);
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.message || "Failed to update schedule";
+    onError: (error: unknown) => {
+      const message = getApiErrorMessage(error, "Failed to update schedule");
       toast({ variant: "destructive", title: "Error", description: message });
       setDeactivateConfirm(null);
     },
@@ -230,8 +231,8 @@ export default function RecurringTemplates() {
       });
       setGenerateTemplateId(null);
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.message || "Failed to generate visits";
+    onError: (error: unknown) => {
+      const message = getApiErrorMessage(error, "Failed to generate visits");
       toast({ variant: "destructive", title: "Error", description: message });
     },
   });

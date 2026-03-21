@@ -1214,3 +1214,53 @@ export {
   importAssets,
   downloadAssetImportTemplate,
 };
+
+
+// =============================================================================
+// Error Handling Utilities
+// =============================================================================
+
+/** Shape of API errors thrown by apiFetch in client.ts */
+export interface ApiError extends Error {
+  response?: {
+    status: number;
+    statusText: string;
+    data?: {
+      detail?: string;
+      message?: string;
+      code?: string;
+      [key: string]: unknown;
+    };
+  };
+}
+
+/**
+ * Extract a human-readable error message from an API error.
+ * Falls back to the provided default message if no API details are found.
+ */
+export function getApiErrorMessage(error: unknown, fallback: string): string {
+  if (error && typeof error === 'object' && 'response' in error) {
+    const apiErr = error as ApiError;
+    return (
+      apiErr.response?.data?.message ||
+      apiErr.response?.data?.detail ||
+      apiErr.message ||
+      fallback
+    );
+  }
+  if (error instanceof Error) {
+    return error.message || fallback;
+  }
+  return fallback;
+}
+
+/**
+ * Extract an error code from an API error (e.g. 'CONFLICT', 'company_blocked').
+ */
+export function getApiErrorCode(error: unknown): string | undefined {
+  if (error && typeof error === 'object' && 'response' in error) {
+    const apiErr = error as ApiError;
+    return apiErr.response?.data?.code;
+  }
+  return undefined;
+}

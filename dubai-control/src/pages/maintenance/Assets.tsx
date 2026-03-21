@@ -34,6 +34,7 @@ import {
   type Asset,
   type AssetType,
   type Location,
+  getApiErrorMessage,
 } from "@/api/maintenance";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
 import { MaintenanceLayout } from "@/contexts/maintenance/ui/MaintenanceLayout";
@@ -123,9 +124,8 @@ export default function Assets() {
       });
       handleCloseModal();
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message || "Failed to create asset";
+    onError: (error: unknown) => {
+      const message = getApiErrorMessage(error, "Failed to create asset");
       toast({
         variant: "destructive",
         title: "Error",
@@ -148,9 +148,8 @@ export default function Assets() {
         handleCloseModal();
       }
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message || "Failed to update asset";
+    onError: (error: unknown) => {
+      const message = getApiErrorMessage(error, "Failed to update asset");
       toast({
         variant: "destructive",
         title: "Error",
@@ -177,7 +176,7 @@ export default function Assets() {
       }
       setDeactivateConfirm(null);
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error("[Assets] Mutation error:", error);
       const message = error?.response?.data?.message || error?.message || "Failed to update asset";
       toast({
@@ -203,9 +202,8 @@ export default function Assets() {
       setNewTypeName("");
       setNewTypeDescription("");
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message || "Failed to create asset type";
+    onError: (error: unknown) => {
+      const message = getApiErrorMessage(error, "Failed to create asset type");
       toast({
         variant: "destructive",
         title: "Error",

@@ -45,6 +45,8 @@ import {
   type StockAdjustment,
   type StockAdjustmentType,
   type AdjustStockInput,
+  getApiErrorMessage,
+  getApiErrorCode,
 } from "@/api/maintenance";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
 import { MaintenanceLayout } from "@/contexts/maintenance/ui/MaintenanceLayout";
@@ -129,9 +131,8 @@ export default function Parts() {
       });
       handleCloseModal();
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message || "Failed to create part";
+    onError: (error: unknown) => {
+      const message = getApiErrorMessage(error, "Failed to create part");
       toast({
         variant: "destructive",
         title: "Error",
@@ -157,9 +158,8 @@ export default function Parts() {
       });
       handleCloseModal();
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message || "Failed to update part";
+    onError: (error: unknown) => {
+      const message = getApiErrorMessage(error, "Failed to update part");
       toast({
         variant: "destructive",
         title: "Error",
@@ -179,12 +179,12 @@ export default function Parts() {
       });
       setDeleteConfirm(null);
     },
-    onError: (error: any) => {
-      const code = error?.response?.data?.code;
+    onError: (error: unknown) => {
+      const code = getApiErrorCode(error);
       const message =
         code === "CONFLICT"
           ? "Cannot delete part with usage records. Deactivate instead."
-          : error?.response?.data?.message || "Failed to delete part";
+          : getApiErrorMessage(error, "Failed to delete part");
       toast({
         variant: "destructive",
         title: "Error",
@@ -212,9 +212,8 @@ export default function Parts() {
         reference: "",
       });
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message || "Failed to adjust stock";
+    onError: (error: unknown) => {
+      const message = getApiErrorMessage(error, "Failed to adjust stock");
       toast({
         variant: "destructive",
         title: "Error",
@@ -390,9 +389,7 @@ export default function Parts() {
 
   // Error state
   if (isError) {
-    const errorMessage =
-      (errorData as any)?.response?.data?.message ||
-      "Failed to load parts. Please try again.";
+    const errorMessage = getApiErrorMessage(errorData, "Failed to load parts. Please try again.");
     return (
       <MaintenanceLayout>
         <div className="space-y-4">

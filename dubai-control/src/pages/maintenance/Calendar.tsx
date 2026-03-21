@@ -41,6 +41,7 @@ import {
   rescheduleVisit,
   maintenanceKeys,
   type ServiceVisit,
+  getApiErrorMessage,
 } from "@/api/maintenance";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
 import { MaintenanceLayout } from "@/contexts/maintenance/ui/MaintenanceLayout";
@@ -179,10 +180,10 @@ export default function Calendar() {
       });
       queryClient.invalidateQueries({ queryKey: maintenanceKeys.visits.all });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Reschedule failed",
-        description: error?.message || "Failed to reschedule the visit.",
+        description: getApiErrorMessage(error, "Failed to reschedule the visit."),
         variant: "destructive",
       });
     },

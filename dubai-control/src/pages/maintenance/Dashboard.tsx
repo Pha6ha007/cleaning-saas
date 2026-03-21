@@ -41,7 +41,7 @@ const VALID_STATUSES = ["scheduled", "in_progress", "completed"] as const;
 
 // Filter out cancelled visits (they should not be displayed or counted)
 function filterValidVisits(visits: ServiceVisit[]): ServiceVisit[] {
-  return visits.filter((v) => VALID_STATUSES.includes(v.status as any));
+  return visits.filter((v) => (VALID_STATUSES as readonly string[]).includes(v.status));
 }
 
 // ============================================================================

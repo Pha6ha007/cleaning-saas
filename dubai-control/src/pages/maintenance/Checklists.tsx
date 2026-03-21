@@ -31,6 +31,7 @@ import {
   type ChecklistTemplate,
   type CreateChecklistTemplateInput,
   type UpdateChecklistTemplateInput,
+  getApiErrorMessage,
 } from "@/api/maintenance";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
 import { MaintenanceLayout } from "@/contexts/maintenance/ui/MaintenanceLayout";
@@ -99,9 +100,8 @@ export default function Checklists() {
       });
       handleCloseModal();
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message || "Failed to create checklist template";
+    onError: (error: unknown) => {
+      const message = getApiErrorMessage(error, "Failed to create checklist template");
       toast({
         variant: "destructive",
         title: "Error",
@@ -127,9 +127,8 @@ export default function Checklists() {
       });
       handleCloseModal();
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message || "Failed to update checklist template";
+    onError: (error: unknown) => {
+      const message = getApiErrorMessage(error, "Failed to update checklist template");
       toast({
         variant: "destructive",
         title: "Error",
@@ -149,12 +148,12 @@ export default function Checklists() {
       });
       setDeleteConfirm(null);
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       const code = error?.response?.data?.code;
       const message =
         code === "CONFLICT"
-          ? error?.response?.data?.message || "Cannot delete checklist template in use."
-          : error?.response?.data?.message || "Failed to delete checklist template";
+          ? getApiErrorMessage(error, "Cannot delete checklist template in use.")
+          : getApiErrorMessage(error, "Failed to delete checklist template");
       toast({
         variant: "destructive",
         title: "Error",

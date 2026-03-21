@@ -35,6 +35,7 @@ import {
   maintenanceKeys,
   type AssetType,
   type ChecklistTemplate,
+  getApiErrorMessage,
 } from "@/api/maintenance";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
 import { MaintenanceLayout } from "@/contexts/maintenance/ui/MaintenanceLayout";
@@ -102,9 +103,8 @@ export default function AssetTypes() {
       });
       handleCloseModal();
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message || "Failed to create asset type";
+    onError: (error: unknown) => {
+      const message = getApiErrorMessage(error, "Failed to create asset type");
       toast({
         variant: "destructive",
         title: "Error",
@@ -130,9 +130,8 @@ export default function AssetTypes() {
       });
       handleCloseModal();
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message || "Failed to update asset type";
+    onError: (error: unknown) => {
+      const message = getApiErrorMessage(error, "Failed to update asset type");
       toast({
         variant: "destructive",
         title: "Error",
@@ -152,12 +151,12 @@ export default function AssetTypes() {
       });
       setDeleteConfirm(null);
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       const code = error?.response?.data?.code;
       const message =
         code === "CONFLICT"
           ? "Cannot delete asset type with linked assets. Deactivate instead."
-          : error?.response?.data?.message || "Failed to delete asset type";
+          : getApiErrorMessage(error, "Failed to delete asset type");
       toast({
         variant: "destructive",
         title: "Error",

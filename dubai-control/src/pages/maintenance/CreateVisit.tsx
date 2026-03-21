@@ -30,6 +30,7 @@ import {
   type Asset,
   type MaintenanceCategory,
   type ChecklistTemplate,
+  getApiErrorMessage,
 } from "@/api/maintenance";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
 import { UpgradeDialog } from "@/components/maintenance/UpgradeDialog";
@@ -210,7 +211,7 @@ export default function CreateVisit() {
         });
       }
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       const errorData = error?.response?.data;
 
       // Handle plan enforcement (trial expired / company blocked)

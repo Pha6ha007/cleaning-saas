@@ -37,6 +37,7 @@ import {
   type ServiceContract,
   type CreateServiceContractInput,
   type Location,
+  getApiErrorMessage,
 } from "@/api/maintenance";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
 import { MaintenanceLayout } from "@/contexts/maintenance/ui/MaintenanceLayout";
@@ -169,8 +170,8 @@ export default function Contracts() {
       toast({ title: "Success", description: "Contract created successfully" });
       handleCloseModal();
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.message || "Failed to create contract";
+    onError: (error: unknown) => {
+      const message = getApiErrorMessage(error, "Failed to create contract");
       toast({ variant: "destructive", title: "Error", description: message });
     },
   });
@@ -184,8 +185,8 @@ export default function Contracts() {
       toast({ title: "Success", description: "Contract updated successfully" });
       handleCloseModal();
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.message || "Failed to update contract";
+    onError: (error: unknown) => {
+      const message = getApiErrorMessage(error, "Failed to update contract");
       toast({ variant: "destructive", title: "Error", description: message });
     },
   });
@@ -197,8 +198,8 @@ export default function Contracts() {
       queryClient.invalidateQueries({ queryKey: maintenanceKeys.contracts.all });
       toast({ title: "Success", description: "Contract deleted successfully" });
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.message || "Failed to delete contract";
+    onError: (error: unknown) => {
+      const message = getApiErrorMessage(error, "Failed to delete contract");
       toast({ variant: "destructive", title: "Error", description: message });
     },
   });

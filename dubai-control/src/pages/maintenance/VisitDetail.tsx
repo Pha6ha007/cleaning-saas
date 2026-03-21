@@ -59,6 +59,7 @@ import {
   type NotificationKind,
   type Part,
   type VisitPart,
+  getApiErrorMessage,
 } from "@/api/maintenance";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
 import { useOfflinePhotos } from "@/hooks/useOfflinePhotos";
@@ -388,11 +389,11 @@ export default function VisitDetail() {
       setShowAddPartModal(false);
       setAddPartForm({ part_id: "", quantity: "1", notes: "" });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error?.response?.data?.message || "Failed to add part.",
+        description: getApiErrorMessage(error, "Failed to add part."),
       });
     },
   });
@@ -407,11 +408,11 @@ export default function VisitDetail() {
         description: "Part has been removed from this visit.",
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error?.response?.data?.message || "Failed to remove part.",
+        description: getApiErrorMessage(error, "Failed to remove part."),
       });
     },
   });
@@ -425,11 +426,11 @@ export default function VisitDetail() {
       await queryClient.cancelQueries({ queryKey: ["serviceVisit", visitId] });
       const previousVisit = queryClient.getQueryData(["serviceVisit", visitId]);
 
-      queryClient.setQueryData(["serviceVisit", visitId], (old: any) => {
+      queryClient.setQueryData(["serviceVisit", visitId], (old: Record<string, unknown> | undefined) => {
         if (!old?.checklist_items) return old;
         return {
           ...old,
-          checklist_items: old.checklist_items.map((item: any) =>
+          checklist_items: old.checklist_items.map((item: { id: number; name: string; is_completed: boolean }) =>
             item.id === itemId ? { ...item, is_completed: isCompleted } : item
           ),
         };
@@ -810,7 +811,7 @@ export default function VisitDetail() {
       <div className="grid gap-4 md:grid-cols-2 mt-4">
         {/* Checklist Section */}
         {visit.checklist_items && visit.checklist_items.length > 0 ? (() => {
-          const completedCount = visit.checklist_items.filter((item: any) => item.is_completed).length;
+          const completedCount = visit.checklist_items.filter((item: { is_completed: boolean }) => item.is_completed).length;
           const totalCount = visit.checklist_items.length;
           const progressPercent = Math.round((completedCount / totalCount) * 100);
           const canToggle = canEditChecklist && visit.status === "in_progress";
@@ -834,7 +835,7 @@ export default function VisitDetail() {
 
               {/* Checklist items - compact 2-column layout */}
               <div className="mt-2 grid grid-cols-1 gap-1">
-                {visit.checklist_items.map((item: any) => (
+                {visit.checklist_items.map((item: { id: number; name: string; is_completed: boolean }) => (
                   <div
                     key={item.id}
                     className={`flex items-center gap-1.5 rounded border px-2 py-1 transition-colors text-xs ${

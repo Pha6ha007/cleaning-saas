@@ -35,6 +35,7 @@ import {
   maintenanceKeys,
   type ServiceVisit,
   type VisitFilters,
+  getApiErrorMessage,
 } from "@/api/maintenance";
 import { useUserRole, type UserRole } from "@/hooks/useUserRole";
 import {
@@ -319,11 +320,11 @@ export default function VisitList() {
         });
       }
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error?.response?.data?.message || "Failed to assign visits",
+        description: getApiErrorMessage(error, "Failed to assign visits"),
       });
     },
   });
@@ -349,11 +350,11 @@ export default function VisitList() {
         });
       }
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error?.response?.data?.message || "Failed to cancel visits",
+        description: getApiErrorMessage(error, "Failed to cancel visits"),
       });
     },
   });
@@ -398,8 +399,7 @@ export default function VisitList() {
 
   // Error state with error banner
   if (isError) {
-    const errorMessage = (visitsError as any)?.response?.data?.message
-      || "Failed to load service visits. Please try again.";
+    const errorMessage = getApiErrorMessage(visitsError, "Failed to load service visits. Please try again.");
     return (
       <MaintenanceLayout>
         <div className="space-y-4">

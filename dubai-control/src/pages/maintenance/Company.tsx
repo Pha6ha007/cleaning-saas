@@ -26,6 +26,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { MaintenanceLayout } from "@/contexts/maintenance/ui/MaintenanceLayout";
 import { TechniciansPage } from "@/contexts/maintenance/ui/TechniciansPage";
+import { getApiErrorMessage } from "@/api/maintenance";
 import {
   getTeamMembers,
   createTeamMember,
@@ -100,9 +101,8 @@ export default function Company() {
         description: "Team member updated successfully",
       });
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message || "Failed to update team member";
+    onError: (error: unknown) => {
+      const message = getApiErrorMessage(error, "Failed to update team member");
       toast({
         variant: "destructive",
         title: "Error",
@@ -121,9 +121,8 @@ export default function Company() {
         setShowMemberPasswordModal(true);
       }
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message || "Failed to reset password";
+    onError: (error: unknown) => {
+      const message = getApiErrorMessage(error, "Failed to reset password");
       toast({
         variant: "destructive",
         title: "Error",
@@ -536,7 +535,7 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
       queryClient.invalidateQueries({ queryKey: ["teamMembers"] });
       setCreatedPassword(data.temp_password);
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       const data = error?.response?.data;
       if (data?.fields) {
         const fieldErrors: Record<string, string> = {};
