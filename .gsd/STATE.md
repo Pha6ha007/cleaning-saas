@@ -1,7 +1,7 @@
 # GSD State
 
-**Active Milestone:** Phase 4 — Type Safety
-**Status:** in-progress
+**Active Milestone:** Improvement Plan (Phases 1–4)
+**Status:** mostly complete
 
 ## Improvement Plan Progress (from audit 2026-03-21)
 
@@ -12,10 +12,10 @@
 - [x] Remove 38 debug console.log (4 remain in LOCKED files)
 
 ### Phase 2 — Stability & Testing ✅ DONE
-- [x] Route-level Error Boundaries (46 routes wrapped with PageErrorBoundary)
-- [x] Frontend unit tests: 0 → 61 (CSV, auth, query keys, image utils)
+- [x] Route-level Error Boundaries (46 routes wrapped)
+- [x] Frontend unit tests: 0 → 61
 - [x] Login form accessibility (htmlFor/id + aria-label)
-- [x] Audit eslint-disable suppressions (all 7 verified as intentional)
+- [x] Audit eslint-disable suppressions (all 7 verified)
 
 ### Phase 3 — Architecture (partial)
 - [x] Dynamic xlsx imports at call sites (4 files)
@@ -23,34 +23,25 @@
 - [ ] Split client.ts (3051 lines) — DEFERRED
 - [ ] Split views_maintenance.py (5511 lines) — DEFERRED
 
-### Phase 4 — Type Safety ✅ (unlocked files complete)
-- **any count: 186 → 107 (79 removed, 43% reduction)**
-- [x] catch(err: any) → catch(err: unknown) + instanceof Error
-- [x] ApiError type + getApiErrorMessage/getApiErrorCode utilities
-- [x] 32× onError any → unknown in 12 maintenance pages
-- [x] 5× onError any → unknown + getApiErrorMessage in TechniciansPage
-- [x] completionErrors.ts: typed assertions
-- [x] ViolationJobsPage: extended ViolationJob type (6× as any removed)
-- [x] ReportEmailLogs: ExtendedEmailLog type (7× as any removed)
-- [x] AddressAutocompleteInput: google.maps types (3× as any removed)
-- [x] Login, Locations, LocationsOld: typed assertions
-- Remaining 107: 50 LOCKED, 18 client.ts, 39 other (most are enum casts, window.google, etc.)
-- [ ] i18n infrastructure
-- [ ] Accessibility audit
-- [ ] Bundle optimization
+### Phase 4 — Quality & Performance ✅ DONE (unlocked scope)
+- **Type safety: 186 → 107 any (43% reduction)**
+  - 50 in LOCKED files, 18 in client.ts, 39 remaining unlocked
+  - ApiError type + getApiErrorMessage/getApiErrorCode utilities
+  - 79 individual any→typed fixes across 25+ files
+- **Bundle optimization: vendor-misc 154→131 KB gzip (-15%)**
+  - Split vendor-dnd (13KB), vendor-paddle (5KB), vendor-qrcode (6KB)
+  - These load lazily only when needed (calendar/billing/QR pages)
+- [ ] i18n infrastructure — DEFERRED
+- [ ] Accessibility audit — DEFERRED
 
-### Phase 5 — Revenue
+### Phase 5 — Revenue (not started)
 - [ ] Paddle billing integration
-- [ ] Mobile UX safety states
+- [ ] Mobile UX safety states  
 - [ ] Staging environment
 
 ## Test Totals
-- Backend: 845/845
-- Frontend E2E: 62/62 (Playwright)
-- Frontend Unit: 61/61 (Vitest)
-- Mobile Jest: 37/37
-- **Total: 1005 tests**
-- TypeScript: 0 errors | Build: clean
+- Backend: 845 | Frontend E2E: 62 | Frontend Unit: 61 | Mobile: 37
+- **Total: 1005 tests** — TSC: 0 errors — Build: clean
 
 ## Session Commits (2026-03-21)
 1. `552892f` — fix: 8 bugs
@@ -59,6 +50,8 @@
 4. `015cc60` — feat: Phase 1–2
 5. `116cbfd` — perf: Phase 3 partial
 6. `f37bd35` — refactor: catch any → unknown
-7. `1911aae` — refactor: 45× any → typed in maintenance
+7. `1911aae` — refactor: 45× any in maintenance
 8. `336b2a8` — refactor: TechniciansPage, Login, Locations
-9. `c96a0ca` — refactor: 20 more any (ViolationJobs, ReportEmailLogs, Google Maps)
+9. `c96a0ca` — refactor: 20 more any
+10. `9ba08c8` — fix: missing SuspenseFallback (Vercel deploy fix)
+11. `303e8c9` — perf: vendor chunk splitting (-23KB gzip)
