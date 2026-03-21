@@ -101,3 +101,4 @@
 15. `1a671a3` — feat: maintenance signup flow (M2)
 16. `9f20bfd` — feat: demo accounts (C5 + M5)
 17. `777675c` — feat: page view analytics (S3)
+18. `33d1b87` — feat: i18n infrastructure + 180 keys (4.2)
