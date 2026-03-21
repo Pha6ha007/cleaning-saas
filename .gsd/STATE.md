@@ -143,7 +143,7 @@ Strategy: extract when touching file for other work.
 |---|------|--------|--------|
 | 4.2 | i18n infrastructure | — | ✅ Done (incremental extraction ongoing) |
 | 4.3 | Accessibility audit (WCAG) | 3h | ✅ `f64841f` |
-| 4.1 | Split client.ts (3051 lines) | 4h | ⬜ Deferred |
+| 4.1 | Split client.ts (3051→2626 lines) | 4h | ✅ `8587cad` |
 
 ### Phase 5 — Revenue & Scale
 | # | Task | Effort | Status |
@@ -180,3 +180,4 @@ Strategy: extract when touching file for other work.
 19. `f64841f` — a11y: accessibility audit fixes (4.3)
 20. `baeb45b` — infra: staging environment (5.3)
 21. `1339338` — feat: mobile UX safety states (5.2)
+22. `8587cad` — refactor: split client.ts (4.1)
