@@ -701,3 +701,38 @@ class EmailVerificationToken(models.Model):
         # Delete token (single-use)
         self.delete()
         return True
+
+
+class PasswordResetToken(models.Model):
+    """
+    Single-use password reset token.
+
+    Created via POST /api/auth/password-reset/ when user requests a reset.
+    Consumed via POST /api/auth/password-reset/confirm/ with new password.
+
+    Token expires after 1 hour. Single-use: deleted after successful reset.
+    """
+
+    TOKEN_TTL_HOURS = 1
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="password_reset_tokens",
+    )
+    token = models.UUIDField(default=_uuid.uuid4, unique=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "password_reset_tokens"
+        verbose_name = "Password Reset Token"
+        verbose_name_plural = "Password Reset Tokens"
+
+    def __str__(self):
+        return f"ResetToken({self.user.email}, {'expired' if self.is_expired else 'valid'})"
+
+    @property
+    def is_expired(self) -> bool:
+        from django.utils import timezone as tz
+        from datetime import timedelta
+        return tz.now() > self.created_at + timedelta(hours=self.TOKEN_TTL_HOURS)

@@ -1,57 +1,61 @@
 # GSD State
 
-**Active Milestone:** Improvement Plan (Phases 1–4)
-**Status:** mostly complete
+**Active Milestone:** Launch Readiness Plan
+**Status:** in-progress
 
-## Improvement Plan Progress (from audit 2026-03-21)
+---
 
-### Phase 1 — Critical Fixes ✅ DONE
-- [x] Wire Contact form to backend (+ phone field migration)
-- [x] Add ProtectedRoute guard (redirects to /login with redirect-back)
-- [x] Add frontend e2e to CI pipeline (Playwright job + gate)
-- [x] Remove 38 debug console.log (4 remain in LOCKED files)
+## Launch Readiness Plan
 
-### Phase 2 — Stability & Testing ✅ DONE
-- [x] Route-level Error Boundaries (46 routes wrapped)
-- [x] Frontend unit tests: 0 → 61
-- [x] Login form accessibility (htmlFor/id + aria-label)
-- [x] Audit eslint-disable suppressions (all 7 verified)
+### CleanProof — Launch Checklist
 
-### Phase 3 — Architecture (partial)
-- [x] Dynamic xlsx imports at call sites (4 files)
-- [x] Dashboard skeleton loading
-- [ ] Split client.ts (3051 lines) — DEFERRED
-- [ ] Split views_maintenance.py (5511 lines) — DEFERRED
+| # | Task | Priority | Status |
+|---|------|----------|--------|
+| C1 | **Email verification page** — `/verify-email` route to handle backend verification links | Must | ⬜ |
+| C2 | **Signup → "Check your email" screen** — after signup show verification message instead of silently switching to login | Must | ⬜ |
+| C3 | **Onboarding wizard** — after first login: create location → add cleaner → create first job | Must | ⬜ |
+| C4 | **Empty states** — Dashboard, Jobs, Locations show helpful CTAs when no data exists | Must | ⬜ |
+| C5 | **Demo account** — "Try without signup" button on landing → pre-filled read-only demo | Nice | ⬜ |
+| C6 | Paddle billing integration | Must | ⏸️ Waiting for Paddle verification |
 
-### Phase 4 — Quality & Performance ✅ DONE (unlocked scope)
-- **Type safety: 186 → 107 any (43% reduction)**
-  - 50 in LOCKED files, 18 in client.ts, 39 remaining unlocked
-  - ApiError type + getApiErrorMessage/getApiErrorCode utilities
-  - 79 individual any→typed fixes across 25+ files
-- **Bundle optimization: vendor-misc 154→131 KB gzip (-15%)**
-  - Split vendor-dnd (13KB), vendor-paddle (5KB), vendor-qrcode (6KB)
-  - These load lazily only when needed (calendar/billing/QR pages)
-- [ ] i18n infrastructure — DEFERRED
-- [ ] Accessibility audit — DEFERRED
+### MaintainProof — Launch Checklist
 
-### Phase 5 — Revenue (not started)
-- [ ] Paddle billing integration
-- [ ] Mobile UX safety states  
-- [ ] Staging environment
+| # | Task | Priority | Status |
+|---|------|----------|--------|
+| M1 | **Email verification** — shared with CleanProof (same route) | Must | ⬜ |
+| M2 | **Signup flow for Maintenance** — separate entry point or context selector after signup | Must | ⬜ |
+| M3 | **Onboarding wizard** — after first login: add location → add asset → create first visit | Must | ⬜ |
+| M4 | **Empty states** — Dashboard, Visits, Assets show helpful CTAs | Must | ⬜ |
+| M5 | **Demo account** — pre-filled maintenance data for "try without signup" | Nice | ⬜ |
+| M6 | Paddle billing integration | Must | ⏸️ Waiting for Paddle verification |
 
-## Test Totals
+### Shared Infrastructure
+
+| # | Task | Priority | Status |
+|---|------|----------|--------|
+| S1 | **Resend verification email** — button if user didn't receive it | Must | ⬜ |
+| S2 | **Password reset flow** — "Forgot password?" on login page | Must | ⬜ |
+| S3 | **Analytics tracking** — basic page views + signup funnel events | Nice | ⬜ |
+
+### Execution Order
+1. **C1 + M1 + S1** — Email verification (shared page + resend)
+2. **C2** — Signup shows "check email" message
+3. **S2** — Password reset flow
+4. **C4 + M4** — Empty states with CTAs
+5. **C3 + M3** — Onboarding wizards
+6. **C5 + M5** — Demo accounts (if time)
+7. **Billing** — when Paddle is verified
+
+---
+
+## Previous Work (2026-03-21 session)
+
+### Phases 1–4 Complete
+- Phase 1: Contact form, ProtectedRoute, e2e CI, console.log cleanup
+- Phase 2: Error boundaries (46 routes), 61 unit tests, a11y, eslint audit
+- Phase 3: Dynamic xlsx imports, dashboard skeleton
+- Phase 4: Type safety (186→107 any), bundle optimization (-23KB gzip)
+
+### Test Totals
 - Backend: 845 | Frontend E2E: 62 | Frontend Unit: 61 | Mobile: 37
 - **Total: 1005 tests** — TSC: 0 errors — Build: clean
-
-## Session Commits (2026-03-21)
-1. `552892f` — fix: 8 bugs
-2. `44b72a0` — test: 62 e2e tests
-3. `a5e3201` — docs: project audit & plan
-4. `015cc60` — feat: Phase 1–2
-5. `116cbfd` — perf: Phase 3 partial
-6. `f37bd35` — refactor: catch any → unknown
-7. `1911aae` — refactor: 45× any in maintenance
-8. `336b2a8` — refactor: TechniciansPage, Login, Locations
-9. `c96a0ca` — refactor: 20 more any
-10. `9ba08c8` — fix: missing SuspenseFallback (Vercel deploy fix)
-11. `303e8c9` — perf: vendor chunk splitting (-23KB gzip)

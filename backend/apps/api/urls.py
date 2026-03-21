@@ -12,6 +12,7 @@ from .views_branches import BranchListCreateView, BranchDetailView, BranchAnalyt
 from .views_recurring_jobs import RecurringJobListCreateView, RecurringJobDetailView
 from .views_sla_policies import SLAPolicyListCreateView, SLAPolicyDetailView, EffectiveSLAPolicyView
 from .views_audit_log import AuditLogView, AuditLogExportView
+from .views_api_keys import ApiKeyListCreateView, ApiKeyDetailView, ApiKeyUsageView
 from . import views
 from .views_jwt import JWTManagerLoginView, JWTCleanerLoginView, JWTRefreshView, JWTLogoutView
 
@@ -33,11 +34,59 @@ from apps.locations.app.views import (
 
 
 def health_view(request):
+    """
+    Liveness probe — lightweight, no external deps.
+    Used by Docker HEALTHCHECK and nginx upstream checks.
+    Always returns 200 if the process is alive.
+    """
+    if request.method != "GET":
+        from django.http import HttpResponseNotAllowed
+        return HttpResponseNotAllowed(["GET"])
+    return JsonResponse({"status": "ok"})
+
+
+def readiness_view(request):
+    """
+    Readiness probe — checks DB and cache before accepting traffic.
+    Returns 503 if any dependency is unhealthy.
+    """
+    import time
+    checks = {}
+    ok = True
+
+    # Database check
     try:
         connection.ensure_connection()
-        return JsonResponse({"status": "ok", "database": "connected"})
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        checks["database"] = "ok"
     except Exception as e:
-        return JsonResponse({"status": "error", "database": str(e)}, status=503)
+        checks["database"] = f"error: {e}"
+        ok = False
+
+    # Cache check
+    try:
+        from django.core.cache import cache
+        probe_key = "__health_probe__"
+        cache.set(probe_key, "1", timeout=5)
+        val = cache.get(probe_key)
+        if val == "1":
+            checks["cache"] = "ok"
+        else:
+            checks["cache"] = "error: read-back mismatch"
+            ok = False
+    except Exception as e:
+        checks["cache"] = f"error: {e}"
+        ok = False
+
+    import django
+    payload = {
+        "status": "ok" if ok else "degraded",
+        "checks": checks,
+        "django_version": django.VERSION[:2],
+    }
+    status_code = 200 if ok else 503
+    return JsonResponse(payload, status=status_code)
 
 
 urlpatterns = [
@@ -60,10 +109,12 @@ urlpatterns = [
     ),
 
     # =====================
-    # Health (no auth, no DB — for load balancer/nginx health checks)
-    # Full path: /api/health/ (included under /api/ prefix)
+    # Health probes (no auth)
+    # /api/health/        → liveness (process alive, no deps)
+    # /api/health/ready/  → readiness (DB + cache healthy)
     # =====================
     path("health/", health_view, name="api-health"),
+    path("health/ready/", readiness_view, name="api-health-ready"),
 
     # =====================
     # Auth
@@ -99,6 +150,25 @@ urlpatterns = [
         "auth/verify-email/",
         api_views.EmailVerifyView.as_view(),
         name="api-auth-verify-email",
+    ),
+
+    # Resend verification email
+    path(
+        "auth/resend-verification/",
+        api_views.ResendVerificationView.as_view(),
+        name="api-auth-resend-verification",
+    ),
+
+    # Password reset
+    path(
+        "auth/password-reset/",
+        api_views.PasswordResetRequestView.as_view(),
+        name="api-auth-password-reset",
+    ),
+    path(
+        "auth/password-reset/confirm/",
+        api_views.PasswordResetConfirmView.as_view(),
+        name="api-auth-password-reset-confirm",
     ),
 
     # =====================
@@ -418,6 +488,22 @@ urlpatterns = [
         "jobs/audit-log/export/",
         AuditLogExportView.as_view(),
         name="audit-log-export",
+    ),
+    # M006/S04: Enterprise API Keys
+    path(
+        "enterprise/api-keys/",
+        ApiKeyListCreateView.as_view(),
+        name="enterprise-api-keys",
+    ),
+    path(
+        "enterprise/api-keys/usage/",
+        ApiKeyUsageView.as_view(),
+        name="enterprise-api-keys-usage",
+    ),
+    path(
+        "enterprise/api-keys/<int:pk>/",
+        ApiKeyDetailView.as_view(),
+        name="enterprise-api-key-detail",
     ),
     path(  # без слэша в конце
         "manager/analytics/summary",

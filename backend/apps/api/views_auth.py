@@ -413,3 +413,187 @@ class EmailVerifyView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class ResendVerificationView(APIView):
+    """
+    Resend verification email.
+
+    POST /api/auth/resend-verification/
+    Body: {"email": "user@example.com"}
+
+    Rate limited: max 3 requests per email per hour.
+    Always returns 200 to prevent email enumeration.
+    """
+
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request, *args, **kwargs):
+        email = (request.data.get("email") or "").strip().lower()
+
+        if not email:
+            # Always return 200 to prevent enumeration
+            return Response(
+                {"message": "If an account with that email exists, we've sent a new verification link."},
+                status=status.HTTP_200_OK,
+            )
+
+        from apps.accounts.models import User, EmailVerificationToken
+        try:
+            user = User.objects.get(email=email, is_active=False)
+        except User.DoesNotExist:
+            # Don't reveal whether email exists
+            return Response(
+                {"message": "If an account with that email exists, we've sent a new verification link."},
+                status=status.HTTP_200_OK,
+            )
+
+        # Delete old tokens and create a new one
+        EmailVerificationToken.objects.filter(user=user).delete()
+        verification = EmailVerificationToken.objects.create(user=user)
+        _send_verification_email(user, user.company, str(verification.token))
+
+        return Response(
+            {"message": "If an account with that email exists, we've sent a new verification link."},
+            status=status.HTTP_200_OK,
+        )
+
+
+class PasswordResetRequestView(APIView):
+    """
+    Request a password reset email.
+
+    POST /api/auth/password-reset/
+    Body: {"email": "user@example.com"}
+
+    Always returns 200 to prevent email enumeration.
+    """
+
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request, *args, **kwargs):
+        email = (request.data.get("email") or "").strip().lower()
+
+        if not email:
+            return Response(
+                {"message": "If an account with that email exists, we've sent a password reset link."},
+                status=status.HTTP_200_OK,
+            )
+
+        from apps.accounts.models import User
+        try:
+            user = User.objects.get(email=email, is_active=True)
+        except User.DoesNotExist:
+            return Response(
+                {"message": "If an account with that email exists, we've sent a password reset link."},
+                status=status.HTTP_200_OK,
+            )
+
+        # Generate reset token
+        from apps.accounts.models import PasswordResetToken
+        PasswordResetToken.objects.filter(user=user).delete()
+        reset_token = PasswordResetToken.objects.create(user=user)
+
+        _send_password_reset_email(user, str(reset_token.token))
+
+        return Response(
+            {"message": "If an account with that email exists, we've sent a password reset link."},
+            status=status.HTTP_200_OK,
+        )
+
+
+class PasswordResetConfirmView(APIView):
+    """
+    Confirm password reset with token.
+
+    POST /api/auth/password-reset/confirm/
+    Body: {"token": "<uuid>", "password": "<new_password>"}
+    """
+
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request, *args, **kwargs):
+        import uuid
+        token_str = (request.data.get("token") or "").strip()
+        new_password = request.data.get("password", "")
+
+        if not token_str or not new_password:
+            return Response(
+                {"code": "MISSING_FIELDS", "message": "Token and password are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            token_uuid = uuid.UUID(token_str)
+        except ValueError:
+            return Response(
+                {"code": "TOKEN_INVALID", "message": "Invalid reset token."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        from apps.accounts.models import PasswordResetToken
+        try:
+            reset_token = PasswordResetToken.objects.select_related("user").get(token=token_uuid)
+        except PasswordResetToken.DoesNotExist:
+            return Response(
+                {"code": "TOKEN_INVALID", "message": "Invalid or already used reset token."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if reset_token.is_expired:
+            reset_token.delete()
+            return Response(
+                {"code": "TOKEN_EXPIRED", "message": "Reset link has expired. Please request a new one."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = reset_token.user
+
+        # Validate password
+        from django.contrib.auth.password_validation import validate_password
+        from django.core.exceptions import ValidationError
+        try:
+            validate_password(new_password, user)
+        except ValidationError as e:
+            return Response(
+                {"code": "WEAK_PASSWORD", "message": "Password too weak.", "errors": list(e.messages)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(new_password)
+        user.save(update_fields=["password"])
+        reset_token.delete()
+
+        return Response(
+            {"status": "success", "message": "Password has been reset. You can now sign in."},
+            status=status.HTTP_200_OK,
+        )
+
+
+def _send_password_reset_email(user, token: str) -> None:
+    """Send password reset email. Non-fatal."""
+    from django.core.mail import send_mail
+    from django.conf import settings
+    import logging
+
+    logger = logging.getLogger(__name__)
+    try:
+        base_url = getattr(settings, "FRONTEND_URL", "http://localhost:5173")
+        reset_url = f"{base_url}/reset-password?token={token}"
+        subject = "Reset your password"
+        body = (
+            f"Hello {user.full_name},\n\n"
+            f"We received a request to reset your password. Click the link below:\n\n"
+            f"{reset_url}\n\n"
+            f"This link expires in 1 hour.\n\n"
+            f"If you didn't request this, you can ignore this email.\n\n"
+            f"— The Proof Platform Team"
+        )
+        from_email = getattr(settings, "EMAIL_HOST_USER", "noreply@proofplatform.com")
+        send_mail(subject, body, from_email, [user.email], fail_silently=True)
+        logger.info("Password reset email sent to %s", user.email)
+    except Exception as exc:
+        logger.error("Failed to send password reset email to %s: %s", user.email, exc)

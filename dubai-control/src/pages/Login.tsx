@@ -130,7 +130,8 @@ export default function Login() {
   const location = useLocation();
 
   // Mode: "signin" or "signup"
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup" | "verification_pending">("signin");
+  const [pendingEmail, setPendingEmail] = useState("");
   const [mounted, setMounted] = useState(false);
   const [animKey, setAnimKey] = useState(0);
 
@@ -293,17 +294,11 @@ export default function Login() {
         return;
       }
 
-      // Success - switch to sign in mode with populated email
-      setEmail(signupEmail.trim());
-      setPassword("");
-      setMode("signin");
+      // Success - show "check your email" screen
+      setPendingEmail(signupEmail.trim());
+      setMode("verification_pending");
       setAnimKey((k) => k + 1);
       setError(null);
-      setSignupCompany("");
-      setSignupName("");
-      setSignupEmail("");
-      setSignupPassword("");
-      setSignupConfirmPassword("");
     } catch (err: unknown) {
       setError((err instanceof Error ? err.message : "Failed to create account. Please try again."));
     } finally {
@@ -526,7 +521,7 @@ export default function Login() {
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-6 mb-6 border-b border-[#E2E4E9]">
+          {mode !== "verification_pending" && <div className="flex gap-6 mb-6 border-b border-[#E2E4E9]">
             <button
               type="button"
               onClick={() => switchMode("signin")}
@@ -555,11 +550,37 @@ export default function Login() {
             >
               Create account
             </button>
-          </div>
+          </div>}
 
           {/* Form */}
           <div key={animKey} className="animate-in fade-in slide-in-from-bottom-2 duration-350">
-            {mode === "signin" ? (
+            {mode === "verification_pending" ? (
+              <div className="text-center space-y-6 py-4">
+                <div className="mx-auto w-14 h-14 rounded-full bg-[#F0FDF4] flex items-center justify-center">
+                  <svg className="w-7 h-7 text-[#16A34A]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-[#1A1A2E] mb-2">Check your email</h3>
+                  <p className="text-sm text-[#6C7281] leading-relaxed">
+                    We sent a verification link to<br />
+                    <span className="font-medium text-[#1A1A2E]">{pendingEmail}</span>
+                  </p>
+                </div>
+                <p className="text-xs text-[#9CA3AF] leading-relaxed">
+                  Click the link in the email to activate your account and start your 7-day free trial.
+                  The link expires in 24 hours.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => { setMode("signin"); setEmail(pendingEmail); }}
+                  className="text-sm text-[#2d5a5a] hover:underline cursor-pointer"
+                >
+                  ← Back to sign in
+                </button>
+              </div>
+            ) : mode === "signin" ? (
               <>
                 <p className="text-sm text-[#6C7281] mb-6 leading-relaxed">
                   Welcome back. Sign in to your workspace.
@@ -594,7 +615,7 @@ export default function Login() {
                   />
                   <div className="flex justify-end -mt-2.5 mb-5">
                     <a
-                      href="#"
+                      href="/reset-password"
                       className="text-[12.5px] text-[#2563EB] font-medium hover:text-[#1D4FD7] hover:underline"
                     >
                       Forgot password?
