@@ -4,8 +4,25 @@
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8001";
 
-function getAuthToken(): string | null {
-  return localStorage.getItem("authToken") || localStorage.getItem("auth_token");
+/**
+ * Get the current auth token from localStorage.
+ * Prefers JWT access_token; falls back to legacy Token auth for existing sessions.
+ */
+function getAuthToken(): { token: string; scheme: "Bearer" | "Token" } | null {
+  // Prefer JWT access token (new auth flow)
+  const jwtAccess = localStorage.getItem("access_token");
+  if (jwtAccess) {
+    return { token: jwtAccess, scheme: "Bearer" };
+  }
+
+  // Fall back to legacy Token auth (existing sessions, backward compat)
+  const legacyToken =
+    localStorage.getItem("authToken") || localStorage.getItem("auth_token");
+  if (legacyToken) {
+    return { token: legacyToken, scheme: "Token" };
+  }
+
+  return null;
 }
 
 export interface SupportSession {
@@ -42,8 +59,8 @@ export interface SendMessageResponse {
 export async function createSession(
   data: CreateSessionRequest = {}
 ): Promise<SupportSession> {
-  const token = getAuthToken();
-  if (!token) {
+  const auth = getAuthToken();
+  if (!auth) {
     throw new Error("Not authenticated");
   }
 
@@ -51,7 +68,7 @@ export async function createSession(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Token ${token}`,
+      Authorization: `${auth.scheme} ${auth.token}`,
     },
     body: JSON.stringify(data),
   });
@@ -68,15 +85,15 @@ export async function createSession(
  * Get list of support sessions
  */
 export async function getSessions(): Promise<SupportSession[]> {
-  const token = getAuthToken();
-  if (!token) {
+  const auth = getAuthToken();
+  if (!auth) {
     throw new Error("Not authenticated");
   }
 
   const response = await fetch(`${API_BASE_URL}/api/support/sessions/`, {
     method: "GET",
     headers: {
-      Authorization: `Token ${token}`,
+      Authorization: `${auth.scheme} ${auth.token}`,
     },
   });
 
@@ -93,8 +110,8 @@ export async function getSessions(): Promise<SupportSession[]> {
 export async function getSessionMessages(
   sessionId: string
 ): Promise<SupportMessage[]> {
-  const token = getAuthToken();
-  if (!token) {
+  const auth = getAuthToken();
+  if (!auth) {
     throw new Error("Not authenticated");
   }
 
@@ -103,7 +120,7 @@ export async function getSessionMessages(
     {
       method: "GET",
       headers: {
-        Authorization: `Token ${token}`,
+        Authorization: `${auth.scheme} ${auth.token}`,
       },
     }
   );
@@ -122,8 +139,8 @@ export async function sendMessage(
   sessionId: string,
   data: SendMessageRequest
 ): Promise<SendMessageResponse> {
-  const token = getAuthToken();
-  if (!token) {
+  const auth = getAuthToken();
+  if (!auth) {
     throw new Error("Not authenticated");
   }
 
@@ -133,7 +150,7 @@ export async function sendMessage(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Token ${token}`,
+        Authorization: `${auth.scheme} ${auth.token}`,
       },
       body: JSON.stringify(data),
     }

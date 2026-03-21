@@ -136,14 +136,18 @@ export default function Dashboard() {
       localStorage.removeItem("cleanproof_trial_entry");
 
       // Call trial start endpoint with the selected tier
-      const token = localStorage.getItem("authToken") || localStorage.getItem("auth_token");
+      // Prefer JWT access_token; fall back to legacy Token auth
+      const jwtToken = localStorage.getItem("access_token");
+      const legacyToken = localStorage.getItem("authToken") || localStorage.getItem("auth_token");
+      const token = jwtToken || legacyToken;
+      const authScheme = jwtToken ? "Bearer" : "Token";
 
       if (token) {
         fetch(`${API_BASE_URL}/api/cleanproof/trials/start/`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Token ${token}`,
+            Authorization: `${authScheme} ${token}`,
           },
           body: JSON.stringify({ tier: trialEntry }),
         })

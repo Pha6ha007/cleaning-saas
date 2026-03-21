@@ -211,15 +211,18 @@ export default function ReportsPage() {
 
     try {
       const apiBase =
-        import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
-      const token =
+        import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8001";
+      const jwtToken = localStorage.getItem("access_token");
+      const legacyToken =
         localStorage.getItem("authToken") ||
         localStorage.getItem("managerToken");
+      const token = jwtToken || legacyToken;
+      const authScheme = jwtToken ? "Bearer" : "Token";
 
       const resp = await fetch(`${apiBase}${endpoint}`, {
         method: "GET",
         headers: {
-          ...(token ? { Authorization: `Token ${token}` } : {}),
+          ...(token ? { Authorization: `${authScheme} ${token}` } : {}),
         },
       });
 

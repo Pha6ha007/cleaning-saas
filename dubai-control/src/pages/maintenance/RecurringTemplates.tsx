@@ -162,7 +162,7 @@ export default function RecurringTemplates() {
   });
 
   const { data: checklistTemplates = [] } = useQuery({
-    queryKey: maintenanceKeys.checklistTemplates,
+    queryKey: maintenanceKeys.checklistTemplates.all,
     queryFn: listChecklistTemplates,
     enabled: hasReadAccess,
   });

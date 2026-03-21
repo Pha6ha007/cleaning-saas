@@ -1,5 +1,6 @@
 // dubai-control/src/App.tsx
 
+import { lazy, Suspense } from "react";
 import * as Sentry from "@sentry/react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -8,85 +9,84 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import ScrollToTop from "@/components/layout/ScrollToTop";
+import { SuspenseFallback } from "@/components/layout/SuspenseFallback";
 
-/* Product pages */
+/* Eager — above the fold / auth shell (must not lazy-load) */
 import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import Jobs from "./pages/Jobs";
-import JobDetails from "./pages/JobDetails";
-import History from "./pages/History";
-import Settings from "./pages/Settings";
-import CleanerJob from "./pages/CleanerJob";
-import NotFound from "./pages/NotFound";
-import JobPlanning from "./pages/JobPlanning";
-import Locations from "./pages/Locations";
-import PricingPage from "./pages/PricingPage";
 import Signup from "./pages/Signup";
-import Performance from "./pages/Performance";
-import Reports from "./pages/Reports";
-import ViolationJobsPage from "./pages/ViolationJobsPage";
-import ReportEmailLogsPage from "./pages/ReportEmailLogs";
-import Analytics from "./pages/Analytics";
-import Docs from "./pages/Docs";
-import Support from "./pages/Support";
-import CompanyProfile from "./pages/company/CompanyProfile";
-import CompanyTeam from "./pages/company/CompanyTeam";
-import BranchesPage from "./pages/company/Branches";
-import Billing from "./pages/settings/Billing";
-import SchedulingPage from "./pages/Scheduling";
-import AuditLogPage from "./pages/AuditLog";
+import PricingPage from "./pages/PricingPage";
+import NotFound from "./pages/NotFound";
+import CleanerJob from "./pages/CleanerJob";
 
-/* Maintenance pages */
-import MaintenanceDocs from "./contexts/maintenance/pages/Docs";
-import MaintenanceSupport from "./contexts/maintenance/pages/Support";
-import { TechniciansPage } from "./contexts/maintenance/ui/TechniciansPage";
-import MaintenanceDashboard from "./pages/maintenance/Dashboard";
-import MaintenanceAssets from "./pages/maintenance/Assets";
-import MaintenanceAssetDetail from "./pages/maintenance/AssetDetail";
-import MaintenanceAssetTypes from "./pages/maintenance/AssetTypes";
-import MaintenanceCalendar from "./pages/maintenance/Calendar";
-import MaintenanceChecklists from "./pages/maintenance/Checklists";
-import MaintenanceCompany from "./pages/maintenance/Company";
-import MaintenanceContracts from "./pages/maintenance/Contracts";
-import MaintenanceLocations from "./pages/maintenance/Locations";
-import MaintenanceMap from "./pages/maintenance/Map";
-import MaintenanceParts from "./pages/maintenance/Parts";
-import MaintenanceRecurringTemplates from "./pages/maintenance/RecurringTemplates";
-import MaintenanceAnalytics from "./pages/maintenance/Analytics";
-import MaintenanceReports from "./pages/maintenance/Reports";
-import MaintenanceVisitList from "./pages/maintenance/VisitList";
-import MaintenanceVisitDetail from "./pages/maintenance/VisitDetail";
-import MaintenanceCreateVisit from "./pages/maintenance/CreateVisit";
-
-/* Contexts */
+/* Contexts (always needed, keep eager) */
 import { LocationsProvider } from "@/contexts/LocationsContext";
 import { AppContextProvider } from "@/contexts/AppContext";
 
-/* Marketing – Platform */
-import {
-  PlatformLanding,
-  Products,
-  Contact,
-  Updates,
-  Principles,
-  TermsOfService,
-  PrivacyPolicy,
-  RefundPolicy,
-} from "@/pages/platform";
+/* Lazy — CleanProof app pages */
+const Dashboard        = lazy(() => import("./pages/Dashboard"));
+const Jobs             = lazy(() => import("./pages/Jobs"));
+const JobDetails       = lazy(() => import("./pages/JobDetails"));
+const JobPlanning      = lazy(() => import("./pages/JobPlanning"));
+const History          = lazy(() => import("./pages/History"));
+const Performance      = lazy(() => import("./pages/Performance"));
+const Reports          = lazy(() => import("./pages/Reports"));
+const ViolationJobsPage      = lazy(() => import("./pages/ViolationJobsPage"));
+const ReportEmailLogsPage    = lazy(() => import("./pages/ReportEmailLogs"));
+const Analytics        = lazy(() => import("./pages/Analytics"));
+const Docs             = lazy(() => import("./pages/Docs"));
+const Support          = lazy(() => import("./pages/Support"));
+const Settings         = lazy(() => import("./pages/Settings"));
+const Locations        = lazy(() => import("./pages/Locations"));
+const CompanyProfile   = lazy(() => import("./pages/company/CompanyProfile"));
+const CompanyTeam      = lazy(() => import("./pages/company/CompanyTeam"));
+const BranchesPage     = lazy(() => import("./pages/company/Branches"));
+const Billing          = lazy(() => import("./pages/settings/Billing"));
+const AccountSettings  = lazy(() => import("./pages/settings/AccountSettings"));
+const SchedulingPage   = lazy(() => import("./pages/Scheduling"));
+const AuditLogPage     = lazy(() => import("./pages/AuditLog"));
 
-/* Marketing – Product Landing Pages */
-import {
-  CleaningLanding,
-  MaintenanceLanding,
-  PropertyComing,
-  FitoutComing,
-} from "@/pages/products";
+/* Lazy — Maintenance app pages (separate chunk group) */
+const MaintenanceDashboard         = lazy(() => import("./pages/maintenance/Dashboard"));
+const MaintenanceVisitList         = lazy(() => import("./pages/maintenance/VisitList"));
+const MaintenanceCreateVisit       = lazy(() => import("./pages/maintenance/CreateVisit"));
+const MaintenanceVisitDetail       = lazy(() => import("./pages/maintenance/VisitDetail"));
+const MaintenanceAssets            = lazy(() => import("./pages/maintenance/Assets"));
+const MaintenanceAssetDetail       = lazy(() => import("./pages/maintenance/AssetDetail"));
+const MaintenanceAssetTypes        = lazy(() => import("./pages/maintenance/AssetTypes"));
+const MaintenanceCalendar          = lazy(() => import("./pages/maintenance/Calendar"));
+const MaintenanceChecklists        = lazy(() => import("./pages/maintenance/Checklists"));
+const MaintenanceCompany           = lazy(() => import("./pages/maintenance/Company"));
+const MaintenanceContracts         = lazy(() => import("./pages/maintenance/Contracts"));
+const MaintenanceLocations         = lazy(() => import("./pages/maintenance/Locations"));
+const MaintenanceMap               = lazy(() => import("./pages/maintenance/Map"));
+const MaintenanceParts             = lazy(() => import("./pages/maintenance/Parts"));
+const MaintenanceRecurringTemplates = lazy(() => import("./pages/maintenance/RecurringTemplates"));
+const MaintenanceAnalytics         = lazy(() => import("./pages/maintenance/Analytics"));
+const MaintenanceReports           = lazy(() => import("./pages/maintenance/Reports"));
+const MaintenanceDocs              = lazy(() => import("./contexts/maintenance/pages/Docs"));
+const MaintenanceSupport           = lazy(() => import("./contexts/maintenance/pages/Support"));
+const TechniciansPage              = lazy(() =>
+  import("./contexts/maintenance/ui/TechniciansPage").then(m => ({ default: m.TechniciansPage }))
+);
 
-/* Marketing – CleanProof */
-import CleanProofLanding from "@/marketing/cleanproof/CleanProofLanding";
-import CleanProofDemoRequest from "@/marketing/cleanproof/CleanProofDemoRequest";
-import CleanProofContact from "@/marketing/cleanproof/CleanProofContact";
-import CleanProofUpdates from "@/marketing/cleanproof/CleanProofUpdates";
+/* Lazy — Marketing / Platform (rarely visited after first load) */
+const PlatformLanding   = lazy(() => import("@/pages/platform").then(m => ({ default: m.PlatformLanding })));
+const Products          = lazy(() => import("@/pages/platform").then(m => ({ default: m.Products })));
+const Contact           = lazy(() => import("@/pages/platform").then(m => ({ default: m.Contact })));
+const Updates           = lazy(() => import("@/pages/platform").then(m => ({ default: m.Updates })));
+const Principles        = lazy(() => import("@/pages/platform").then(m => ({ default: m.Principles })));
+const TermsOfService    = lazy(() => import("@/pages/platform").then(m => ({ default: m.TermsOfService })));
+const PrivacyPolicy     = lazy(() => import("@/pages/platform").then(m => ({ default: m.PrivacyPolicy })));
+const RefundPolicy      = lazy(() => import("@/pages/platform").then(m => ({ default: m.RefundPolicy })));
+
+const CleaningLanding   = lazy(() => import("@/pages/products").then(m => ({ default: m.CleaningLanding })));
+const MaintenanceLanding = lazy(() => import("@/pages/products").then(m => ({ default: m.MaintenanceLanding })));
+const PropertyComing    = lazy(() => import("@/pages/products").then(m => ({ default: m.PropertyComing })));
+const FitoutComing      = lazy(() => import("@/pages/products").then(m => ({ default: m.FitoutComing })));
+
+/* Removed: CleanProofLanding, CleanProofDemoRequest, CleanProofContact, CleanProofUpdates
+   were imported but never used in any route (dead code). Legacy /cleanproof/* routes
+   redirect to platform pages via <Navigate>. */
 
 import "leaflet/dist/leaflet.css";
 
@@ -125,6 +125,7 @@ const App = () => (
 
         <AppContextProvider>
           <LocationsProvider>
+            <Suspense fallback={<SuspenseFallback />}>
             <Routes>
             {/* =========================
                 Platform Marketing (public)
@@ -194,6 +195,7 @@ const App = () => (
               <Route path="/docs/:page" element={<Docs />} />
               <Route path="/support" element={<Support />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/settings/account" element={<AccountSettings />} />
               <Route path="/settings/billing" element={<Billing />} />
               <Route path="/company/profile" element={<CompanyProfile />} />
               <Route path="/company/team" element={<CompanyTeam />} />
@@ -236,6 +238,7 @@ const App = () => (
                 ========================= */}
             <Route path="*" element={<NotFound />} />
             </Routes>
+            </Suspense>
           </LocationsProvider>
         </AppContextProvider>
       </BrowserRouter>
