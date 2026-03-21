@@ -72,7 +72,7 @@ export function AddressAutocompleteInput({
   useEffect(() => {
     if (!isLoaded || typeof window === "undefined") return;
 
-    const g = (window as any).google;
+    const g = (window as unknown as { google?: typeof google }).google;
     if (!g?.maps?.places) {
       console.warn("[AddressAutocompleteInput] Google Maps JS not available");
       return;
@@ -127,7 +127,7 @@ export function AddressAutocompleteInput({
           input: query,
           types: ["geocode"],
         },
-        (results: any[], status: string) => {
+        (results: google.maps.places.AutocompletePrediction[] | null, status: string) => {
           // ответ от старого запроса — игнорируем
           if (currentRequestId !== requestIdRef.current) {
             return;
@@ -183,7 +183,7 @@ export function AddressAutocompleteInput({
         placeId: s.placeId,
         fields: ["formatted_address", "geometry"],
       },
-      (place: any, status: string) => {
+      (place: google.maps.places.PlaceResult | null, status: string) => {
         if (
           status !== "OK" ||
           !place?.geometry?.location

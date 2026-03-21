@@ -372,8 +372,7 @@ export default function Assets() {
 
   // Error state
   if (assetsError || typesError) {
-    const errorMessage = (assetsErrorData as any)?.response?.data?.message
-      || "Failed to load assets. Please try again.";
+    const errorMessage = getApiErrorMessage(assetsErrorData, "Failed to load assets. Please try again.");
     return (
       <MaintenanceLayout>
         <div className="space-y-4">

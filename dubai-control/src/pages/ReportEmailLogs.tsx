@@ -30,6 +30,18 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 
+/** Extended log type with fields present in API response but not in base EmailLog type */
+type ExtendedEmailLog = EmailLog & {
+  job_period?: string;
+  company_name?: string;
+  location_name?: string;
+  cleaner_name?: string;
+  error_message?: string;
+  sent_by?: { full_name?: string } | string | null;
+  pagination?: { total: number; page: number; page_size: number };
+};
+
+
 const DEFAULT_PAGE_SIZE = 20;
 
 export default function ReportEmailLogsPage() {
@@ -59,7 +71,7 @@ export default function ReportEmailLogsPage() {
       }),
   });
 
-  const pagination = (data as any)?.pagination;
+  const pagination = (data as unknown as { pagination?: { total: number; page: number } })?.pagination;
   const logs: EmailLog[] = data?.results ?? [];
 
   // ⚙️ Клиентская фильтрация по диапазону дат (на основе sent_at)
@@ -416,19 +428,19 @@ export default function ReportEmailLogsPage() {
                   const dt = log.sent_at ? new Date(log.sent_at) : null;
                   const dateStr = dt ? dt.toLocaleString() : "-";
                   const isJob = log.kind === "job_report";
-                  const jobPeriod = (log as any).job_period as
+                  const jobPeriod = (log as ExtendedEmailLog).job_period as
                     | string
                     | undefined;
-                  const companyName = (log as any).company_name as
+                  const companyName = (log as ExtendedEmailLog).company_name as
                     | string
                     | null;
-                  const locationName = (log as any).location_name as
+                  const locationName = (log as ExtendedEmailLog).location_name as
                     | string
                     | null;
-                  const cleanerName = (log as any).cleaner_name as
+                  const cleanerName = (log as ExtendedEmailLog).cleaner_name as
                     | string
                     | null;
-                  const errorMessage = (log as any).error_message as
+                  const errorMessage = (log as ExtendedEmailLog).error_message as
                     | string
                     | null;
 
@@ -507,7 +519,7 @@ export default function ReportEmailLogsPage() {
                         <span className="text-muted-foreground">
                           {typeof log.sent_by === "string"
                             ? log.sent_by
-                            : (log.sent_by as any)?.full_name ?? "-"}
+                            : ((log as ExtendedEmailLog).sent_by as { full_name?: string } | null)?.full_name ?? "-"}
                         </span>
                       </td>
                     </tr>

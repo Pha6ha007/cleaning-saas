@@ -391,7 +391,7 @@ export default function RecurringTemplates() {
   }
 
   if (isError) {
-    const errorMessage = (error as any)?.response?.data?.message || "Failed to load schedules.";
+    const errorMessage = getApiErrorMessage(error, "Failed to load schedules.");
     return (
       <MaintenanceLayout>
         <div className="space-y-4">

@@ -14,7 +14,13 @@ import {
 import type { PlanningJob } from "@/types/planning";
 import { AlertTriangle } from "lucide-react";
 
-type ViolationJob = ViolationJobsResponse["jobs"][number];
+type ViolationJobBase = ViolationJobsResponse["jobs"][number];
+type ViolationJob = ViolationJobBase & {
+  sla_status?: string;
+  sla_reasons?: string[];
+  location_id?: number;
+  cleaner_id?: number;
+};
 
 export default function ViolationJobsPage() {
   const location = useLocation();
@@ -96,8 +102,8 @@ export default function ViolationJobsPage() {
    * - время начала/конца нам сейчас не известно → оставляем null
    */
   const mapViolationToPlanningJob = (job: ViolationJob): PlanningJob => {
-    const slaStatus = (job as any).sla_status ?? "violated";
-    const slaReasons: string[] = (job as any).sla_reasons ?? [];
+    const slaStatus = job.sla_status ?? "violated";
+    const slaReasons: string[] = job.sla_reasons ?? [];
 
     const hasMissingBefore = slaReasons.includes("missing_before_photo");
     const hasMissingAfter = slaReasons.includes("missing_after_photo");
@@ -112,17 +118,17 @@ export default function ViolationJobsPage() {
       scheduled_start_time: null,
       scheduled_end_time: null,
       location: {
-        id: (job as any).location_id ?? 0,
+        id: job.location_id ?? 0,
         name: job.location_name,
         address: null,
       },
       cleaner: {
-        id: (job as any).cleaner_id ?? 0,
+        id: job.cleaner_id ?? 0,
         full_name: job.cleaner_name,
-        phone: null as any,
+        phone: null as string | null,
       },
       sla_status: slaStatus,
-      sla_reasons: slaReasons as any,
+      sla_reasons: slaReasons,
       proof: {
         before_photo: !hasMissingBefore,
         after_photo: !hasMissingAfter,

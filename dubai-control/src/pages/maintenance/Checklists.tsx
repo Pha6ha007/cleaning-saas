@@ -327,9 +327,7 @@ export default function Checklists() {
 
   // Error state
   if (isError) {
-    const errorMessage =
-      (errorData as any)?.response?.data?.message ||
-      "Failed to load checklist templates. Please try again.";
+    const errorMessage = getApiErrorMessage(errorData, "Failed to load checklist templates. Please try again.");
     return (
       <MaintenanceLayout>
         <div className="space-y-4">
