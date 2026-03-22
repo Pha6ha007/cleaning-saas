@@ -1,6 +1,7 @@
 # backend/apps/api/views.py
 
 from rest_framework.authentication import TokenAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -206,7 +207,7 @@ def create_default_checklist_templates_for_company(company: Company) -> None:
 
 
 class ManagerMetaView(APIView):
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
