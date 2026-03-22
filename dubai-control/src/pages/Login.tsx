@@ -284,14 +284,27 @@ export default function Login() {
       if (!res.ok) {
         let message = "Failed to create account. Please try again.";
         try {
-          const data = await res.json() as { access?: string; refresh?: string; detail?: string; non_field_errors?: string[] };
-          if (typeof data?.detail === "string") {
+          const data = await res.json() as Record<string, unknown>;
+          // Handle specific error codes from backend
+          if (data?.code === "weak_password" && data?.fields) {
+            const pwdErrors = (data.fields as Record<string, string[]>).password;
+            message = pwdErrors?.join(" ") || "Password is too weak. Try a stronger password.";
+          } else if (data?.email) {
+            const emailErr = Array.isArray(data.email) ? data.email[0] : data.email;
+            message = typeof emailErr === "string" ? emailErr : "This email is already registered.";
+          } else if (typeof data?.message === "string") {
+            message = data.message;
+          } else if (typeof data?.detail === "string") {
             message = data.detail;
-          } else if (typeof data?.error === "string") {
-            message = data.error;
+          } else {
+            // Collect all field errors
+            const fieldErrors = Object.entries(data || {})
+              .filter(([, v]) => Array.isArray(v))
+              .map(([k, v]) => `${k}: ${(v as string[]).join(", ")}`);
+            if (fieldErrors.length) message = fieldErrors.join(". ");
           }
         } catch {
-          // ignore
+          // ignore JSON parse errors
         }
         setError(message);
         return;
@@ -711,6 +724,7 @@ export default function Login() {
                     required
                     disabled={isLoading}
                   />
+                  <PasswordStrengthBar password={signupPassword} />
                   <IconInput
                     icon={<Lock className="h-[18px] w-[18px]" />}
                     label="Confirm password"
@@ -884,6 +898,44 @@ export default function Login() {
           }
         }
       `}</style>
+    </div>
+  );
+}
+
+
+// Password Strength Indicator
+function getPasswordStrength(password: string): { score: number; label: string; color: string; bgColor: string } {
+  if (!password) return { score: 0, label: '', color: '', bgColor: '' };
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (password.length >= 12) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+  // Common passwords penalty
+  const common = ['password', 'qwerty', '12345678', 'letmein', 'welcome', 'monkey', 'dragon', 'master', 'login', 'abc123'];
+  if (common.some(w => password.toLowerCase().includes(w))) score = Math.min(score, 1);
+  if (score <= 1) return { score: 1, label: 'Weak — try adding numbers & symbols', color: '#DC2626', bgColor: '#FEE2E2' };
+  if (score === 2) return { score: 2, label: 'Fair — add uppercase & special chars', color: '#EA580C', bgColor: '#FFF7ED' };
+  if (score === 3) return { score: 3, label: 'Good', color: '#CA8A04', bgColor: '#FEFCE8' };
+  return { score: 4, label: 'Strong', color: '#16A34A', bgColor: '#F0FDF4' };
+}
+
+function PasswordStrengthBar({ password }: { password: string }) {
+  const { score, label, color } = getPasswordStrength(password);
+  if (!password) return null;
+  return (
+    <div className="-mt-2.5 mb-3">
+      <div className="flex gap-1 mb-1">
+        {[1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            className="h-[3px] flex-1 rounded-full transition-all duration-300"
+            style={{ background: i <= score ? color : '#E5E7EB' }}
+          />
+        ))}
+      </div>
+      <p className="text-[11px] transition-colors" style={{ color }}>{label}</p>
     </div>
   );
 }
