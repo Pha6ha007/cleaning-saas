@@ -3,6 +3,8 @@
 Django Admin for Maintenance app.
 
 M003/S02: AssetAdmin upgraded to ImportExportModelAdmin for bulk CSV/XLSX import.
+M011/S03: Added admin for ServiceContract, RecurringVisitTemplate, Part,
+          StockAdjustment, VisitPart, AssetDocument, GeneratedVisitLog.
 """
 
 from django.contrib import admin
@@ -16,6 +18,13 @@ from .models import (
     MaintenanceCategory,
     MaintenanceNotificationLog,
     WhatsAppNotificationLog,
+    ServiceContract,
+    RecurringVisitTemplate,
+    GeneratedVisitLog,
+    Part,
+    StockAdjustment,
+    VisitPart,
+    AssetDocument,
 )
 from apps.accounts.models import Company
 from apps.locations.models import Location
@@ -26,18 +35,6 @@ from apps.locations.models import Location
 # =============================================================================
 
 class AssetResource(resources.ModelResource):
-    """
-    Import/export resource for Asset.
-
-    CSV columns: name, serial_number, description, is_active
-    company, location, and asset_type are resolved by name from context.
-
-    Example CSV header:
-        name,serial_number,description,is_active
-        "HVAC Unit 1","SN-12345","Rooftop AC unit, floor 3",true
-        "Elevator A","ELV-001","Main elevator",true
-    """
-
     company = fields.Field(
         column_name="company",
         attribute="company",
@@ -72,7 +69,7 @@ class AssetResource(resources.ModelResource):
 
 
 # =============================================================================
-# Admin classes
+# Admin classes — existing
 # =============================================================================
 
 @admin.register(AssetType)
@@ -112,3 +109,91 @@ class WhatsAppNotificationLogAdmin(admin.ModelAdmin):
     list_filter = ["kind", "status", "company"]
     readonly_fields = ["created_at", "wa_message_id"]
     ordering = ["-created_at"]
+
+
+# =============================================================================
+# Admin classes — M011/S03: newly registered models
+# =============================================================================
+
+@admin.register(ServiceContract)
+class ServiceContractAdmin(admin.ModelAdmin):
+    list_display = [
+        "name", "contract_type", "status", "location", "company",
+        "start_date", "end_date", "created_at",
+    ]
+    list_filter = ["contract_type", "status", "company"]
+    search_fields = ["name", "contract_number", "customer_name"]
+    raw_id_fields = ["company", "location", "created_by"]
+    date_hierarchy = "start_date"
+    ordering = ["-created_at"]
+    readonly_fields = ["created_at", "updated_at"]
+
+
+@admin.register(RecurringVisitTemplate)
+class RecurringVisitTemplateAdmin(admin.ModelAdmin):
+    list_display = [
+        "name", "frequency", "is_active", "company",
+        "location", "start_date", "end_date", "created_at",
+    ]
+    list_filter = ["frequency", "is_active", "company"]
+    search_fields = ["name", "description"]
+    raw_id_fields = ["company", "location", "asset", "assigned_technician",
+                     "checklist_template", "service_contract"]
+    ordering = ["-created_at"]
+    readonly_fields = ["created_at", "updated_at"]
+
+
+@admin.register(GeneratedVisitLog)
+class GeneratedVisitLogAdmin(admin.ModelAdmin):
+    list_display = ["template", "job", "scheduled_date", "generated_at"]
+    list_filter = ["template__company"]
+    search_fields = ["template__name"]
+    raw_id_fields = ["template", "job"]
+    ordering = ["-generated_at"]
+    readonly_fields = ["generated_at"]
+
+
+@admin.register(Part)
+class PartAdmin(admin.ModelAdmin):
+    list_display = [
+        "name", "sku", "company", "is_active",
+        "stock_quantity", "unit", "created_at",
+    ]
+    list_filter = ["is_active", "company", "unit"]
+    search_fields = ["name", "sku", "description"]
+    raw_id_fields = ["company"]
+    ordering = ["name"]
+    readonly_fields = ["created_at", "updated_at"]
+
+
+@admin.register(StockAdjustment)
+class StockAdjustmentAdmin(admin.ModelAdmin):
+    list_display = [
+        "part", "adjustment_type", "quantity",
+        "quantity_after", "adjusted_by", "adjusted_at",
+    ]
+    list_filter = ["adjustment_type", "part__company"]
+    search_fields = ["part__name", "reason"]
+    raw_id_fields = ["part", "adjusted_by"]
+    ordering = ["-adjusted_at"]
+    readonly_fields = ["adjusted_at", "quantity_after"]
+
+
+@admin.register(VisitPart)
+class VisitPartAdmin(admin.ModelAdmin):
+    list_display = ["part", "job", "quantity", "added_by", "added_at"]
+    list_filter = ["part__company"]
+    search_fields = ["part__name", "notes"]
+    raw_id_fields = ["job", "part", "added_by"]
+    ordering = ["-added_at"]
+    readonly_fields = ["added_at"]
+
+
+@admin.register(AssetDocument)
+class AssetDocumentAdmin(admin.ModelAdmin):
+    list_display = ["name", "asset", "document_type", "uploaded_by", "uploaded_at"]
+    list_filter = ["document_type", "asset__company"]
+    search_fields = ["name", "description", "asset__name"]
+    raw_id_fields = ["asset", "uploaded_by"]
+    ordering = ["-uploaded_at"]
+    readonly_fields = ["uploaded_at", "file_size", "mime_type"]
