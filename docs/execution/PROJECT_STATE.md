@@ -1,8 +1,94 @@
-# Cleaning SaaS — FACTUAL PROJECT STATE (v7.13)
+# Cleaning SaaS — FACTUAL PROJECT STATE (v7.14)
 
-Обновлено: 2026-02-15
+Обновлено: 2026-03-22
 
 ## Changelog
+
+### v7.14 — 2026-03-22
+
+**Production Deployment + Design Improvements + Launch Readiness**
+
+#### Production Stack Deployed ✅
+- **Frontend:** Vercel at `https://proofplatform.vercel.app`
+- **Backend API:** Railway at `https://proofplatform.up.railway.app`
+- **Database:** Railway Postgres (`Postgres-bnDY`)
+- **CORS:** Configured and verified (preflight OPTIONS → 200)
+- **Health checks:** `/api/health/` and `/api/health/ready/` working
+- **Deploy method:** `railway up --service api -d --path-as-root backend` (CLI)
+- **Builder:** Dockerfile (not Railpack/Nixpacks)
+- **Startup:** `entrypoint.sh` (migrate → collectstatic → gunicorn)
+
+#### Authentication & Signup Flow ✅
+- Signup creates active accounts immediately (`SKIP_EMAIL_VERIFICATION=true`)
+- JWT login verified working end-to-end (signup → login → dashboard)
+- Django password validators enforce strong passwords
+- **Password strength indicator** added to signup form:
+  - 4-level visual bar (Weak 🔴 → Fair 🟠 → Good 🟡 → Strong 🟢)
+  - Common password detection (qwerty, password, 12345678, etc.)
+  - Inline tips ("try adding numbers & symbols", "add uppercase & special chars")
+- **Improved signup error messages:**
+  - Weak password → shows specific Django validator errors
+  - Duplicate email → "This email is already registered"
+  - Field-level errors parsed and displayed
+
+#### Backend Fixes ✅
+- **ManagerMetaView JWT auth:** Added `JWTAuthentication` (was only `TokenAuthentication`, caused 401 on Job Planning filters)
+- **Branch.is_demo migration:** Created migration `0014_branch_is_demo` (fixed 500 on `/api/branches/`)
+- **Analytics pageview index:** Renamed index in migration `0002`
+- **Maintenance admin.py:** Fixed field references (Part, StockAdjustment, VisitPart, AssetDocument)
+- **Signup view:** Skip user deactivation when `SKIP_EMAIL_VERIFICATION` env var is set
+
+#### Design Improvements (10/15 Complete) ✅
+| # | Improvement | Status |
+|---|-------------|--------|
+| 1 | Fix `locations.filter` crash (paginated API) | ✅ |
+| 2 | Login form submit | ✅ |
+| 3 | Sidebar collapsible groups | ✅ |
+| 4 | Dashboard cards visual hierarchy | ✅ |
+| 5 | Better empty states | ✅ |
+| 7 | Typography hierarchy | ✅ |
+| 9 | Dismissible info box | ✅ |
+| 11 | Page transitions | ✅ |
+| 12 | User avatar initials | ✅ |
+| 14 | Reports ProgressRing | ✅ |
+| 6 | Filter bar standardization | 🟡 TODO |
+| 8 | CTA button consistency | 🟡 TODO |
+| 10 | Table sorting indicators | 🟡 TODO |
+| 13 | Calendar colored dots | 🟡 TODO |
+| 15 | Mobile responsive sidebar | 🟡 TODO |
+
+#### Vercel White Screen Fix ✅
+- Removed `vendor-misc` catch-all Rollup chunk
+- Moved React-dependent libs (`@radix-ui`, `cmdk`, `sonner`, etc.) into `vendor-react` chunk
+- Libraries calling `React.createContext()` at import time must share chunk with React
+
+#### Files Created
+- `backend/entrypoint.sh` — Startup script (migrate + collectstatic + gunicorn)
+- `backend/apps/accounts/migrations/0014_branch_is_demo.py`
+- `backend/apps/analytics/migrations/0002_alter_pageview_options_and_more.py`
+- `docs/execution/PRODUCTION_DEPLOYMENT.md` — Full deployment guide
+- `docs/execution/LAUNCH_READINESS.md` — Pre-launch checklist
+
+#### Files Modified
+- `backend/Dockerfile` — Uses entrypoint.sh
+- `backend/apps/api/views.py` — JWTAuthentication for ManagerMetaView
+- `backend/apps/api/views_auth.py` — SKIP_EMAIL_VERIFICATION support
+- `backend/apps/maintenance/admin.py` — Fixed field references
+- `dubai-control/src/pages/Login.tsx` — Password strength indicator + error parsing
+- `dubai-control/src/components/layout/AppSidebar.tsx` — Collapsible groups
+- `dubai-control/src/components/layout/PageTransition.tsx` — Page transitions
+- `dubai-control/src/components/maintenance/EmptyState.tsx` — Empty states
+- `dubai-control/src/config/contexts/types.ts` — NavItem.group property
+- `dubai-control/vite.config.ts` — Fixed chunk splitting
+
+#### Files Removed
+- `backend/railway.toml` — Interfered with Dockerfile builder
+- `backend/nixpacks.toml` — Interfered with Dockerfile builder
+
+**Documentation:**
+- `docs/execution/PRODUCTION_DEPLOYMENT.md` — Created (deployment guide)
+- `docs/execution/LAUNCH_READINESS.md` — Created (pre-launch checklist)
+- `docs/execution/PROJECT_STATE.md` — Updated to v7.14
 
 ### v7.13 — 2026-02-15
 
@@ -382,16 +468,18 @@ python manage.py activate_paid_plan --company-id 18 --deactivate
 ## Google Maps & Places — security and billing
 
 * API key restricted by HTTP referrer:
+  * `http://localhost:5173/*`
   * `http://localhost:8080/*`
+  * `https://*.vercel.app/*`
+  * `https://proofplatform.vercel.app/*`
 * API key restricted to required services:
   * Maps JavaScript API
   * Places API
-* Monthly billing budget enabled:
-  * limit: $10 / month
-  * alerts at 50%, 90%, 100%
-* Цель: предотвращение неконтролируемых расходов
+* Google Cloud Billing: Free trial account (prepayment $50 required for activation)
+* Monthly free tier: $200/month (covers ~28,000 map loads)
+* **Known issue:** Maps blocked until Google Cloud prepayment is completed
 
-Status: ✅ enforced
+Status: 🟡 blocked by Google Cloud billing prepayment
 
 👉 Backend-ядро job execution **полностью закрыто**.
 
@@ -730,11 +818,17 @@ Status: ✅ enforced
 - Impact: Cleaning reports/analytics no longer include Maintenance jobs
 - Phase 5: Added pagination to History/Locations, retry buttons to Dashboard/Analytics
 
-## Platform Landing & Deployment (2026-03-06)
+## Platform Landing & Deployment (2026-03-06 → 2026-03-22)
 
-- Production URL: https://proofplatform.vercel.app
+- **Frontend:** `https://proofplatform.vercel.app` (Vercel)
+- **Backend API:** `https://proofplatform.up.railway.app` (Railway)
+- **Database:** Railway Postgres (`Postgres-bnDY`)
 - Old domain: cleaning-saas-seven.vercel.app → 307 redirect to new
 - Landing page: PlatformLanding on / (MarketingLayout)
 - Vercel project renamed: cleaning-saas → proofplatform
 - SPA routing: vercel.json with rewrites
 - All marketing pages live: /, /products, /products/cleaning, /products/maintenance, /pricing, /contact, /login
+- **Full stack deployed:** Frontend ↔ Backend ↔ Database connected and verified
+- **Auth flow:** Signup → Login → Dashboard working end-to-end
+- **CORS:** Vercel ↔ Railway configured and verified
+- **Deploy:** See `docs/execution/PRODUCTION_DEPLOYMENT.md`
