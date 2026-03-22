@@ -1,0 +1,11 @@
+Payment Failed
+
+Hi {{ user_name }},
+
+We were unable to process your payment for the {{ plan_tier|title }} plan for {{ company_name }}.
+
+Please update your payment method to avoid service interruption: {{ update_payment_url }}
+
+If you believe this is an error, contact us at {{ support_email }}.
+
+— The {{ platform_name }} Team

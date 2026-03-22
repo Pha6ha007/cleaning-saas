@@ -1,0 +1,25 @@
+{% extends "emails/base.html" %}
+{% block title %}Payment confirmed{% endblock %}
+{% block content %}
+<h1>Payment Confirmed ✓</h1>
+<p>Hi {{ user_name }},</p>
+<p>Your payment for the <strong>{{ plan_tier|title }}</strong> plan has been processed successfully.</p>
+<table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+  <tr>
+    <td style="padding: 8px 0; color: #71717a; font-size: 14px;">Plan</td>
+    <td style="padding: 8px 0; text-align: right; font-weight: 600; font-size: 14px;">{{ plan_tier|title }}</td>
+  </tr>
+  <tr>
+    <td style="padding: 8px 0; color: #71717a; font-size: 14px; border-top: 1px solid #e4e4e7;">Company</td>
+    <td style="padding: 8px 0; text-align: right; font-size: 14px; border-top: 1px solid #e4e4e7;">{{ company_name }}</td>
+  </tr>
+  <tr>
+    <td style="padding: 8px 0; color: #71717a; font-size: 14px; border-top: 1px solid #e4e4e7;">Next billing date</td>
+    <td style="padding: 8px 0; text-align: right; font-size: 14px; border-top: 1px solid #e4e4e7;">{{ next_billing_date|default:"—" }}</td>
+  </tr>
+</table>
+<p style="text-align: center;">
+  <a href="{{ dashboard_url }}" class="btn">Go to Dashboard</a>
+</p>
+<p class="muted">You can manage your subscription in Settings → Billing.</p>
+{% endblock %}

@@ -1,46 +1,184 @@
-version: '3.8'
+# =============================================================================
+# CleanProof / ProofPlatform — Production Docker Compose
+#
+# Services:
+#   nginx        — reverse proxy, TLS termination, static files
+#   backend      — Django + Gunicorn (API)
+#   celery-worker — async task workers
+#   celery-beat  — periodic task scheduler (one instance only)
+#   db           — PostgreSQL 16
+#   redis        — cache + Celery broker
+#
+# Usage:
+#   cp backend/.env.production.example backend/.env.production
+#   # fill in all required values
+#   docker compose up -d
+#   docker compose exec backend python manage.py migrate
+#   docker compose exec backend python manage.py createsuperuser
+#   docker compose exec backend python manage.py setup_periodic_tasks
+#
+# Deployment note:
+#   For HTTPS, set your domain in nginx/conf.d/cleanproof.conf and run
+#   certbot via the certbot service (or manage certs externally).
+# =============================================================================
+
+x-backend-common: &backend-common
+  build:
+    context: ./backend
+    dockerfile: Dockerfile
+    target: runtime
+  env_file:
+    - ./backend/.env.production
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  restart: unless-stopped
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "50m"
+      max-file: "5"
+
 services:
-  backend:
-    build: ./backend
+  # ---------------------------------------------------------------------------
+  # Nginx — reverse proxy + static file server
+  # ---------------------------------------------------------------------------
+  nginx:
+    image: nginx:1.25-alpine
     ports:
-      - "8000:8000"
-    env_file:
-      - ./backend/.env.production
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+      - static_data:/app/staticfiles:ro
+      - media_data:/app/media:ro
+      - ./nginx/logs:/var/log/nginx
     depends_on:
-      - db
-      - redis
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ---------------------------------------------------------------------------
+  # Django / Gunicorn — API backend
+  # ---------------------------------------------------------------------------
+  backend:
+    <<: *backend-common
     volumes:
       - media_data:/app/media
+      - static_data:/app/staticfiles
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
+      interval: 30s
+      timeout: 10s
+      start_period: 40s
+      retries: 3
+    # No direct port exposure — nginx proxies to backend:8000
+
+  # ---------------------------------------------------------------------------
+  # Celery Worker — async tasks (email, webhooks, PDF generation)
+  # ---------------------------------------------------------------------------
   celery-worker:
-    build: ./backend
-    command: celery -A config worker -l info --pool=prefork --concurrency=4
-    env_file:
-      - ./backend/.env.production
-    depends_on:
-      - db
-      - redis
+    <<: *backend-common
+    command: >
+      celery -A config worker
+        --loglevel=info
+        --pool=prefork
+        --concurrency=4
+        --max-tasks-per-child=500
+        --queues=default,webhooks,notifications
+    volumes:
+      - media_data:/app/media
+    healthcheck:
+      test: ["CMD", "celery", "-A", "config", "inspect", "ping", "-d", "celery@$$HOSTNAME", "--timeout", "5"]
+      interval: 60s
+      timeout: 15s
+      start_period: 30s
+      retries: 3
+
+  # ---------------------------------------------------------------------------
+  # Celery Beat — periodic task scheduler
+  # WARNING: Run exactly ONE instance. Multiple beats = duplicate tasks.
+  # ---------------------------------------------------------------------------
   celery-beat:
-    build: ./backend
-    command: celery -A config beat -l info
-    env_file:
-      - ./backend/.env.production
-    depends_on:
-      - db
-      - redis
+    <<: *backend-common
+    command: >
+      celery -A config beat
+        --loglevel=info
+        --scheduler=django_celery_beat.schedulers:DatabaseScheduler
+    volumes:
+      - media_data:/app/media
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 16
+  # ---------------------------------------------------------------------------
   db:
     image: postgres:16-alpine
+    env_file:
+      - ./backend/.env.production
     environment:
-      POSTGRES_DB: cleanproof
-      POSTGRES_USER: cleanproof
-      POSTGRES_PASSWORD: changeme
+      POSTGRES_DB: ${POSTGRES_DB:-cleanproof}
+      POSTGRES_USER: ${POSTGRES_USER:-cleanproof}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cleanproof} -d ${POSTGRES_DB:-cleanproof}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+  # ---------------------------------------------------------------------------
+  # Redis 7 — cache + Celery broker
+  # ---------------------------------------------------------------------------
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    command: >
+      redis-server
+        --maxmemory 256mb
+        --maxmemory-policy allkeys-lru
+        --save 60 1
+        --loglevel warning
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 volumes:
   postgres_data:
+    driver: local
+  redis_data:
+    driver: local
   media_data:
+    driver: local
+  static_data:
+    driver: local
+
+networks:
+  default:
+    name: cleanproof_network

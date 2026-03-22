@@ -1,0 +1,12 @@
+{% extends "emails/base.html" %}
+{% block title %}Payment failed{% endblock %}
+{% block content %}
+<h1>Payment Failed</h1>
+<p>Hi {{ user_name }},</p>
+<p>We were unable to process your payment for the <strong>{{ plan_tier|title }}</strong> plan for <strong>{{ company_name }}</strong>.</p>
+<p>Please update your payment method to avoid any service interruption. Your account will remain active during the retry period, but may be suspended if the payment continues to fail.</p>
+<p style="text-align: center;">
+  <a href="{{ update_payment_url }}" class="btn">Update Payment Method</a>
+</p>
+<p class="muted">If you believe this is an error, please contact us at {{ support_email }}.</p>
+{% endblock %}

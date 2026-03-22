@@ -1,0 +1,5 @@
+# .gitignore additions for deploy artifacts
+certs/*.key
+certs/*.crt
+certs/*.pem
+logs/*.log

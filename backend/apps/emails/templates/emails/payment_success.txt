@@ -1,0 +1,15 @@
+Payment Confirmed
+
+Hi {{ user_name }},
+
+Your payment for the {{ plan_tier|title }} plan has been processed successfully.
+
+Plan: {{ plan_tier|title }}
+Company: {{ company_name }}
+Next billing date: {{ next_billing_date|default:"—" }}
+
+Go to your dashboard: {{ dashboard_url }}
+
+You can manage your subscription in Settings → Billing.
+
+— The {{ platform_name }} Team

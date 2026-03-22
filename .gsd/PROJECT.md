@@ -19,6 +19,10 @@ A company can sign up, try the platform for free, pay via Paddle, and immediatel
 - MaintainProof: V3 complete — visits, assets, checklists, recurring templates, contracts, analytics, reports, customer portal, parts/inventory, notifications.
 - Auth: Django Token auth (`rest_framework.authtoken`). No JWT implemented yet.
 - Billing: Company model has plan (trial/active/blocked), plan_tier (standard/pro/enterprise), trial logic. No payment processor integration. Billing UI exists as scaffolding.
+- Email: Centralized email service (`apps.emails`) with HTML templates — verification, password reset, trial expiry reminders, billing notifications. Async via Celery.
+- Rate limiting: DRF throttles (auth, uploads, dashboard, webhooks) + nginx L7 rate limiting config.
+- Backups: PostgreSQL backup/restore scripts with S3 offsite upload option.
+- Logging: Structured JSON logging in production, text in dev. Per-app loggers.
 - Landing pages: Platform, product, pricing, legal, contact pages exist. Need minor polish for launch.
 - Marketing backend: Demo requests and contact message capture working.
 - Mobile: React Native cleaner app with Token auth, GPS, photos, checklists, PDF reports.

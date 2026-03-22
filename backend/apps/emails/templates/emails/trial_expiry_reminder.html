@@ -1,0 +1,17 @@
+{% extends "emails/base.html" %}
+{% block title %}Your trial is ending soon{% endblock %}
+{% block content %}
+<h1>Your trial ends in {{ days_left }} day{{ days_left|pluralize }}</h1>
+<p>Hi {{ user_name }},</p>
+<p>Your {{ platform_name }} trial for <strong>{{ company_name }}</strong> is ending {{ expiry_text }}.</p>
+{% if days_left > 0 %}
+<p>To keep using all features without interruption, upgrade to a paid plan now. Your data and settings will be preserved.</p>
+{% else %}
+<p>Your trial has expired. Your account is now in read-only mode — you can still view your data, but creating new jobs or visits is disabled.</p>
+<p>Upgrade now to restore full access.</p>
+{% endif %}
+<p style="text-align: center;">
+  <a href="{{ upgrade_url }}" class="btn">{% if days_left > 0 %}Upgrade Now{% else %}Reactivate Account{% endif %}</a>
+</p>
+<p class="muted">Have questions? Reply to this email or contact us at {{ support_email }}.</p>
+{% endblock %}

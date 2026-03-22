@@ -296,11 +296,14 @@ class TestDeliverWebhookEventTask:
             mock_client.post = MagicMock(return_value=mock_response)
             mock_client_cls.return_value = mock_client
 
-            deliver_webhook_event(endpoint.id, EVENT_JOB_COMPLETED, {"job_id": 1})
+            # M011: task now retries on failure — use apply() with propagate=False
+            result = deliver_webhook_event.apply(args=[endpoint.id, EVENT_JOB_COMPLETED, {"job_id": 1}])
+            result.get(propagate=False)
 
-        log = WebhookDeliveryLog.objects.get()
-        assert log.status == WebhookDeliveryLog.STATUS_FAILED
-        assert log.http_status == 500
+        # At least one failed log created (may have multiple from retries)
+        logs = WebhookDeliveryLog.objects.filter(status=WebhookDeliveryLog.STATUS_FAILED)
+        assert logs.count() >= 1
+        assert logs.first().http_status == 500
 
     def test_creates_failed_log_on_network_error(self, endpoint):
         from apps.webhooks.tasks import deliver_webhook_event
@@ -314,11 +317,14 @@ class TestDeliverWebhookEventTask:
             mock_client.post = MagicMock(side_effect=httpx.ConnectError("Connection refused"))
             mock_client_cls.return_value = mock_client
 
-            deliver_webhook_event(endpoint.id, EVENT_SLA_VIOLATED, {"job_id": 1})
+            # M011: task now retries on failure — use apply() with propagate=False
+            result = deliver_webhook_event.apply(args=[endpoint.id, EVENT_SLA_VIOLATED, {"job_id": 1}])
+            result.get(propagate=False)
 
-        log = WebhookDeliveryLog.objects.get()
-        assert log.status == WebhookDeliveryLog.STATUS_FAILED
-        assert "Connection refused" in log.error_message
+        # At least one failed log with error message
+        logs = WebhookDeliveryLog.objects.filter(status=WebhookDeliveryLog.STATUS_FAILED)
+        assert logs.count() >= 1
+        assert "Connection refused" in logs.first().error_message
 
     def test_skips_non_enterprise_at_delivery_time(self, company_standard, db):
         from apps.webhooks.models import WebhookEndpoint, WebhookDeliveryLog, EVENT_JOB_COMPLETED

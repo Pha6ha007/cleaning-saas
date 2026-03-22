@@ -1,0 +1,17 @@
+{% extends "emails/base.html" %}
+{% block title %}Subscription canceled{% endblock %}
+{% block content %}
+<h1>Subscription Canceled</h1>
+<p>Hi {{ user_name }},</p>
+<p>Your <strong>{{ plan_tier|title }}</strong> subscription for <strong>{{ company_name }}</strong> has been canceled.</p>
+{% if access_until %}
+<p>You'll still have access to all features until <strong>{{ access_until }}</strong>. After that, your account will switch to read-only mode.</p>
+{% else %}
+<p>Your account is now in read-only mode. You can still view all your data, but creating or editing is disabled.</p>
+{% endif %}
+<p>Changed your mind? You can resubscribe at any time.</p>
+<p style="text-align: center;">
+  <a href="{{ resubscribe_url }}" class="btn">Resubscribe</a>
+</p>
+<p class="muted">We'd love to know why you canceled. Reply to this email with your feedback — it helps us improve.</p>
+{% endblock %}

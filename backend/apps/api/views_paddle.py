@@ -225,6 +225,18 @@ def _handle_subscription_activated(
     company.upgrade_to_active(tier=tier)
     logger.info("[paddle] Company %s upgraded to active (tier=%s)", company.id, tier)
 
+    # Send payment success email (async, non-blocking)
+    try:
+        from apps.emails.tasks import send_billing_notification
+        period_end_str = period_end.strftime("%B %d, %Y") if period_end else None
+        send_billing_notification.delay(
+            "payment_success",
+            company.id,
+            {"next_billing_date": period_end_str},
+        )
+    except Exception as exc:
+        logger.warning("[paddle] Failed to queue payment success email for company %s: %s", company.id, exc)
+
     return PaddleWebhookEvent.STATUS_PROCESSED
 
 
@@ -285,6 +297,17 @@ def _handle_subscription_canceled(
         webhook_event.event_type,
         paddle_status,
     )
+
+    # Send billing notification email (async, non-blocking)
+    try:
+        from apps.emails.tasks import send_billing_notification
+        notification_type = "payment_failed" if paddle_status == "past_due" else "subscription_canceled"
+        extra_context = {}
+        if sub and sub.current_period_end:
+            extra_context["access_until"] = sub.current_period_end.strftime("%B %d, %Y")
+        send_billing_notification.delay(notification_type, company.id, extra_context)
+    except Exception as exc:
+        logger.warning("[paddle] Failed to queue billing email for company %s: %s", company.id, exc)
 
     return PaddleWebhookEvent.STATUS_PROCESSED
 

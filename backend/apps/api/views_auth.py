@@ -149,6 +149,7 @@ class ManagerLoginView(APIView):
     authentication_classes = []
     permission_classes = []
     throttle_classes = [AnonRateThrottle]
+    throttle_scope = "auth_login"
 
     def post(self, request):
         email = (request.data.get("email") or "").strip().lower()
@@ -215,6 +216,7 @@ class ManagerSignupView(APIView):
     authentication_classes: list = []
     permission_classes: list = []
     throttle_classes = [AnonRateThrottle]
+    throttle_scope = "auth_signup"
 
     def post(self, request, *args, **kwargs):
         company_name = (request.data.get("company_name") or "").strip()
@@ -310,7 +312,6 @@ class ManagerSignupView(APIView):
 
 def _send_verification_email(user, company, token: str) -> None:
     """Send verification email to newly registered owner. Non-fatal."""
-    from django.core.mail import send_mail
     from django.conf import settings
     import logging
 
@@ -318,17 +319,19 @@ def _send_verification_email(user, company, token: str) -> None:
     try:
         base_url = getattr(settings, "FRONTEND_URL", "http://localhost:5173")
         verify_url = f"{base_url}/verify-email?token={token}"
-        subject = "Verify your MaintainProof account"
-        body = (
-            f"Hello {user.full_name},\n\n"
-            f"Welcome to MaintainProof! Please verify your email address to activate "
-            f"your account and start your 7-day free trial.\n\n"
-            f"Click here to verify:\n{verify_url}\n\n"
-            f"This link expires in 24 hours.\n\n"
-            f"— The MaintainProof Team"
+
+        from apps.emails.service import send_transactional_email
+        send_transactional_email(
+            template_name="verification",
+            to_email=user.email,
+            context={
+                "user_name": user.full_name,
+                "verify_url": verify_url,
+                "company_name": company.name,
+            },
+            subject="Verify your Proof Platform account",
+            fail_silently=True,
         )
-        from_email = getattr(settings, "EMAIL_HOST_USER", "noreply@maintainproof.com")
-        send_mail(subject, body, from_email, [user.email], fail_silently=True)
         logger.info("Verification email sent to %s", user.email)
     except Exception as exc:
         logger.error("Failed to send verification email to %s: %s", user.email, exc)
@@ -580,7 +583,6 @@ class PasswordResetConfirmView(APIView):
 
 def _send_password_reset_email(user, token: str) -> None:
     """Send password reset email. Non-fatal."""
-    from django.core.mail import send_mail
     from django.conf import settings
     import logging
 
@@ -588,17 +590,18 @@ def _send_password_reset_email(user, token: str) -> None:
     try:
         base_url = getattr(settings, "FRONTEND_URL", "http://localhost:5173")
         reset_url = f"{base_url}/reset-password?token={token}"
-        subject = "Reset your password"
-        body = (
-            f"Hello {user.full_name},\n\n"
-            f"We received a request to reset your password. Click the link below:\n\n"
-            f"{reset_url}\n\n"
-            f"This link expires in 1 hour.\n\n"
-            f"If you didn't request this, you can ignore this email.\n\n"
-            f"— The Proof Platform Team"
+
+        from apps.emails.service import send_transactional_email
+        send_transactional_email(
+            template_name="password_reset",
+            to_email=user.email,
+            context={
+                "user_name": user.full_name,
+                "reset_url": reset_url,
+            },
+            subject="Reset your password",
+            fail_silently=True,
         )
-        from_email = getattr(settings, "EMAIL_HOST_USER", "noreply@proofplatform.com")
-        send_mail(subject, body, from_email, [user.email], fail_silently=True)
         logger.info("Password reset email sent to %s", user.email)
     except Exception as exc:
         logger.error("Failed to send password reset email to %s: %s", user.email, exc)

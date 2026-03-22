@@ -518,6 +518,22 @@ export async function uploadJobPhoto(
 
 // ─── PDF report ───────────────────────────────────────────────────────────────
 
+// ─── Profile ──────────────────────────────────────────────────────────────────
+
+export type CleanerProfile = {
+  id: number;
+  email: string;
+  full_name: string;
+  role: string;
+  company_name: string;
+};
+
+export async function fetchMe(): Promise<CleanerProfile> {
+  return apiFetch<CleanerProfile>("/api/me/", { method: "GET" });
+}
+
+// ─── PDF ──────────────────────────────────────────────────────────────────────
+
 export async function fetchJobReportPdf(jobId: number): Promise<ArrayBuffer> {
   const url = `${API_BASE_URL}/api/jobs/${jobId}/report/pdf/`;
 

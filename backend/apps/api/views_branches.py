@@ -26,6 +26,7 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from .cache_utils import cached_response, invalidate, make_company_key
 from rest_framework.views import APIView
 
 from apps.accounts.models import Branch, Company, User
@@ -300,59 +301,65 @@ class BranchAnalyticsView(APIView):
         except (ValueError, TypeError):
             days = 30
 
-        from datetime import date, timedelta
+        cache_key = make_company_key("branch_analytics", request.user.company.id, pk, days)
 
-        since = date.today() - timedelta(days=days)
-        locations = branch.locations.filter(is_active=True).values("id", "name")
-        location_ids = [l["id"] for l in locations]
+        def _compute():
+            from datetime import date, timedelta
 
-        base_qs = Job.objects.filter(
-            location_id__in=location_ids,
-            context=Job.CONTEXT_CLEANING,
-        )
-        period_qs = base_qs.filter(scheduled_date__gte=since)
+            since = date.today() - timedelta(days=days)
+            locations = branch.locations.filter(is_active=True).values("id", "name")
+            location_ids = [l["id"] for l in locations]
 
-        # Aggregate per location
-        loc_stats = {}
-        for loc in locations:
-            loc_qs = period_qs.filter(location_id=loc["id"])
-            total = loc_qs.count()
-            completed = loc_qs.filter(status=Job.STATUS_COMPLETED).count()
-            cancelled = loc_qs.filter(status=Job.STATUS_CANCELLED).count()
-            in_prog = loc_qs.filter(status=Job.STATUS_IN_PROGRESS).count()
-            loc_stats[loc["id"]] = {
-                "id": loc["id"],
-                "name": loc["name"],
-                "total_jobs": total,
-                "completed_jobs": completed,
-                "in_progress_jobs": in_prog,
-                "cancelled_jobs": cancelled,
-                "completion_rate": round(completed / total * 100, 1) if total else 0.0,
+            base_qs = Job.objects.filter(
+                location_id__in=location_ids,
+                context=Job.CONTEXT_CLEANING,
+            )
+            period_qs = base_qs.filter(scheduled_date__gte=since)
+
+            loc_stats = {}
+            for loc in locations:
+                loc_qs = period_qs.filter(location_id=loc["id"])
+                total = loc_qs.count()
+                completed = loc_qs.filter(status=Job.STATUS_COMPLETED).count()
+                cancelled = loc_qs.filter(status=Job.STATUS_CANCELLED).count()
+                in_prog = loc_qs.filter(status=Job.STATUS_IN_PROGRESS).count()
+                loc_stats[loc["id"]] = {
+                    "id": loc["id"],
+                    "name": loc["name"],
+                    "total_jobs": total,
+                    "completed_jobs": completed,
+                    "in_progress_jobs": in_prog,
+                    "cancelled_jobs": cancelled,
+                    "completion_rate": round(completed / total * 100, 1) if total else 0.0,
+                }
+
+            total_jobs = sum(s["total_jobs"] for s in loc_stats.values())
+            completed_jobs = sum(s["completed_jobs"] for s in loc_stats.values())
+            cancelled_jobs = sum(s["cancelled_jobs"] for s in loc_stats.values())
+            in_progress = sum(s["in_progress_jobs"] for s in loc_stats.values())
+
+            sla_breaches = period_qs.filter(
+                status=Job.STATUS_COMPLETED,
+                actual_end_time__isnull=False,
+                sla_deadline__isnull=False,
+            ).filter(actual_end_time__gt=F("sla_deadline")).count()
+
+            return {
+                "branch_id": branch.id,
+                "branch_name": branch.name,
+                "period_days": days,
+                "location_count": len(location_ids),
+                "total_jobs": total_jobs,
+                "completed_jobs": completed_jobs,
+                "in_progress_jobs": in_progress,
+                "cancelled_jobs": cancelled_jobs,
+                "completion_rate": round(completed_jobs / total_jobs * 100, 1) if total_jobs else 0.0,
+                "sla_breaches": sla_breaches,
+                "sla_breach_rate": round(sla_breaches / completed_jobs * 100, 1) if completed_jobs else 0.0,
+                "locations": list(loc_stats.values()),
             }
 
-        total_jobs = sum(s["total_jobs"] for s in loc_stats.values())
-        completed_jobs = sum(s["completed_jobs"] for s in loc_stats.values())
-        cancelled_jobs = sum(s["cancelled_jobs"] for s in loc_stats.values())
-        in_progress = sum(s["in_progress_jobs"] for s in loc_stats.values())
-
-        # SLA breaches: jobs where actual_end_time > sla_deadline
-        sla_breaches = period_qs.filter(
-            status=Job.STATUS_COMPLETED,
-            actual_end_time__isnull=False,
-            sla_deadline__isnull=False,
-        ).filter(actual_end_time__gt=F("sla_deadline")).count()
-
-        return Response({
-            "branch_id": branch.id,
-            "branch_name": branch.name,
-            "period_days": days,
-            "location_count": len(location_ids),
-            "total_jobs": total_jobs,
-            "completed_jobs": completed_jobs,
-            "in_progress_jobs": in_progress,
-            "cancelled_jobs": cancelled_jobs,
-            "completion_rate": round(completed_jobs / total_jobs * 100, 1) if total_jobs else 0.0,
-            "sla_breaches": sla_breaches,
-            "sla_breach_rate": round(sla_breaches / completed_jobs * 100, 1) if completed_jobs else 0.0,
-            "locations": list(loc_stats.values()),
-        })
+        data, hit = cached_response(cache_key, ttl=120, fn=_compute)
+        resp = Response(data)
+        resp["X-Cache"] = "HIT" if hit else "MISS"
+        return resp

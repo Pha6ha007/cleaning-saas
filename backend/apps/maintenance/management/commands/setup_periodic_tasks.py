@@ -68,6 +68,19 @@ class Command(BaseCommand):
                 "timezone": "Asia/Dubai",
             },
         },
+        {
+            "name": "check-trial-expiry-reminders-daily",
+            "task": "apps.emails.tasks.check_trial_expiry_reminders",
+            "description": "Daily check for trial expiry: sends 3-day, 1-day, and expired reminders (08:00 Dubai time)",
+            "crontab": {
+                "minute": "0",
+                "hour": "8",
+                "day_of_week": "*",
+                "day_of_month": "*",
+                "month_of_year": "*",
+                "timezone": "Asia/Dubai",
+            },
+        },
     ]
 
     def handle(self, *args, **options):

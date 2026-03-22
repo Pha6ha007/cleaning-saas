@@ -12,8 +12,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Coming Soon
 - Frontend migration to JWT authentication
 - Multi-factor authentication (MFA)
-- Advanced audit logging
-- API rate limiting per user tier
+
+---
+
+## [0.10.0] - 2026-03-22 - Production Hardening 🛡️
+
+### Added — Email Service
+- **Centralized email module** (`apps.emails`) with HTML + plaintext templates
+- **Branded HTML templates** with consistent header/footer, responsive design
+  - `verification.html` — email verification on signup
+  - `password_reset.html` — password reset flow
+  - `trial_expiry_reminder.html` — 3-day, 1-day, and expired trial reminders
+  - `payment_success.html` — payment confirmation with plan details
+  - `payment_failed.html` — failed payment with update CTA
+  - `subscription_canceled.html` — cancellation with resubscribe CTA
+- **Celery tasks** for async email delivery
+  - `send_email_async` — retries 3x on SMTP failures
+  - `check_trial_expiry_reminders` — daily task at 08:00 Dubai, sends 3-day/1-day/expired reminders
+  - `send_billing_notification` — queued from Paddle webhook handlers, retries 2x
+- **Paddle webhook email hooks** — payment success/failure/cancellation emails triggered automatically
+- **Migrated** signup verification and password reset emails from plaintext to HTML templates
+
+### Added — Rate Limiting (Enhanced)
+- **Auth-specific DRF throttles** to prevent brute force:
+  - `auth_login`: 5 requests/minute per IP
+  - `auth_signup`: 3 requests/minute per IP
+  - `auth_password_reset`: 3 requests/minute per IP
+- **Nginx rate limiting config** (`deploy/nginx-rate-limiting.conf`):
+  - API general: 30 req/s per IP (burst 50)
+  - Auth endpoints: 5 req/min per IP
+  - Signup: 3 req/min per IP
+  - Paddle webhooks: 20 req/s per IP (burst 30)
+  - File uploads: 10 req/s per IP
+  - JSON 429 error responses
+
+### Added — Backup & Recovery
+- **PostgreSQL backup script** (`deploy/backup-postgres.sh`):
+  - `pg_dump` + gzip compression
+  - Integrity verification after backup
+  - Optional S3/Spaces offsite upload
+  - 30-day local retention with automatic cleanup
+  - Cron-ready: `0 3 * * * ./backup-postgres.sh`
+- **Restore script** (`deploy/restore-postgres.sh`):
+  - Interactive confirmation before restore
+  - Post-restore checklist (migrate, verify, restart)
+
+### Added — Structured Logging
+- **JSON log formatter** (`config/logging_json.py`):
+  - Zero external dependencies (stdlib only)
+  - Fields: `ts`, `level`, `logger`, `msg`, `module`, `line`, exception traceback
+  - Supports extra fields via `logger.info("msg", extra={...})`
+- **Auto-switching**: text in development, JSON in production (`LOG_FORMAT` env var)
+- **Per-app loggers**: `apps.emails`, `apps.api`, `apps.maintenance`
+- Compatible with journalctl, jq, CloudWatch, Datadog, Grafana Loki
+
+### Changed
+- `views_auth.py` — signup verification and password reset now send branded HTML emails
+- `views_paddle.py` — webhook handlers now queue billing notification emails
+- `throttles.py` — added `AuthLoginThrottle`, `AuthSignupThrottle`, `AuthPasswordResetThrottle`
+- `settings.py` — added `apps.emails` to INSTALLED_APPS, email template directory, auth throttle rates, structured logging config
+- `setup_periodic_tasks.py` — added `check-trial-expiry-reminders-daily` Celery Beat task
+
+### Documentation
+- `deploy/DEPLOYMENT_EMAIL_RATELIMIT_BACKUP_LOGGING.md` — full deployment guide for all 4 systems
+- `deploy/nginx-rate-limiting.conf` — production-ready nginx config with comments
 
 ---
 

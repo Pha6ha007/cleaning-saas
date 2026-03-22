@@ -77,3 +77,7 @@ class AccessAuditLog(models.Model):
     def __str__(self) -> str:
         performer = self.performed_by.full_name if self.performed_by else "System"
         return f"{self.get_action_display()} - {self.cleaner.full_name} by {performer}"
+
+
+# M006/S04: Enterprise API Keys
+from apps.api.models_api_keys import EnterpriseApiKey  # noqa: F401

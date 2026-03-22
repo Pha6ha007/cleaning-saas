@@ -1,0 +1,14 @@
+{% extends "emails/base.html" %}
+{% block title %}Verify your email{% endblock %}
+{% block content %}
+<h1>Welcome to {{ platform_name }}!</h1>
+<p>Hi {{ user_name }},</p>
+<p>Thanks for signing up. Please verify your email address to activate your account and start your 7-day free trial.</p>
+<p style="text-align: center;">
+  <a href="{{ verify_url }}" class="btn">Verify Email Address</a>
+</p>
+<p class="muted">This link expires in 24 hours. If you didn't create this account, you can safely ignore this email.</p>
+<hr class="divider">
+<p class="muted">If the button doesn't work, copy and paste this link into your browser:</p>
+<div class="code-block">{{ verify_url }}</div>
+{% endblock %}

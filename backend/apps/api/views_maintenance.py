@@ -2849,6 +2849,17 @@ class RecurringTemplateGenerateView(MaintenancePermissionMixin, APIView):
                 "message": "No new visits to generate. All dates already have visits."
             }, status=status.HTTP_200_OK)
 
+        # Require technician — Job.cleaner is NOT NULL
+        if not template.assigned_technician:
+            return Response(
+                {
+                    "code": "NO_TECHNICIAN",
+                    "message": "Cannot generate visits: template has no assigned technician. "
+                               "Set assigned_technician_id on the template first.",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # Create Jobs and logs
         created_visits = []
         user = request.user
@@ -3031,8 +3042,8 @@ class ServiceContractListCreateView(MaintenancePermissionMixin, APIView):
             "contract_number": contract.contract_number,
             "contract_type": contract.contract_type,
             "status": contract.status,
-            "start_date": contract.start_date.isoformat(),
-            "end_date": contract.end_date.isoformat() if contract.end_date else None,
+            "start_date": str(contract.start_date),
+            "end_date": str(contract.end_date) if contract.end_date else None,
             "created_at": contract.created_at.isoformat(),
         }, status=status.HTTP_201_CREATED)
 
@@ -3428,6 +3439,14 @@ class PartListCreateView(MaintenancePermissionMixin, APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        from decimal import Decimal, InvalidOperation
+
+        def _to_decimal(val, default=0):
+            try:
+                return Decimal(str(val)) if val is not None else Decimal(default)
+            except (InvalidOperation, TypeError, ValueError):
+                return Decimal(default)
+
         part = Part.objects.create(
             company=company,
             name=name,
@@ -3435,9 +3454,9 @@ class PartListCreateView(MaintenancePermissionMixin, APIView):
             description=data.get("description", ""),
             unit=data.get("unit", Part.UNIT_PCS),
             # Stage 14: Stock Management
-            stock_quantity=data.get("stock_quantity", 0),
-            reorder_point=data.get("reorder_point", 0),
-            reorder_quantity=data.get("reorder_quantity", 0),
+            stock_quantity=_to_decimal(data.get("stock_quantity", 0)),
+            reorder_point=_to_decimal(data.get("reorder_point", 0)),
+            reorder_quantity=_to_decimal(data.get("reorder_quantity", 0)),
         )
 
         return Response(
@@ -3622,7 +3641,8 @@ class PartStockAdjustView(MaintenancePermissionMixin, APIView):
             )
 
         try:
-            quantity = float(data.get("quantity", 0))
+            from decimal import Decimal
+            quantity = Decimal(str(data.get("quantity", 0)))
             if quantity <= 0:
                 raise ValueError("Quantity must be positive")
         except (TypeError, ValueError):
@@ -4781,7 +4801,7 @@ class AssetExportView(MaintenancePermissionMixin, APIView):
         if error:
             return error
         
-        export_format = request.query_params.get("format", "csv").lower()
+        export_format = request.query_params.get("export_format", "csv").lower()
         
         assets = Asset.objects.filter(
             company=company
@@ -5081,7 +5101,7 @@ class AssetImportTemplateView(MaintenancePermissionMixin, APIView):
         if error:
             return error
         
-        export_format = request.query_params.get("format", "csv").lower()
+        export_format = request.query_params.get("export_format", "csv").lower()
         
         headers = [
             "Name", "Serial Number", "Asset Type", "Location",

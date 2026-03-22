@@ -69,9 +69,24 @@ proof-platform/
 
 ### ✅ Rate Limiting & DoS Protection
 - **Login Rate Limiting:** 5 attempts per minute per IP
+- **Signup Rate Limiting:** 3 attempts per minute per IP
+- **Password Reset Rate Limiting:** 3 attempts per minute per IP
 - **Upload Rate Limiting:** 10 uploads per minute per user
+- **Nginx L7 Rate Limiting:** API (30r/s), auth (5r/m), webhooks (20r/s)
 - **HTTP 429** responses when limits exceeded
 - **Brute-Force Protection** for all authentication endpoints
+
+### ✅ Email & Notifications
+- **HTML transactional emails** with branded templates (verification, password reset, billing)
+- **Trial expiry reminders** — automated at 3 days, 1 day, and expired (Celery daily task)
+- **Billing notifications** — payment success, failure, cancellation (Paddle webhook-triggered)
+- **WhatsApp notifications** for maintenance visits (pywa)
+
+### ✅ Observability & Operations
+- **Sentry** error tracking (Django + Celery + Redis integrations)
+- **Structured JSON logging** in production (grep/jq-friendly, CloudWatch-compatible)
+- **PostgreSQL backup scripts** with S3 offsite upload and 30-day retention
+- **Health check endpoints** — liveness + readiness probes
 
 ### ✅ Security Testing
 - **115+ Security Tests** across all critical areas

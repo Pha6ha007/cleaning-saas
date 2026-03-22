@@ -162,6 +162,8 @@ Add new domain to Google Cloud Console → APIs & Services → Credentials → A
 - [ ] Login works on production
 - [ ] Dashboard loads
 - [ ] CORS preflight succeeds (check OPTIONS to any API endpoint)
+- [ ] `python manage.py setup_periodic_tasks` run (trial expiry + recurring visits)
+- [ ] Test email delivery (see Section 10)
 
 ---
 
@@ -189,3 +191,66 @@ Add new domain to Google Cloud Console → APIs & Services → Credentials → A
 - Check Google Cloud Billing is active (prepayment required)
 - Verify domain in API key Website restrictions
 - Propagation delay: up to 5 minutes after changes
+
+---
+
+## 10. Email, Rate Limiting, Backups, Logging
+
+> **Full guide:** `backend/deploy/DEPLOYMENT_EMAIL_RATELIMIT_BACKUP_LOGGING.md`
+
+### Email (SMTP)
+
+Add to Railway environment variables:
+```
+EMAIL_HOST=smtp.resend.com          # or smtp.sendgrid.net, smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=resend              # or 'apikey' for SendGrid
+EMAIL_HOST_PASSWORD=<your-api-key>
+DEFAULT_FROM_EMAIL=Proof Platform <noreply@yourdomain.com>
+FRONTEND_URL=https://proofplatform.vercel.app
+```
+
+Emails sent automatically:
+- **Signup** → verification email (HTML template)
+- **Password reset** → reset link email (HTML template)
+- **Trial expiry** → reminders at 3 days, 1 day, and expired (Celery daily task)
+- **Paddle events** → payment success/failed/canceled (async via webhook handlers)
+
+After deploy: `python manage.py setup_periodic_tasks` to register the trial expiry check.
+
+### Rate Limiting
+
+**DRF (active by default):**
+| Endpoint | Rate |
+|----------|------|
+| Login | 5/min per IP |
+| Signup | 3/min per IP |
+| Password reset | 3/min per IP |
+| Anonymous API | 10/min per IP |
+
+**Nginx (manual setup):**
+Copy `backend/deploy/nginx-rate-limiting.conf` to your server and include in your server block. See the file for exact `location` directives.
+
+### PostgreSQL Backups
+
+```bash
+# Daily at 3 AM (add to cron)
+0 3 * * * /opt/proofplatform/deploy/backup-postgres.sh >> /var/log/backup.log 2>&1
+
+# Optional: offsite to S3/Spaces
+BACKUP_S3_BUCKET=your-backup-bucket
+```
+
+Railway provides automatic daily backups, but an independent backup is recommended for disaster recovery.
+
+### Structured Logging
+
+Production automatically outputs JSON logs (`LOG_FORMAT=json` when `DEBUG=False`).
+
+```bash
+# Query logs with jq
+journalctl -u gunicorn | jq 'select(.level == "ERROR")'
+```
+
+To force text format in production for debugging: set `LOG_FORMAT=text` in env vars.

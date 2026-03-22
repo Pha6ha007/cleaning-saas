@@ -32,11 +32,15 @@ from apps.accounts.models import Company, PaddleSubscription, PaddleWebhookEvent
 
 
 @pytest.fixture(autouse=True)
-def _disable_throttling(settings):
-    settings.REST_FRAMEWORK = {
-        **settings.REST_FRAMEWORK,
+def _disable_throttling(monkeypatch):
+    """Disable DRF throttling and clear cache before each test."""
+    from django.conf import settings as django_settings
+    original = dict(django_settings.REST_FRAMEWORK)
+    patched = {
+        **original,
         "DEFAULT_THROTTLE_RATES": {"anon": "1000/minute", "user": "1000/minute"},
     }
+    monkeypatch.setattr("django.conf.settings.REST_FRAMEWORK", patched)
     from django.core.cache import cache
     cache.clear()
 
@@ -45,12 +49,16 @@ TEST_WEBHOOK_SECRET = "test_webhook_secret_s03"
 
 
 @pytest.fixture(autouse=True)
-def _set_paddle_settings(settings):
-    """Configure Paddle env vars for all S03 tests."""
-    settings.PADDLE_WEBHOOK_SECRET = TEST_WEBHOOK_SECRET
-    settings.PADDLE_PRICE_ID_STANDARD = "pri_standard_test"
-    settings.PADDLE_PRICE_ID_PRO = "pri_pro_test"
-    settings.PADDLE_PRICE_ID_ENTERPRISE = "pri_enterprise_test"
+def _set_paddle_settings():
+    """Configure Paddle env vars for all S03 tests via override_settings (safe, no fixture interaction)."""
+    from django.test import override_settings
+    with override_settings(
+        PADDLE_WEBHOOK_SECRET=TEST_WEBHOOK_SECRET,
+        PADDLE_PRICE_ID_STANDARD="pri_standard_test",
+        PADDLE_PRICE_ID_PRO="pri_pro_test",
+        PADDLE_PRICE_ID_ENTERPRISE="pri_enterprise_test",
+    ):
+        yield
 
 
 @pytest.fixture
@@ -174,11 +182,12 @@ class TestWebhookSignatureVerification:
         resp = _post_webhook(api_client, payload, bad_sig=True)
         assert resp.status_code == 403, f"Expected 403, got {resp.status_code}"
 
-    def test_missing_webhook_secret_rejects_all(self, api_client, settings):
+    def test_missing_webhook_secret_rejects_all(self, api_client):
         """If PADDLE_WEBHOOK_SECRET is empty, all webhooks are rejected."""
-        settings.PADDLE_WEBHOOK_SECRET = ""
-        payload = _make_event_payload("subscription.activated")
-        resp = _post_webhook(api_client, payload)
+        from django.test import override_settings
+        with override_settings(PADDLE_WEBHOOK_SECRET=""):
+            payload = _make_event_payload("subscription.activated")
+            resp = _post_webhook(api_client, payload)
         assert resp.status_code == 403
 
 

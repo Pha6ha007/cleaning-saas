@@ -22,6 +22,7 @@ from rest_framework.views import APIView
 from apps.jobs.models import SLAPolicy, get_effective_sla_policy
 from apps.accounts.models import User
 from .permissions import IsManagerUser
+from .cache_utils import cached_response, invalidate, make_company_key
 
 logger = logging.getLogger(__name__)
 
@@ -98,10 +99,19 @@ class SLAPolicyListCreateView(APIView):
     permission_classes = [IsAuthenticated, IsManagerUser]
 
     def get(self, request):
-        policies = SLAPolicy.objects.filter(
-            company=request.user.company
-        ).prefetch_related("locations")
-        return Response([_policy_to_dict(p) for p in policies])
+        company = request.user.company
+        cache_key = make_company_key("sla_policies", company.id)
+
+        def _fetch():
+            policies = SLAPolicy.objects.filter(
+                company=company
+            ).prefetch_related("locations")
+            return [_policy_to_dict(p) for p in policies]
+
+        data, hit = cached_response(cache_key, ttl=60, fn=_fetch)
+        resp = Response(data)
+        resp["X-Cache"] = "HIT" if hit else "MISS"
+        return resp
 
     def post(self, request):
         cleaned, errors = _validate_policy_data(request.data, partial=False)
@@ -113,6 +123,7 @@ class SLAPolicyListCreateView(APIView):
 
         policy = SLAPolicy(company=request.user.company, **cleaned)
         policy.save()
+        invalidate(make_company_key("sla_policies", request.user.company.id))
         return Response(_policy_to_dict(policy), status=status.HTTP_201_CREATED)
 
 
@@ -152,6 +163,7 @@ class SLAPolicyDetailView(APIView):
         if cleaned:
             p.updated_at = timezone.now()
             p.save()
+            invalidate(make_company_key("sla_policies", request.user.company.id))
 
         return Response(_policy_to_dict(p))
 
@@ -181,6 +193,7 @@ class SLAPolicyDetailView(APIView):
             )
 
         p.delete()
+        invalidate(make_company_key("sla_policies", request.user.company.id))
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

@@ -7,6 +7,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import LoginScreen from "./src/screens/LoginScreen";
 import JobsScreen from "./src/screens/JobsScreen";
 import JobDetailsScreen from "./src/screens/JobDetailsScreen";
+import ProfileScreen from "./src/screens/ProfileScreen";
 import { loadStoredToken } from "./src/api/client";
 import { navigationRef } from "./src/navigation";
 
@@ -14,6 +15,7 @@ export type RootStackParamList = {
   Login: undefined;
   Jobs: undefined;
   JobDetails: { jobId: number };
+  Profile: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -61,6 +63,11 @@ export default function App() {
           name="JobDetails"
           component={JobDetailsScreen}
           options={{ title: "Job Details" }}
+        />
+        <Stack.Screen
+          name="Profile"
+          component={ProfileScreen}
+          options={{ title: "My Profile" }}
         />
       </Stack.Navigator>
     </NavigationContainer>

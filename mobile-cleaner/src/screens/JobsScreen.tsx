@@ -10,16 +10,13 @@ import {
   ActivityIndicator,
   RefreshControl,
   SafeAreaView,
-  Alert,
   Pressable,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../App";
 import { fetchTodayJobs, type CleanerJobSummary } from "../api/client";
 import { getStatusConfig } from "../components/job-details/statusConfig";
-import { resetToLogin } from "../navigation";
 import { cacheTodayJobs, getCachedTodayJobs } from "../utils/cache";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Jobs">;
@@ -52,31 +49,20 @@ export default function JobsScreen({ navigation }: Props) {
   const [isOffline, setIsOffline] = React.useState(false);
   const [showingCached, setShowingCached] = React.useState(false);
 
-  // Logout handler
-  const handleLogout = React.useCallback(() => {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Logout",
-        style: "destructive",
-        onPress: async () => {
-          await AsyncStorage.removeItem("@auth_token");
-          resetToLogin();
-        },
-      },
-    ]);
-  }, []);
-
-  // Add logout button to header
+  // Add profile button to header
   React.useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <Pressable onPress={handleLogout} style={styles.logoutBtn}>
-          <Text style={styles.logoutBtnText}>Logout</Text>
+        <Pressable
+          onPress={() => navigation.navigate("Profile")}
+          style={styles.profileBtn}
+          testID="profile-header-button"
+        >
+          <Text style={styles.profileBtnText}>Profile</Text>
         </Pressable>
       ),
     });
-  }, [navigation, handleLogout]);
+  }, [navigation]);
 
   const loadJobs = React.useCallback(async () => {
     try {
@@ -413,12 +399,12 @@ const styles = StyleSheet.create({
     color: "#CBD5E1", // менее контрастная стрелка
   },
 
-  // Logout button
-  logoutBtn: {
+  // Profile button (header right)
+  profileBtn: {
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
-  logoutBtnText: {
+  profileBtnText: {
     fontSize: 15,
     fontWeight: "600",
     color: listColors.teal,

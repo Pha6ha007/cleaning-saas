@@ -100,7 +100,7 @@ class CustomerDashboardView(CustomerPermissionMixin, APIView):
             location_id__in=location_ids,
             context=Job.CONTEXT_MAINTENANCE,
             status=Job.STATUS_COMPLETED,
-            completed_at__gte=thirty_days_ago
+            actual_end_time__gte=thirty_days_ago
         ).count()
 
         # Count active contracts
@@ -329,8 +329,8 @@ class CustomerVisitsView(CustomerPermissionMixin, APIView):
                     "id": visit.cleaner.id,
                     "name": visit.cleaner.full_name,
                 } if visit.cleaner else None,
-                "completed_at": visit.completed_at.isoformat() if visit.completed_at else None,
-                "has_photos": bool(visit.photo_before or visit.photo_after),
+                "completed_at": visit.actual_end_time.isoformat() if visit.actual_end_time else None,
+                "has_photos": visit.photos.exists(),
             }
             for visit in visits
         ]
@@ -402,11 +402,11 @@ class CustomerVisitDetailView(CustomerPermissionMixin, APIView):
             } if visit.cleaner else None,
             "scheduled_start_time": visit.scheduled_start_time.isoformat() if visit.scheduled_start_time else None,
             "scheduled_end_time": visit.scheduled_end_time.isoformat() if visit.scheduled_end_time else None,
-            "check_in_time": visit.check_in_time.isoformat() if visit.check_in_time else None,
-            "check_out_time": visit.check_out_time.isoformat() if visit.check_out_time else None,
-            "completed_at": visit.completed_at.isoformat() if visit.completed_at else None,
-            "photo_before": visit.photo_before or None,
-            "photo_after": visit.photo_after or None,
+            "check_in_time": visit.actual_start_time.isoformat() if visit.actual_start_time else None,
+            "check_out_time": visit.actual_end_time.isoformat() if visit.actual_end_time else None,
+            "completed_at": visit.actual_end_time.isoformat() if visit.actual_end_time else None,
+            "photo_before": None,  # Use /visits/{id}/photos/ endpoint for photos
+            "photo_after": None,
             "manager_notes": "",  # Hide internal notes from customers
             "checklist": checklist,
             "checklist_progress": {
@@ -502,7 +502,7 @@ class CustomerContractDetailView(CustomerPermissionMixin, APIView):
             },
             "start_date": contract.start_date.isoformat() if contract.start_date else None,
             "end_date": contract.end_date.isoformat() if contract.end_date else None,
-            "terms": contract.terms or "",
+            "terms": contract.service_terms or "",
             "created_at": contract.created_at.isoformat(),
         }
 

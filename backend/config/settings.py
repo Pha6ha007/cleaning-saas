@@ -82,6 +82,7 @@ INSTALLED_APPS = [
     "apps.api",
     "apps.marketing",
     "apps.analytics",
+    "apps.emails",
     "storages",  # S3-compatible file storage
 ]
 
@@ -107,7 +108,9 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [
+            BASE_DIR / "apps" / "emails" / "templates",
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -251,6 +254,10 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_THROTTLE_RATES": {
         "anon": "10/minute",
+        # Auth endpoints — tighter limits to prevent brute force
+        "auth_login": "5/minute",
+        "auth_signup": "3/minute",
+        "auth_password_reset": "3/minute",
         # M006/S04: Per-endpoint granular throttle scopes
         "check_in": "60/hour",
         "photo_upload": "120/hour",
@@ -452,6 +459,11 @@ SERVER_EMAIL = os.getenv("SERVER_EMAIL", DEFAULT_FROM_EMAIL)
 # =============================================================================
 # Logging Configuration
 # =============================================================================
+# Development: human-readable console output
+# Production: structured JSON for log aggregation (grep-friendly, parseable)
+# =============================================================================
+
+_LOG_FORMAT = os.getenv("LOG_FORMAT", "json" if not DEBUG else "text")
 
 LOGGING = {
     "version": 1,
@@ -464,6 +476,9 @@ LOGGING = {
         "simple": {
             "format": "{levelname} {message}",
             "style": "{",
+        },
+        "json": {
+            "()": "apps.emails.__init__" if False else "logging.Formatter",  # placeholder — replaced below
         },
     },
     "filters": {
@@ -478,11 +493,10 @@ LOGGING = {
         "console": {
             "level": "DEBUG" if DEBUG else "INFO",
             "class": "logging.StreamHandler",
-            "formatter": "simple",
+            "formatter": "simple" if DEBUG else "verbose",
         },
-        "console_production": {
-            "level": "WARNING",
-            "filters": ["require_debug_false"],
+        "console_json": {
+            "level": "INFO",
             "class": "logging.StreamHandler",
             "formatter": "verbose",
         },
@@ -505,11 +519,35 @@ LOGGING = {
         # Suppress noisy loggers in production
         "django.security.DisallowedHost": {
             "handlers": ["console"],
-            "level": "CRITICAL",  # Don't log disallowed host attacks
+            "level": "CRITICAL",
+            "propagate": False,
+        },
+        # App loggers — structured output
+        "apps.emails": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "apps.api": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "apps.maintenance": {
+            "handlers": ["console"],
+            "level": "INFO",
             "propagate": False,
         },
     },
 }
+
+# Production: Replace formatter with structured JSON
+if _LOG_FORMAT == "json":
+    LOGGING["formatters"]["json"] = {
+        "()": "config.logging_json.JsonFormatter",
+    }
+    LOGGING["handlers"]["console"]["formatter"] = "json"
+    LOGGING["handlers"]["console_json"]["formatter"] = "json"
 
 
 # =============================================================================

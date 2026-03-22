@@ -139,9 +139,10 @@ class Asset(models.Model):
 
     class Meta:
         ordering = ["name"]
-
-    def __str__(self):
-        return f"{self.name} ({self.asset_type.name})"
+        indexes = [
+            models.Index(fields=["company", "location", "is_active"], name="asset_co_loc_active_idx"),
+            models.Index(fields=["company", "is_active"], name="asset_co_active_idx"),
+        ]
 
     @property
     def warranty_status(self) -> str:
@@ -299,6 +300,9 @@ class ServiceContract(models.Model):
         ordering = ["-created_at"]
         verbose_name = "Service Contract"
         verbose_name_plural = "Service Contracts"
+        indexes = [
+            models.Index(fields=["company", "status", "end_date"], name="contract_co_status_end_idx"),
+        ]
 
     def __str__(self):
         return f"{self.name} ({self.get_contract_type_display()})"
@@ -451,6 +455,9 @@ class RecurringVisitTemplate(models.Model):
         ordering = ["name"]
         verbose_name = "Recurring Visit Template"
         verbose_name_plural = "Recurring Visit Templates"
+        indexes = [
+            models.Index(fields=["company", "is_active", "start_date"], name="rvt_co_active_start_idx"),
+        ]
 
     def __str__(self):
         return f"{self.name} ({self.get_frequency_display()})"
@@ -761,6 +768,9 @@ class Part(models.Model):
         unique_together = ["company", "name"]
         verbose_name = "Part"
         verbose_name_plural = "Parts"
+        indexes = [
+            models.Index(fields=["company", "is_active", "stock_quantity"], name="part_co_active_stock_idx"),
+        ]
 
     def __str__(self):
         if self.sku:
@@ -893,6 +903,9 @@ class VisitPart(models.Model):
         ordering = ["-added_at"]
         verbose_name = "Visit Part"
         verbose_name_plural = "Visit Parts"
+        indexes = [
+            models.Index(fields=["job", "part"], name="visitpart_job_part_idx"),
+        ]
 
     def __str__(self):
         return f"{self.part.name} x{self.quantity} on Job #{self.job_id}"

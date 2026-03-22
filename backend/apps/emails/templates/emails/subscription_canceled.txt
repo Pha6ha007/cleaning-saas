@@ -1,0 +1,11 @@
+Subscription Canceled
+
+Hi {{ user_name }},
+
+Your {{ plan_tier|title }} subscription for {{ company_name }} has been canceled.
+
+{% if access_until %}You'll still have access until {{ access_until }}. After that, your account switches to read-only mode.{% else %}Your account is now in read-only mode.{% endif %}
+
+Changed your mind? Resubscribe: {{ resubscribe_url }}
+
+— The {{ platform_name }} Team
