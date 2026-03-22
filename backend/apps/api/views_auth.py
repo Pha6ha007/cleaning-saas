@@ -277,14 +277,19 @@ class ManagerSignupView(APIView):
         owner.set_password(password)
         owner.save(update_fields=["password"])
 
-        # M004/S02: Create email verification token and send verification email
-        # User starts inactive — activated only after email verification
-        owner.is_active = False
-        owner.save(update_fields=["is_active"])
+        # M004/S02: Email verification
+        # Skip deactivation if SKIP_EMAIL_VERIFICATION is set (no SMTP configured)
+        import os as _os
+        skip_verification = _os.environ.get("SKIP_EMAIL_VERIFICATION", "").lower() in ("true", "1", "yes")
 
-        from apps.accounts.models import EmailVerificationToken
-        verification = EmailVerificationToken.objects.create(user=owner)
-        _send_verification_email(owner, company, str(verification.token))
+        if not skip_verification:
+            owner.is_active = False
+            owner.save(update_fields=["is_active"])
+
+            from apps.accounts.models import EmailVerificationToken
+            verification = EmailVerificationToken.objects.create(user=owner)
+            _send_verification_email(owner, company, str(verification.token))
+        # else: user stays is_active=True, can login immediately
 
         data = {
             "status": "verification_pending",
