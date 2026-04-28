@@ -236,6 +236,26 @@ else:
     MEDIA_ROOT = BASE_DIR / "media"
 
 
+# =============================================================================
+# Upload Limits (TICKET-003)
+# =============================================================================
+# Hard ceilings on request body size to prevent disk-fill / memory-exhaustion DoS.
+# Matches nginx client_max_body_size (20M) in nginx/conf.d/cleanproof.conf.
+# Individual views may enforce stricter limits (e.g. 10 MB for maintenance documents).
+
+# Maximum size of a request body that will be loaded into memory (in bytes).
+# Larger requests are streamed to TemporaryFileUploadHandler.
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024  # 5 MB
+
+# Maximum size of the entire request body (form data + files).
+# Requests larger than this are rejected by Django before view code runs.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024  # 20 MB — matches nginx
+
+# Maximum number of fields/files in a single multipart request.
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
+DATA_UPLOAD_MAX_NUMBER_FILES = 50
+
+
 # Default primary key field type
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
