@@ -15,7 +15,7 @@ Backend accepts both JWT and Token auth on cleaner views (backward compatible).
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.throttling import AnonRateThrottle
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -70,7 +70,8 @@ class JWTManagerLoginView(APIView):
 
     authentication_classes = []
     permission_classes = [AllowAny]
-    throttle_classes = [AnonRateThrottle]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth_login"
 
     ALLOWED_ROLES = {User.ROLE_OWNER, User.ROLE_MANAGER, User.ROLE_STAFF}
 
@@ -260,7 +261,8 @@ class JWTCleanerLoginView(APIView):
 
     authentication_classes = []
     permission_classes = [AllowAny]
-    throttle_classes = [AnonRateThrottle]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth_login"
 
     def post(self, request):
         email = (request.data.get("email") or "").strip().lower()

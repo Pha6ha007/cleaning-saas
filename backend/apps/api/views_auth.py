@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
-from rest_framework.throttling import AnonRateThrottle
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from apps.accounts.models import Company, User
@@ -20,6 +20,8 @@ class LoginView(APIView):
 
     authentication_classes = []
     permission_classes = []
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth_login"
 
     def post(self, request, *args, **kwargs):
         email = (request.data.get("email") or "").strip()
@@ -81,7 +83,8 @@ class CleanerPinLoginView(APIView):
 
     authentication_classes = []
     permission_classes = []
-    throttle_classes = [AnonRateThrottle]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth_login"
 
     def post(self, request, *args, **kwargs):
         phone = (request.data.get("phone") or "").strip()
@@ -148,7 +151,7 @@ class ManagerLoginView(APIView):
 
     authentication_classes = []
     permission_classes = []
-    throttle_classes = [AnonRateThrottle]
+    throttle_classes = [ScopedRateThrottle]
     throttle_scope = "auth_login"
 
     def post(self, request):
@@ -215,7 +218,7 @@ class ManagerSignupView(APIView):
 
     authentication_classes: list = []
     permission_classes: list = []
-    throttle_classes = [AnonRateThrottle]
+    throttle_classes = [ScopedRateThrottle]
     throttle_scope = "auth_signup"
 
     def post(self, request, *args, **kwargs):
