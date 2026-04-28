@@ -28,7 +28,7 @@ class LoginView(APIView):
         if not email or not password:
             return Response(
                 {"detail": "Email and password are required."},
-                status=status.HTTP_400_BAD_REQUEST,
+                status=status.HTTP_401_UNAUTHORIZED,
             )
 
         # 🔴 ВАЖНО: тут убираем фильтр по role
@@ -39,14 +39,14 @@ class LoginView(APIView):
             )
         except User.DoesNotExist:
             return Response(
-                {"detail": "User not found"},
-                status=status.HTTP_400_BAD_REQUEST,
+                {"detail": "Invalid credentials."},
+                status=status.HTTP_401_UNAUTHORIZED,
             )
 
         if not user.check_password(password):
             return Response(
-                {"detail": "Invalid credentials"},
-                status=status.HTTP_400_BAD_REQUEST,
+                {"detail": "Invalid credentials."},
+                status=status.HTTP_401_UNAUTHORIZED,
             )
 
         # Check if user must change password
