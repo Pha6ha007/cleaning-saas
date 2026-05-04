@@ -8,8 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, AlertCircle, Eye, EyeOff, Mail, Lock, User, Building2, MapPin, Camera, Clipboard, FileText, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8001";
+import { API_BASE_URL } from "@/lib/env";
 
 // Shield Logo SVG Component
 const ShieldLogo = () => (

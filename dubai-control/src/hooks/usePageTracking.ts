@@ -6,8 +6,7 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8001";
+import { API_BASE_URL } from "@/lib/env";
 
 const ANALYTICS_ENDPOINT = `${API_BASE_URL}/api/analytics/page-view/`;
 

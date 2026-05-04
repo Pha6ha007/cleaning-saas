@@ -7,9 +7,7 @@ import { useSearchParams, Link } from "react-router-dom";
 import { CheckCircle2, Loader2, KeyRound, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8001";
+import { API_BASE_URL } from "@/lib/env";
 
 type Mode = "request" | "requesting" | "requested" | "reset" | "resetting" | "done" | "error";
 

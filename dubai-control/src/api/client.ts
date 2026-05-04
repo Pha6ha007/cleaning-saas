@@ -7,16 +7,11 @@ import type { OwnerOverview } from "@/types/reports";
 // Re-export all types
 export * from "./client-types";
 
-// Re-export core infrastructure
 export { API_BASE_URL } from "./core";
 
 // Import core internals needed by functions in this file
+import { DEV_MANAGER_EMAIL, DEV_MANAGER_PASSWORD, hasDevManagerCredentials } from "@/lib/env";
 import { API_BASE_URL, auth, STORAGE_KEYS, syncTokenFromStorage, apiFetch, apiFetchBlob, _clearAuthAndRedirect } from "./core";
-
-const DEV_MANAGER_EMAIL =
-  import.meta.env.VITE_DEV_MANAGER_EMAIL || "manager@test.com";
-const DEV_MANAGER_PASSWORD =
-  import.meta.env.VITE_DEV_MANAGER_PASSWORD || "Test1234!";
 
 export async function loginManager(): Promise<void> {
   // 1) JWT access token in localStorage — already authenticated
@@ -2621,6 +2616,12 @@ export async function exportAuditLog(filters: AuditLogFilters = {}): Promise<Blo
   const qs = params.toString() ? `?${params.toString()}` : "";
   const response = await fetch(
     `${API_BASE_URL}/api/jobs/audit-log/export/${qs}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  if (!response.ok) throw new Error(`Export failed: ${response.status}`);
+  return response.blob();
+}
+g/export/${qs}`,
     { headers: { Authorization: `Bearer ${token}` } }
   );
   if (!response.ok) throw new Error(`Export failed: ${response.status}`);

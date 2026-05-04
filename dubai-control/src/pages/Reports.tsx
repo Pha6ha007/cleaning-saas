@@ -14,6 +14,7 @@ import {
 import type { OwnerOverview } from "@/types/reports";
 import { Button } from "@/components/ui/button";
 import { Download, Mail } from "lucide-react";
+import { API_BASE_URL } from "@/lib/env";
 import {
   Dialog,
   DialogContent,
@@ -210,8 +211,6 @@ export default function ReportsPage() {
         : "/api/manager/reports/monthly/pdf/";
 
     try {
-      const apiBase =
-        import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8001";
       const jwtToken = localStorage.getItem("access_token");
       const legacyToken =
         localStorage.getItem("authToken") ||
@@ -219,7 +218,7 @@ export default function ReportsPage() {
       const token = jwtToken || legacyToken;
       const authScheme = jwtToken ? "Bearer" : "Token";
 
-      const resp = await fetch(`${apiBase}${endpoint}`, {
+      const resp = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: "GET",
         headers: {
           ...(token ? { Authorization: `${authScheme} ${token}` } : {}),

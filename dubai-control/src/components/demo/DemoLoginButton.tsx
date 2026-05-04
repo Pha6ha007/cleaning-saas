@@ -5,9 +5,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8001";
+import { API_BASE_URL } from "@/lib/env";
 
 interface DemoLoginButtonProps {
   context?: "cleaning" | "maintenance";
