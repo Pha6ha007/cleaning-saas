@@ -104,7 +104,7 @@ class CleanerPinLoginView(APIView):
             )
         except User.DoesNotExist:
             return Response(
-                {"detail": "User not found"},
+                {"detail": "Invalid credentials"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

@@ -9,6 +9,7 @@ otherwise oversized requests bypass nginx and surprise the application.
 import pytest
 from django.conf import settings
 
+pytestmark = pytest.mark.security
 
 # Must match nginx/conf.d/cleanproof.conf: client_max_body_size 20M
 EXPECTED_MAX_BODY_BYTES = 20 * 1024 * 1024

@@ -10,6 +10,8 @@ from django.core.cache import cache
 
 from apps.accounts.models import Company, User
 
+pytestmark = pytest.mark.security
+
 
 @pytest.fixture(autouse=True)
 def _clear_throttle_cache():
