@@ -62,6 +62,8 @@ jobs:
           SECRET_KEY: ci-secret-key-not-for-production
           DATABASE_URL: sqlite:///ci_test.db
           REDIS_URL: redis://localhost:6379/0
+          DEBUG: "True"
+          CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
 
       - name: Run full test suite
         run: |
@@ -77,6 +79,8 @@ jobs:
           SECRET_KEY: ci-secret-key-not-for-production
           DATABASE_URL: sqlite:///ci_test.db
           REDIS_URL: redis://localhost:6379/0
+          DEBUG: "True"
+          CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
 
       - name: Run E2E API flow tests
         run: |
@@ -87,6 +91,8 @@ jobs:
           SECRET_KEY: ci-secret-key-not-for-production
           DATABASE_URL: sqlite:///ci_test.db
           REDIS_URL: redis://localhost:6379/0
+          DEBUG: "True"
+          CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4
@@ -128,7 +134,7 @@ jobs:
         run: npm run build
         env:
           # Use placeholder values — build should not fail on missing env vars
-          VITE_API_URL: https://api.cleanproof.com
+          VITE_API_BASE_URL: https://api.cleanproof.com
           VITE_PADDLE_CLIENT_TOKEN: test_paddle_token
 
       - name: Check chunk sizes
@@ -190,6 +196,8 @@ jobs:
 
       - name: Run E2E smoke tests
         run: npm run test:e2e
+        env:
+          VITE_API_BASE_URL: https://api.cleanproof.com
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
