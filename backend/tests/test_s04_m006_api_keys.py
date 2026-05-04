@@ -30,6 +30,7 @@ Proves:
 import pytest
 from rest_framework.test import APIClient
 
+pytestmark = pytest.mark.security
 
 # =============================================================================
 # Fixtures

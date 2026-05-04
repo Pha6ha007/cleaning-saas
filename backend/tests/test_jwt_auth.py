@@ -18,6 +18,8 @@ from rest_framework_simplejwt.tokens import AccessToken
 
 from apps.accounts.models import Company, User
 
+pytestmark = pytest.mark.security
+
 
 @pytest.fixture(autouse=True)
 def _disable_throttling(settings):

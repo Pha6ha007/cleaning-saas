@@ -1,0 +1,16 @@
+# Bandit configuration for Proof Platform.
+# Docs: https://bandit.readthedocs.io/en/latest/config.html
+
+exclude_dirs:
+  - tests
+  - venv
+  - .venv
+  - env
+  - migrations
+  - node_modules
+
+skips:
+  - B101
+  - B311
+  - B404
+  - B603

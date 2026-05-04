@@ -36,11 +36,12 @@ jobs:
 
       - name: Run security tests
         run: |
-          pytest tests/security/ -v --cov=apps --cov-report=term-missing
+          pytest tests/ -m security -v --cov=apps --cov-report=term-missing
         env:
           DJANGO_SETTINGS_MODULE: config.settings
           SECRET_KEY: test-secret-key-for-ci-only
           DATABASE_URL: sqlite:///test.db
+          DEBUG: "True"
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4

@@ -25,6 +25,7 @@ from rest_framework.test import APIClient
 
 from apps.accounts.models import Company, PaddleSubscription, PaddleWebhookEvent, User
 
+pytestmark = pytest.mark.security
 
 # =============================================================================
 # Fixtures

@@ -16,6 +16,8 @@ from rest_framework.test import APIClient
 
 from apps.accounts.models import Company, User
 
+pytestmark = pytest.mark.security
+
 
 @pytest.fixture(autouse=True)
 def _disable_throttling(settings):

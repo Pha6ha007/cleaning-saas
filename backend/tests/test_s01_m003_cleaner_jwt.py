@@ -23,6 +23,7 @@ from unittest.mock import patch, MagicMock
 from rest_framework.test import APIClient
 from datetime import date
 
+pytestmark = pytest.mark.security
 
 # =============================================================================
 # Fixtures
