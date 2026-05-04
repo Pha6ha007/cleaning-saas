@@ -2,7 +2,6 @@ import * as Sentry from "@sentry/react";
 import { createRoot } from "react-dom/client";
 // Initialize i18n before app renders
 import "./i18n";
-import { API_BASE_URL } from "@/lib/env";
 
 const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN as string | undefined;
 const SENTRY_ENVIRONMENT = (import.meta.env.VITE_SENTRY_ENVIRONMENT as string) || "development";

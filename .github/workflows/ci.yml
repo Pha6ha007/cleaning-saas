@@ -60,7 +60,6 @@ jobs:
         env:
           DJANGO_SETTINGS_MODULE: config.settings
           SECRET_KEY: ci-secret-key-not-for-production
-          DATABASE_URL: sqlite:///ci_test.db
           REDIS_URL: redis://localhost:6379/0
           DEBUG: "True"
           CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
@@ -77,7 +76,6 @@ jobs:
         env:
           DJANGO_SETTINGS_MODULE: config.settings
           SECRET_KEY: ci-secret-key-not-for-production
-          DATABASE_URL: sqlite:///ci_test.db
           REDIS_URL: redis://localhost:6379/0
           DEBUG: "True"
           CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
@@ -89,7 +87,6 @@ jobs:
         env:
           DJANGO_SETTINGS_MODULE: config.settings
           SECRET_KEY: ci-secret-key-not-for-production
-          DATABASE_URL: sqlite:///ci_test.db
           REDIS_URL: redis://localhost:6379/0
           DEBUG: "True"
           CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
