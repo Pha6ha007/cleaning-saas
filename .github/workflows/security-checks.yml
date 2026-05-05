@@ -41,8 +41,8 @@ jobs:
           PYTHONPATH: .
           DJANGO_SETTINGS_MODULE: config.settings
           SECRET_KEY: test-secret-key-for-ci-only
-          DATABASE_URL: sqlite:///test.db
           DEBUG: "True"
+          CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
@@ -109,7 +109,7 @@ jobs:
 
       - name: Run Safety scan
         run: |
-          safety check -r requirements.txt --json > safety-report.json || true
+          safety check -r requirements.txt --json > safety-report.json 2>&1 || true
 
       - name: Upload Safety results
         uses: actions/upload-artifact@v4
@@ -120,7 +120,7 @@ jobs:
 
       - name: Check for vulnerabilities
         run: |
-          safety check -r requirements.txt --exit-zero
+          safety check -r requirements.txt --output screen
 
   codeql-analysis:
     name: CodeQL Security Analysis
