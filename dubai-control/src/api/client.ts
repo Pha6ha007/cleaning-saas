@@ -2621,9 +2621,3 @@ export async function exportAuditLog(filters: AuditLogFilters = {}): Promise<Blo
   if (!response.ok) throw new Error(`Export failed: ${response.status}`);
   return response.blob();
 }
-g/export/${qs}`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  if (!response.ok) throw new Error(`Export failed: ${response.status}`);
-  return response.blob();
-}
