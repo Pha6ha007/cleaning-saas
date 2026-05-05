@@ -4,6 +4,8 @@
 
 import { API_BASE_URL } from "@/lib/env";
 
+export { API_BASE_URL };
+
 export type AuthState = {
   token: string | null;
 };
