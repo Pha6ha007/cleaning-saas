@@ -1,22 +1,45 @@
 // dubai-control/src/lib/excel-export.ts
 // Excel export utilities for Maintenance pages
 
-import * as XLSX from "xlsx";
 import type { MaintenanceTechnician } from "@/api/maintenance";
 import type { ServiceContract, RecurringVisitTemplate } from "@/api/maintenance";
+
+type XLSXModule = typeof import("xlsx");
+
+let xlsxModulePromise: Promise<XLSXModule> | null = null;
+
+function getXlsx(): Promise<XLSXModule> {
+  if (!xlsxModulePromise) {
+    xlsxModulePromise = import("xlsx");
+  }
+  return xlsxModulePromise;
+}
+
+async function writeSheetFile(
+  data: Array<Array<string | number>>,
+  sheetName: string,
+  filename: string,
+  cols: Array<{ wch: number }>
+): Promise<void> {
+  const XLSX = await getXlsx();
+  const worksheet = XLSX.utils.aoa_to_sheet(data);
+  worksheet["!cols"] = cols;
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+  XLSX.writeFile(workbook, filename);
+}
 
 // ============================================================================
 // Technicians Export
 // ============================================================================
 
-export function exportTechniciansToExcel(
+export async function exportTechniciansToExcel(
   technicians: MaintenanceTechnician[],
   filename: string = "technicians.xlsx"
-): void {
+): Promise<void> {
   const data = [
-    // Header row
     ["Name", "Email", "Phone", "Status", "Total Visits", "SLA Violation Rate"],
-    // Data rows
     ...technicians.map((tech) => [
       tech.full_name,
       tech.email || "",
@@ -27,34 +50,25 @@ export function exportTechniciansToExcel(
     ]),
   ];
 
-  const worksheet = XLSX.utils.aoa_to_sheet(data);
-
-  // Set column widths
-  worksheet["!cols"] = [
-    { wch: 25 }, // Name
-    { wch: 30 }, // Email
-    { wch: 15 }, // Phone
-    { wch: 10 }, // Status
-    { wch: 12 }, // Total Visits
-    { wch: 18 }, // SLA Violation Rate
-  ];
-
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Technicians");
-
-  XLSX.writeFile(workbook, filename);
+  await writeSheetFile(data, "Technicians", filename, [
+    { wch: 25 },
+    { wch: 30 },
+    { wch: 15 },
+    { wch: 10 },
+    { wch: 12 },
+    { wch: 18 },
+  ]);
 }
 
 // ============================================================================
 // Contracts Export
 // ============================================================================
 
-export function exportContractsToExcel(
+export async function exportContractsToExcel(
   contracts: ServiceContract[],
   filename: string = "contracts.xlsx"
-): void {
+): Promise<void> {
   const data = [
-    // Header row
     [
       "Contract Name",
       "Contract Number",
@@ -68,7 +82,6 @@ export function exportContractsToExcel(
       "Visits Included",
       "Days Remaining",
     ],
-    // Data rows
     ...contracts.map((contract) => [
       contract.name,
       contract.contract_number || "",
@@ -86,39 +99,30 @@ export function exportContractsToExcel(
     ]),
   ];
 
-  const worksheet = XLSX.utils.aoa_to_sheet(data);
-
-  // Set column widths
-  worksheet["!cols"] = [
-    { wch: 30 }, // Contract Name
-    { wch: 18 }, // Contract Number
-    { wch: 15 }, // Type
-    { wch: 25 }, // Customer
-    { wch: 20 }, // Contact
-    { wch: 25 }, // Location
-    { wch: 12 }, // Status
-    { wch: 12 }, // Start Date
-    { wch: 12 }, // End Date
-    { wch: 15 }, // Visits Included
-    { wch: 15 }, // Days Remaining
-  ];
-
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Contracts");
-
-  XLSX.writeFile(workbook, filename);
+  await writeSheetFile(data, "Contracts", filename, [
+    { wch: 30 },
+    { wch: 18 },
+    { wch: 15 },
+    { wch: 25 },
+    { wch: 20 },
+    { wch: 25 },
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 15 },
+    { wch: 15 },
+  ]);
 }
 
 // ============================================================================
 // Recurring Schedules Export
 // ============================================================================
 
-export function exportSchedulesToExcel(
+export async function exportSchedulesToExcel(
   schedules: RecurringVisitTemplate[],
   filename: string = "schedules.xlsx"
-): void {
+): Promise<void> {
   const data = [
-    // Header row
     [
       "Schedule Name",
       "Location",
@@ -132,7 +136,6 @@ export function exportSchedulesToExcel(
       "Checklist",
       "Status",
     ],
-    // Data rows
     ...schedules.map((schedule) => [
       schedule.name,
       schedule.location?.name || "",
@@ -148,25 +151,17 @@ export function exportSchedulesToExcel(
     ]),
   ];
 
-  const worksheet = XLSX.utils.aoa_to_sheet(data);
-
-  // Set column widths
-  worksheet["!cols"] = [
-    { wch: 30 }, // Schedule Name
-    { wch: 25 }, // Location
-    { wch: 25 }, // Asset
-    { wch: 12 }, // Frequency
-    { wch: 15 }, // Interval (days)
-    { wch: 12 }, // Start Date
-    { wch: 12 }, // End Date
-    { wch: 20 }, // Technician
-    { wch: 20 }, // Category
-    { wch: 25 }, // Checklist
-    { wch: 10 }, // Status
-  ];
-
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Schedules");
-
-  XLSX.writeFile(workbook, filename);
+  await writeSheetFile(data, "Schedules", filename, [
+    { wch: 30 },
+    { wch: 25 },
+    { wch: 25 },
+    { wch: 12 },
+    { wch: 15 },
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 20 },
+    { wch: 20 },
+    { wch: 25 },
+    { wch: 10 },
+  ]);
 }

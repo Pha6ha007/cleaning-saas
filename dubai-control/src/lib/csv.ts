@@ -2,7 +2,17 @@
 // CSV/Excel utilities for importing/exporting locations
 
 import type { Location } from "@/api/client";
-import * as XLSX from "xlsx";
+
+type XLSXModule = typeof import("xlsx");
+
+let xlsxModulePromise: Promise<XLSXModule> | null = null;
+
+function getXlsx(): Promise<XLSXModule> {
+  if (!xlsxModulePromise) {
+    xlsxModulePromise = import("xlsx");
+  }
+  return xlsxModulePromise;
+}
 
 // ============================================================================
 // Types
@@ -316,7 +326,8 @@ export function readCSVFile(file: File): Promise<string> {
 /**
  * Convert locations to Excel file and download
  */
-export function locationsToExcel(locations: Location[], filename: string): void {
+export async function locationsToExcel(locations: Location[], filename: string): Promise<void> {
+  const XLSX = await getXlsx();
   const data = [
     // Header row
     ["name", "address", "latitude", "longitude", "is_active"],
@@ -350,7 +361,8 @@ export function locationsToExcel(locations: Location[], filename: string): void 
 /**
  * Generate Excel template
  */
-export function generateExcelTemplate(filename: string): void {
+export async function generateExcelTemplate(filename: string): Promise<void> {
+  const XLSX = await getXlsx();
   const data = [
     // Header row
     ["name", "address", "latitude", "longitude", "is_active"],
@@ -395,8 +407,9 @@ export function readExcelFile(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
+        const XLSX = await getXlsx();
         const data = e.target?.result;
         const workbook = XLSX.read(data, { type: "array" });
 

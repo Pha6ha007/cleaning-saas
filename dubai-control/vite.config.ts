@@ -73,11 +73,17 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks(id: string) {
           // ── App-level code splitting (safe — no React dependency issues) ──
-          
-          // Maintenance context pages (only loaded on /maintenance/* routes)
-          if (id.includes("/pages/maintenance/") ||
-              id.includes("/contexts/maintenance/")) {
-            return "chunk-maintenance";
+
+          // Maintenance pages: keep route-level chunks instead of one mega-bundle.
+          if (id.includes("/pages/maintenance/")) {
+            const match = id.match(/\/pages\/maintenance\/([^/]+)/);
+            const pageName = match?.[1]?.replace(/\.[^.]+$/, "") || "page";
+            return `maintenance-${pageName.toLowerCase()}`;
+          }
+
+          // Maintenance context/providers can be shared across maintenance routes.
+          if (id.includes("/contexts/maintenance/")) {
+            return "maintenance-shared";
           }
 
           // Marketing / landing pages (rarely loaded after first visit)
@@ -89,9 +95,19 @@ export default defineConfig(({ mode }) => ({
 
           // ── Vendor splitting: only for large, React-free packages ──
           
-          // Spreadsheet processing (xlsx/exceljs — 400KB+, no React dependency)
+          // Spreadsheet processing (xlsx/exceljs + cpexcel helpers)
           if (id.includes("node_modules/xlsx") ||
-              id.includes("node_modules/exceljs")) {
+              id.includes("node_modules/exceljs") ||
+              id.includes("node_modules/codepage") ||
+              id.includes("node_modules/cfb") ||
+              id.includes("node_modules/ssf") ||
+              id.includes("node_modules/wmf") ||
+              id.includes("node_modules/word") ||
+              id.includes("node_modules/crc-32") ||
+              id.includes("node_modules/adler-32") ||
+              id.includes("node_modules/cp") ||
+              id.includes("/xlsx.mjs") ||
+              id.includes("/cpexcel.")) {
             return "vendor-spreadsheet";
           }
 
