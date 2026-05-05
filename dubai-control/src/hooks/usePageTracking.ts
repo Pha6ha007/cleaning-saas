@@ -6,9 +6,7 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
-import { API_BASE_URL } from "@/lib/env";
-
-const ANALYTICS_ENDPOINT = `${API_BASE_URL}/api/analytics/page-view/`;
+import { requireApiBaseUrl } from "@/lib/env";
 
 interface PageViewEvent {
   path: string;
@@ -45,14 +43,16 @@ function isTrackingDisabled(): boolean {
  */
 function sendPageView(event: PageViewEvent): void {
   try {
+    const analyticsEndpoint = `${requireApiBaseUrl()}/api/analytics/page-view/`;
+
     // Use sendBeacon for reliability on page unload
     if (navigator.sendBeacon) {
       const blob = new Blob([JSON.stringify(event)], {
         type: "application/json",
       });
-      navigator.sendBeacon(ANALYTICS_ENDPOINT, blob);
+      navigator.sendBeacon(analyticsEndpoint, blob);
     } else {
-      fetch(ANALYTICS_ENDPOINT, {
+      fetch(analyticsEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(event),
