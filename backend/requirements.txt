@@ -2,14 +2,14 @@
 # Last updated: 2026-02-13
 
 # Core Framework
-Django==5.2.9
+Django==5.2.13
 djangorestframework==3.16.1
 
 # CORS headers
 django-cors-headers==4.9.0
 
 # Image processing
-pillow==12.1.0
+pillow==12.2.0
 pillow_heif==1.1.1
 
 # PDF generation
@@ -62,14 +62,14 @@ whitenoise==6.6.0
 # S3-compatible file storage (DigitalOcean Spaces / AWS S3 / Cloudflare R2)
 django-storages[s3]==1.14.4
 boto3==1.38.0
-sentry-sdk==1.40.0
+sentry-sdk==2.59.0
 
 # =============================================================================
 # API Documentation (M002: drf-spectacular)
 # =============================================================================
 drf-spectacular==0.28.0
 django-import-export==4.3.5
-fpdf2==2.8.3
+fpdf2==2.8.7
 arabic-reshaper==3.0.0
 python-bidi==0.4.2
 
