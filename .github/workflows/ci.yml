@@ -76,13 +76,7 @@ jobs:
 
       - name: Run full test suite
         run: |
-          pytest tests/ --ignore=tests/e2e \
-            -q --no-header \
-            --tb=short \
-            --cov=apps \
-            --cov-report=xml \
-            --cov-report=term-missing:skip-covered \
-            -x
+          pytest tests/ --ignore=tests/e2e --cov=apps --cov-report=xml --cov-report=term-missing:skip-covered -q --no-header --tb=short -x
         env:
           DJANGO_SETTINGS_MODULE: config.settings
           SECRET_KEY: ci-secret-key-not-for-production
