@@ -76,9 +76,10 @@ jobs:
 
       - name: Run full test suite
         run: |
-          pytest tests/ --ignore=tests/e2e --cov=apps --cov-report=xml --cov-report=term-missing:skip-covered -q --no-header --tb=short -x
+          python -m pytest tests/ --ignore=tests/e2e --cov=apps --cov-report=xml --cov-report=term-missing:skip-covered -q --no-header --tb=short -x
         env:
           DJANGO_SETTINGS_MODULE: config.settings
+          PYTHONPATH: .
           SECRET_KEY: ci-secret-key-not-for-production
           REDIS_URL: redis://localhost:6379/0
           DEBUG: "True"
@@ -87,9 +88,10 @@ jobs:
       - name: Run E2E API flow tests
         run: |
           playwright install chromium --with-deps
-          pytest tests/e2e/ -q --no-header --tb=short
+          python -m pytest tests/e2e/ -q --no-header --tb=short
         env:
           DJANGO_SETTINGS_MODULE: config.settings
+          PYTHONPATH: .
           SECRET_KEY: ci-secret-key-not-for-production
           REDIS_URL: redis://localhost:6379/0
           DEBUG: "True"
