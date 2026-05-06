@@ -8,7 +8,7 @@
 
 ## Verdict
 
-Phase 0 is functionally complete.
+Phase 0 is functionally complete, and the post-remediation CI stabilization work is complete.
 
 Closed in this remediation pass:
 - ✅ TICKET-001 — username enumeration in legacy login
@@ -270,6 +270,114 @@ Meaning:
 - `dubai-control/src/pages/Settings.tsx`
 - `dubai-control/src/pages/VerifyEmail.tsx`
 - `dubai-control/src/pages/platform/Contact.tsx`
+
+---
+
+## CI stabilization follow-up — 2026-05-06
+
+After the Phase 0 remediation changes were pushed, the main `CI` workflow still exposed follow-up failures. Those failures are now fixed and should be treated as part of the completed remediation trail rather than as open audit work.
+
+### Follow-up failures that were closed
+
+**Backend CI contract issues**
+- `manage.py migrate --check` was invalid for a fresh CI sqlite database and caused false failures.
+- The backend workflow depended on `pytest-cov` and `pytest-django` behavior without pinning both plugins in `backend/requirements.txt`.
+- Backend pytest invocation was missing an explicit module path, which caused `ImportError: No module named 'config'` on GitHub Actions.
+
+**Frontend runtime/build issues**
+- `dubai-control/src/api/client.ts` consumed `API_BASE_URL` from `src/api/core.ts` without a matching re-export.
+- `dubai-control/src/main.tsx` had lost the `App` bootstrap import.
+- API base URL validation occurred at import time, which could blank public pages before request-time code ran.
+
+**Frontend bundle gate issue**
+- Maintenance code was being forced into a single mega-chunk.
+- `xlsx` was imported eagerly from shared utility files, so spreadsheet code inflated maintenance bundles even when users were not importing/exporting Excel data.
+
+### Additional files changed in the stabilization pass
+
+**Workflow / backend contract**
+- `.github/workflows/ci.yml`
+- `backend/requirements.txt`
+
+**Frontend runtime / env contract**
+- `dubai-control/src/lib/env.ts`
+- `dubai-control/src/api/client.ts`
+- `dubai-control/src/api/core.ts`
+- `dubai-control/src/api/support.ts`
+- `dubai-control/src/hooks/usePageTracking.ts`
+- `dubai-control/src/main.tsx`
+
+**Frontend bundle split / spreadsheet loading**
+- `dubai-control/src/lib/csv.ts`
+- `dubai-control/src/lib/excel-export.ts`
+- `dubai-control/vite.config.ts`
+
+### Stabilization fixes applied
+
+**Backend CI**
+- Replaced `manage.py migrate --check` with the correct CI sequence:
+  - `manage.py makemigrations --check --dry-run`
+  - `manage.py migrate --noinput`
+- Added missing backend test dependencies:
+  - `pytest-cov`
+  - `pytest-django`
+- Switched backend test steps to `python -m pytest`
+- Added `PYTHONPATH: .` to backend pytest steps so the `config` package resolves reliably in Actions.
+
+**Frontend runtime**
+- Restored the missing `App` import in `src/main.tsx`
+- Re-exported `API_BASE_URL` from `src/api/core.ts` to match consumers
+- Moved API base URL validation to request time instead of module-import time
+- Kept analytics fire-and-forget so analytics failures cannot blank the app shell
+
+**Frontend bundle/root-cause fix**
+- Removed eager `xlsx` imports from:
+  - `src/lib/csv.ts`
+  - `src/lib/excel-export.ts`
+- Replaced them with cached lazy `import("xlsx")`
+- Reworked Vite manual chunking so maintenance pages split by route/page instead of one mega maintenance bundle
+- Kept shared maintenance code in a smaller shared chunk and spreadsheet code in a dedicated vendor chunk
+
+### Verification evidence for the stabilization pass
+
+**Backend JWT regression after pytest wiring**
+```bash
+cd backend
+DJANGO_SETTINGS_MODULE=config.settings SECRET_KEY=ci REDIS_URL=redis://localhost:6379/0 DEBUG=True CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000 venv/bin/python -m pytest tests/test_jwt_auth.py -q --tb=short
+```
+Observed result:
+- `19 passed`
+
+**Coverage/plugin path verification**
+```bash
+cd backend
+DEBUG=True PYTHONPATH=. venv/bin/python -m pytest tests/test_legacy_login_security.py --cov=apps --cov-report=term -q
+```
+Observed result:
+- test passes
+- `--cov` options are recognized
+
+**Frontend bundle verification after lazy spreadsheet loading + chunk split**
+```bash
+cd dubai-control
+npm run build
+```
+Observed result:
+- build passes
+- maintenance no longer emits a 1.6 MB mega-chunk
+- maintenance pages are split into route-level chunks
+- maintenance chunks fall below the CI fail threshold
+
+**GitHub Actions final result**
+- `Backend Tests (Python 3.12)` ✅
+- `Frontend Build` ✅
+- `Frontend E2E (Playwright)` ✅
+- `Mobile Jest Tests` ✅
+- `All Checks Passed` ✅
+
+### Durable conclusion
+
+Future agents should treat both Phase 0 remediation and the post-remediation CI stabilization as complete. If the same failures reappear, check for workflow drift or dependency/plugin removal first; do **not** restart the original Phase 0 audit from scratch.
 
 ---
 
