@@ -68,3 +68,17 @@ tmp/
 # GSD-2 agent local state — never commit
 .gsd/
 .mcp.json
+
+
+# Local generated files
+.vercel/
+*.zip
+
+# Playwright artifacts
+dubai-control/playwright-report/
+dubai-control/test-results/
+
+# GSD local runtime files
+.gsd/CODEBASE.md
+.gsd/last-snapshot.md
+.gsd/notifications.jsonl
