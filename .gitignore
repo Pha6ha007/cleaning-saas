@@ -63,3 +63,17 @@ vendor/
 coverage/
 .cache/
 tmp/
+
+# Local generated files
+.mcp.json
+.vercel/
+*.zip
+
+# Playwright artifacts
+dubai-control/playwright-report/
+dubai-control/test-results/
+
+# GSD local runtime files
+.gsd/last-snapshot.md
+.gsd/notifications.jsonl
+.gsd/CODEBASE.md
